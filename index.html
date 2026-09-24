@@ -1,0 +1,1903 @@
+<!DOCTYPE html>
+<!-- ===== 0. DECISIONES DE DISEÑO =====
+  Aplicativo:      Ingeniería de producto — control de entregables de ingeniería por SKU del catálogo
+  Versión:         producción sobre Supabase + GitHub Pages
+  Paleta:
+    Primario        #1E4E79   (azul acero, tinta de plano técnico)
+    Primario hover  #163B5C
+    Acento          #C98A1B   (ámbar: "en proceso")
+    Éxito           #1F7A4D   (verde: entregable correcto / SKU completo)
+    Éxito fondo     #E6F2EB   (celda marcada en la matriz)
+    Advertencia     #B26A00
+    Error           #B42318
+    Texto           #1B2430
+    Texto suave     #5B6675
+    Bordes          #D5DBE2   (bordes internos de tabla: #E3E7EC)
+    Fondo           #EEF1F4
+    Superficie      #FFFFFF
+    Encabezado tabla #F7F9FA
+    Aviso informativo #FFF4DB con borde #E9D29B y texto #5C4410
+  Tipografía:      IBM Plex Sans (Google Fonts) — títulos 600, etiquetas 500, cuerpo 400.
+                   Números con tabular-nums para que claves y porcentajes alineen en columna.
+  Radio de bordes: rounded-md en controles, tablas y paneles; rounded-lg solo en diálogos.
+  Sombras:         ninguna en paneles (se separan con borde); shadow-xl en diálogos, shadow-md en avisos.
+  Densidad:        compacta en la matriz (celdas de 44 px de alto), cómoda en formularios.
+  Elemento central: la matriz SKU × entregable. Todo lo demás es sobrio para que la matriz mande.
+  Estatus:         nunca solo por color — celda marcada lleva ícono ✓, el avance lleva texto
+                   ("Completo", "5 de 7", "Sin iniciar") y el historial dice "Marcó correcto" / "Desmarcó".
+  Modo oscuro (clase "dark" en <html>, variantes dark: de Tailwind):
+    Fondo #10151B, Superficie #18202A, Encabezado tabla #1F2833, Hover #243040
+    Bordes #2E3A48 (internos #26313D, controles #3A4756)
+    Texto #E6EAEF, Texto suave #9AA7B6
+    Primario botón #2F6DA3 (hover #3A7DB8), Primario texto/enlaces/foco #7FB2E5
+    Éxito texto #5CC48E, barras #2E9A63, celda marcada #173526
+    Error texto #F28B82, botón #C8372B, fondo aviso #3A1D1B
+    Ámbar #D9A03A; banda prototipo #3A2F14
+    Las imágenes de referencia conservan fondo claro para que se distingan.
+  Tema inicial:    el del sistema operativo; la elección de cada persona se recuerda en su navegador.
+  Notas:           uso principal en computadora, la matriz se desplaza en pantallas chicas.
+-->
+<html lang="es" class="h-full [color-scheme:light] dark:[color-scheme:dark]">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ingeniería de producto</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    darkMode: 'class',
+    theme: { extend: { fontFamily: { sans: ['"IBM Plex Sans"', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'Arial', 'sans-serif'] } } }
+  };
+</script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.1/dist/umd/supabase.js"></script>
+</head>
+<body class="h-full bg-[#EEF1F4] dark:bg-[#10151B] font-sans text-[#1B2430] dark:text-[#E6EAEF] antialiased pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
+<div id="app"></div>
+
+<!-- ===== 1. ESQUEMA DE DATOS ===== -->
+<script>
+/*
+  Base de datos en Supabase (PostgreSQL). Script completo: supabase.sql
+  ing_roles · ing_perfiles (1 por cuenta) · ing_familias · ing_estatus_sku · ing_entregables · ing_skus
+  ing_sku_entregables (casillas) · ing_historial_entregables
+  Vistas: ing_v_skus (SKU con sus casillas en JSON) · ing_v_historial
+  Funciones: ing_marcar · ing_desmarcar · ing_poner_imagen · ing_quitar_imagen
+  Almacén privado de imágenes: ing-imagenes
+  La seguridad vive en la base (Row Level Security): lo que esta página oculta, la base también lo niega.
+*/
+</script>
+
+<!-- ===== 2. CONFIGURACIÓN (EDITA ESTOS DOS VALORES) ===== -->
+<script>
+/* Supabase → Project Settings → API. Copia "Project URL" y la llave "anon public".
+   La llave anon es pública por diseño: la seguridad la ponen las reglas de supabase.sql.
+   NUNCA pongas aquí la llave "service_role". */
+const CONFIG = {
+  SUPABASE_URL: 'https://myrsbijwtovmnpwdhixc.supabase.co',
+  SUPABASE_ANON_KEY: 'sb_publishable_TANKRU3V5wExp5HoTsxRuA_m6tv_eX2'
+};
+const BUCKET_IMAGENES = 'ing-imagenes';
+let SB = null;      // cliente de Supabase
+let canal = null;   // canal de tiempo real
+const cache = { skus: new Map(), familias: {}, entregables: {}, estatus: {}, perfiles: {} };
+const urlsFirmadas = new Map(); // ruta → { url, vence }
+function configurado() { return /^https:\/\/.+\.supabase\.co\/?$/.test(CONFIG.SUPABASE_URL) && !CONFIG.SUPABASE_URL.includes('TU-PROYECTO') && CONFIG.SUPABASE_ANON_KEY.length > 30; }
+</script>
+
+<!-- ===== 3. CAPA DE DATOS (DataService) ===== -->
+<script>
+class ErrorApi extends Error {
+  constructor(mensaje, { tipo = 'servidor', campos = null } = {}) { super(mensaje); this.tipo = tipo; this.campos = campos; }
+}
+const esperar = ms => new Promise(r => setTimeout(r, ms));
+const claveUnica = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+function errorDe(error) {
+  if (!error) return null;
+  if (error instanceof ErrorApi) return error;
+  const msg = String(error.message || '');
+  if (['conflicto', 'validacion', 'permiso', 'no_encontrado'].includes(error.hint)) return new ErrorApi(msg, { tipo: error.hint });
+  if (error.code === '23505') return new ErrorApi('Ya existe un registro con ese nombre.', { tipo: 'duplicado' });
+  if (error.code === '23514') return new ErrorApi('Algún dato no tiene el formato correcto.', { tipo: 'validacion' });
+  if (error.code === '42501') return new ErrorApi('Tu rol no tiene permiso para esta acción.', { tipo: 'permiso' });
+  if (error.code === 'PGRST301' || /jwt/i.test(msg)) return new ErrorApi('Tu sesión expiró. Vuelve a iniciar sesión.', { tipo: 'sesion' });
+  if (/fetch|network|load failed/i.test(msg)) return new ErrorApi('No se pudo conectar con el servidor. Revisa tu conexión a internet.', { tipo: 'conexion' });
+  return new ErrorApi(msg || 'Ocurrió un error inesperado.');
+}
+async function ejecutar(consulta) {
+  let r;
+  try { r = await consulta; } catch (e) { throw errorDe(e); }
+  const err = errorDe(r.error);
+  if (err) { if (err.tipo === 'sesion') setTimeout(() => cerrarSesion(), 0); throw err; }
+  return r;
+}
+/* Supabase regresa máximo 1000 filas por consulta: se piden por páginas. */
+async function leerTodo(fabrica) {
+  const todo = [];
+  for (let desde = 0; ; desde += 1000) {
+    const { data } = await ejecutar(fabrica().range(desde, desde + 999));
+    todo.push(...(data || []));
+    if (!data || data.length < 1000) return todo;
+  }
+}
+async function exigirFilas(consulta, mensaje = 'Tu rol no tiene permiso para esta acción.') {
+  const { data } = await ejecutar(consulta);
+  if (!data || !data.length) throw new ErrorApi(mensaje, { tipo: 'permiso' });
+  return data;
+}
+function exigirPermiso(accion) { if (!estado.sesion || !puede(estado.sesion.rol_id, accion)) throw new ErrorApi('Tu rol no tiene permiso para esta acción.', { tipo: 'permiso' }); }
+const porId = filas => Object.fromEntries(filas.map(f => [String(f.id), f]));
+const listaCatalogo = obj => Object.values(obj || {}).map(v => ({ ...v, id: Number(v.id) }));
+const vivosSkus = () => [...cache.skus.values()];
+function entregablesActivos() { return listaCatalogo(cache.entregables).filter(e => e.activo).sort((a, b) => a.orden - b.orden); }
+function nombreCorto(id) { return (id && cache.perfiles[id] && cache.perfiles[id].nombre) || 'Usuario'; }
+function skuVivo(id) {
+  const s = cache.skus.get(Number(id));
+  if (!s) throw new ErrorApi('Ese SKU ya no existe. La lista ya se actualizó.', { tipo: 'no_encontrado' });
+  return s;
+}
+function normalizarSku(f) {
+  const casillas = {};
+  for (const [k, v] of Object.entries(f.casillas || {})) casillas[k] = { completado: !!v.c, por: v.por || null, en: v.en || null };
+  return { ...f, id: Number(f.id), familia_id: Number(f.familia_id), estatus_sku_id: Number(f.estatus_sku_id), casillas };
+}
+function avanceDeSku(sku, ents) {
+  const casillas = ents.map(e => {
+    const c = sku.casillas[String(e.id)];
+    const hecho = !!(c && c.completado);
+    return { entregable_id: e.id, nombre: e.nombre, completado: hecho, completado_por: hecho ? c.por : null, completado_por_nombre: hecho ? nombreCorto(c.por) : null, completado_en: hecho ? c.en : null };
+  });
+  const completados = casillas.filter(c => c.completado).length;
+  return { casillas, completados, total: ents.length, porcentaje: calcularPorcentaje(completados, ents.length), estado_avance: estadoAvance(completados, ents.length) };
+}
+function skuConAvance(sku, ents) {
+  const fam = cache.familias[String(sku.familia_id)];
+  const est = cache.estatus[String(sku.estatus_sku_id)];
+  return {
+    id: sku.id, clave: sku.clave, descripcion: sku.descripcion, familia_id: sku.familia_id, estatus_sku_id: sku.estatus_sku_id,
+    observaciones: sku.observaciones || null, miniatura: sku.miniatura || null, tiene_imagen: !!sku.imagen_ruta, imagen_ruta: sku.imagen_ruta || null,
+    familia_nombre: fam ? fam.nombre : '—', estatus_nombre: est ? est.nombre : '—',
+    descontinuado: sku.estatus_sku_id === ESTATUS_SKU.DESCONTINUADO, ...avanceDeSku(sku, ents)
+  };
+}
+function registroHistorial(r) {
+  return {
+    id: r.id, fecha: r.fecha, marcado: !!r.marcado, comentario: r.comentario || null, user_id: r.user_id,
+    usuario_nombre: r.usuario_nombre || nombreCorto(r.user_id), sku_id: r.sku_id, sku_clave: r.sku_clave, sku_eliminado: !!r.sku_eliminado,
+    entregable_id: r.entregable_id, entregable_nombre: r.entregable_nombre
+  };
+}
+function consultaHistorial(filtros = {}) {
+  let q = SB.from('ing_v_historial').select('*', { count: 'exact' }).order('fecha', { ascending: false }).order('id', { ascending: false });
+  if (filtros.sku_id) q = q.eq('sku_id', filtros.sku_id);
+  if (filtros.busqueda) q = q.ilike('sku_clave', `%${String(filtros.busqueda).trim().replace(/[%_\\]/g, m => '\\' + m)}%`);
+  if (filtros.user_id) q = q.eq('user_id', filtros.user_id);
+  if (filtros.marcado === '1') q = q.eq('marcado', true);
+  if (filtros.marcado === '0') q = q.eq('marcado', false);
+  if (filtros.entregable_id) q = q.eq('entregable_id', Number(filtros.entregable_id));
+  return q;
+}
+async function urlImagen(ruta) {
+  const c = urlsFirmadas.get(ruta);
+  if (c && c.vence > Date.now()) return c.url;
+  try {
+    const { data } = await ejecutar(SB.storage.from(BUCKET_IMAGENES).createSignedUrl(ruta, 3600));
+    urlsFirmadas.set(ruta, { url: data.signedUrl, vence: Date.now() + 50 * 60 * 1000 });
+    return data.signedUrl;
+  } catch (e) { return null; }
+}
+/* Reduce la imagen en el navegador: completa (máx. 1200 px, < ~250 KB) y miniatura (96 px). */
+function leerComoDataUrl(archivo) {
+  return new Promise((ok, falla) => { const r = new FileReader(); r.onload = () => ok(r.result); r.onerror = () => falla(new ErrorApi('No se pudo leer la imagen.')); r.readAsDataURL(archivo); });
+}
+function cargarImagen(src) {
+  return new Promise((ok, falla) => { const img = new Image(); img.onload = () => ok(img); img.onerror = () => falla(new ErrorApi('El archivo no es una imagen válida.', { tipo: 'validacion', campos: { imagen: 'El archivo no es una imagen válida.' } })); img.src = src; });
+}
+function redimensionar(img, lado, calidad) {
+  const escala = Math.min(1, lado / Math.max(img.naturalWidth, img.naturalHeight));
+  const c = document.createElement('canvas');
+  c.width = Math.max(1, Math.round(img.naturalWidth * escala)); c.height = Math.max(1, Math.round(img.naturalHeight * escala));
+  const ctx = c.getContext('2d'); ctx.fillStyle = '#FFFFFF'; ctx.fillRect(0, 0, c.width, c.height); ctx.drawImage(img, 0, 0, c.width, c.height);
+  return c.toDataURL('image/jpeg', calidad);
+}
+async function prepararImagen(archivo) {
+  const img = await cargarImagen(await leerComoDataUrl(archivo));
+  let lado = 1200, calidad = 0.85, completa = redimensionar(img, lado, calidad);
+  while (completa.length > 340000 && lado > 300) { if (calidad > 0.6) calidad -= 0.1; else lado = Math.round(lado * 0.8); completa = redimensionar(img, lado, calidad); }
+  return { completa, miniatura: redimensionar(img, 96, 0.8) };
+}
+function dataUrlABlob(dataUrl) {
+  const [cab, datos] = dataUrl.split(',');
+  const bin = atob(datos); const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new Blob([bytes], { type: cab.slice(5, cab.indexOf(';')) });
+}
+
+const DataService = {
+  /* ---------- Sesión (Supabase Auth) ---------- */
+  async iniciarSesion(email, password) {
+    const { data, error } = await SB.auth.signInWithPassword({ email, password });
+    if (error) {
+      if (/confirm/i.test(error.message)) throw new ErrorApi('Confirma tu correo primero: abre el enlace que te enviamos al registrarte.', { tipo: 'credenciales' });
+      if (/invalid/i.test(error.message)) throw new ErrorApi('Correo o contraseña incorrectos.', { tipo: 'credenciales' });
+      throw errorDe(error);
+    }
+    return data.user;
+  },
+  async registrarse({ nombre, email, password }) {
+    const { data, error } = await SB.auth.signUp({ email, password, options: { data: { nombre }, emailRedirectTo: urlApp() } });
+    if (error) {
+      if (/registered|exists/i.test(error.message)) throw new ErrorApi('Ya existe una cuenta con ese correo. Inicia sesión o recupera tu contraseña.', { tipo: 'validacion' });
+      if (/password/i.test(error.message)) throw new ErrorApi('La contraseña no cumple los requisitos de seguridad. Usa al menos 8 caracteres con letras y números.', { tipo: 'validacion' });
+      if (/rate|security purposes/i.test(error.message)) throw new ErrorApi('Se hicieron demasiados intentos. Espera unos minutos e intenta de nuevo.', { tipo: 'limite' });
+      throw errorDe(error);
+    }
+    return { usuario: data.user, conSesion: !!data.session };
+  },
+  async recuperarPassword(email) {
+    const { error } = await SB.auth.resetPasswordForEmail(email, { redirectTo: urlApp() });
+    if (error && /rate|security purposes/i.test(error.message)) throw new ErrorApi('Ya se envió un correo hace poco. Espera unos minutos antes de pedir otro.', { tipo: 'limite' });
+    if (error) throw errorDe(error);
+  },
+  async cambiarPassword(password) {
+    const { data, error } = await SB.auth.updateUser({ password });
+    if (error) {
+      if (/different|same/i.test(error.message)) throw new ErrorApi('La nueva contraseña debe ser distinta de la anterior.', { tipo: 'validacion' });
+      throw errorDe(error);
+    }
+    return data.user;
+  },
+  async cerrarSesion() { try { await SB.auth.signOut(); } catch (e) { /* se cierra localmente de todos modos */ } },
+  async obtenerMiPerfil(userId) {
+    const { data } = await ejecutar(SB.from('ing_perfiles').select('id,nombre,email,rol_id,activo').eq('id', userId).maybeSingle());
+    return data;
+  },
+
+  /* ---------- Carga general ---------- */
+  async recargarTodo() {
+    const [fam, ent, est, per, skus] = await Promise.all([
+      leerTodo(() => SB.from('ing_familias').select('id,nombre,activa').is('deleted_at', null).order('id')),
+      leerTodo(() => SB.from('ing_entregables').select('id,nombre,orden,activo').is('deleted_at', null).order('id')),
+      leerTodo(() => SB.from('ing_estatus_sku').select('id,nombre').is('deleted_at', null).order('id')),
+      leerTodo(() => SB.from('ing_perfiles').select('id,nombre,email,rol_id,activo').is('deleted_at', null).order('id')),
+      leerTodo(() => SB.from('ing_v_skus').select('*').order('id'))
+    ]);
+    cache.familias = porId(fam); cache.entregables = porId(ent); cache.estatus = porId(est);
+    cache.perfiles = Object.fromEntries(per.map(p => [p.id, p]));
+    cache.skus = new Map(skus.map(f => { const s = normalizarSku(f); return [s.id, s]; }));
+  },
+
+  /* ---------- SKUs ---------- */
+  async listarSkus(filtros = {}) {
+    const ents = entregablesActivos();
+    let lista = vivosSkus().map(s => skuConAvance(s, ents));
+    if (!filtros.incluir_descontinuados) lista = lista.filter(s => !s.descontinuado);
+    if (filtros.busqueda) { const q = normalizarTexto(filtros.busqueda); lista = lista.filter(s => normalizarTexto(`${s.clave} ${s.descripcion}`).includes(q)); }
+    if (filtros.familia_id) lista = lista.filter(s => s.familia_id === Number(filtros.familia_id));
+    if (filtros.avance && filtros.avance !== 'todos') lista = lista.filter(s => s.estado_avance === filtros.avance);
+    if (filtros.pendiente_entregable_id) { const id = Number(filtros.pendiente_entregable_id); lista = lista.filter(s => s.casillas.some(c => c.entregable_id === id && !c.completado)); }
+    lista.sort((a, b) => compararNatural(a.clave, b.clave));
+    return { skus: lista, entregables: ents.map(e => ({ id: e.id, nombre: e.nombre })) };
+  },
+  async obtenerSku(id) {
+    const sku = skuVivo(id);
+    const r = skuConAvance(sku, entregablesActivos());
+    const [{ data }, url] = await Promise.all([ejecutar(consultaHistorial({ sku_id: sku.id }).range(0, 299)), sku.imagen_ruta ? urlImagen(sku.imagen_ruta) : null]);
+    r.historial = (data || []).map(registroHistorial);
+    r.imagen_url = url;
+    return r;
+  },
+  async crearSku(datos) {
+    exigirPermiso('administrar');
+    const limpio = limpiarDatosSku(datos);
+    const errores = validarSku(limpio, vivosSkus(), null);
+    if (errores) throw new ErrorApi('Revisa los campos marcados.', { tipo: 'validacion', campos: errores });
+    try {
+      const { data } = await ejecutar(SB.from('ing_skus').insert(limpio).select('id').single());
+      programarRecarga(0);
+      return { id: data.id, ...limpio };
+    } catch (e) {
+      if (e.tipo === 'duplicado') throw new ErrorApi('Revisa los campos marcados.', { tipo: 'validacion', campos: { clave: `Ya existe el SKU ${limpio.clave}.` } });
+      throw e;
+    }
+  },
+  async actualizarSku(id, datos) {
+    exigirPermiso('administrar');
+    const sku = skuVivo(id);
+    const limpio = limpiarDatosSku(datos);
+    const errores = validarSku(limpio, vivosSkus(), sku.id);
+    if (errores) throw new ErrorApi('Revisa los campos marcados.', { tipo: 'validacion', campos: errores });
+    try { await exigirFilas(SB.from('ing_skus').update(limpio).eq('id', sku.id).select('id')); }
+    catch (e) { if (e.tipo === 'duplicado') throw new ErrorApi('Revisa los campos marcados.', { tipo: 'validacion', campos: { clave: `Ya existe el SKU ${limpio.clave}.` } }); throw e; }
+    Object.assign(sku, limpio);
+    programarRecarga(0);
+    return skuConAvance(sku, entregablesActivos());
+  },
+  async eliminarSku(id) {
+    exigirPermiso('administrar');
+    const sku = skuVivo(id);
+    await exigirFilas(SB.from('ing_skus').update({ deleted_at: new Date().toISOString(), imagen_ruta: null, miniatura: null }).eq('id', sku.id).select('id'));
+    if (sku.imagen_ruta) SB.storage.from(BUCKET_IMAGENES).remove([sku.imagen_ruta]).catch(() => {});
+    cache.skus.delete(sku.id);
+    programarRecarga(0);
+    return { id: sku.id, clave: sku.clave };
+  },
+  async marcarEntregable(skuId, entregableId, comentario = null) {
+    exigirPermiso('marcar');
+    const sku = skuVivo(skuId);
+    await ejecutar(SB.rpc('ing_marcar', { p_sku: sku.id, p_entregable: entregableId, p_comentario: comentario }));
+    sku.casillas[String(entregableId)] = { completado: true, por: estado.sesion.user_id, en: new Date().toISOString() };
+    programarRecarga();
+    return skuConAvance(sku, entregablesActivos());
+  },
+  async desmarcarEntregable(skuId, entregableId, causa) {
+    exigirPermiso('marcar');
+    const errorCausa = validarCausa(causa);
+    if (errorCausa) throw new ErrorApi(errorCausa, { tipo: 'validacion', campos: { causa: errorCausa } });
+    const sku = skuVivo(skuId);
+    await ejecutar(SB.rpc('ing_desmarcar', { p_sku: sku.id, p_entregable: entregableId, p_causa: String(causa).trim() }));
+    sku.casillas[String(entregableId)] = { completado: false, por: null, en: null };
+    programarRecarga();
+    return skuConAvance(sku, entregablesActivos());
+  },
+  async subirImagenSku(id, archivo) {
+    exigirPermiso('marcar');
+    const err = validarImagen({ type: archivo ? archivo.type : '', size: archivo ? archivo.size : 0 });
+    if (err) throw new ErrorApi(err, { tipo: 'validacion', campos: { imagen: err } });
+    const sku = skuVivo(id);
+    const { completa, miniatura } = await prepararImagen(archivo);
+    const ruta = `sku-${sku.id}/${claveUnica()}.jpg`;
+    await ejecutar(SB.storage.from(BUCKET_IMAGENES).upload(ruta, dataUrlABlob(completa), { contentType: 'image/jpeg', upsert: false }));
+    const { data: anterior } = await ejecutar(SB.rpc('ing_poner_imagen', { p_sku: sku.id, p_ruta: ruta, p_miniatura: miniatura }));
+    if (anterior) SB.storage.from(BUCKET_IMAGENES).remove([anterior]).catch(() => {});
+    Object.assign(sku, { imagen_ruta: ruta, miniatura });
+    programarRecarga();
+    return { ...skuConAvance(sku, entregablesActivos()), imagen_url: completa };
+  },
+  async quitarImagenSku(id) {
+    exigirPermiso('marcar');
+    const sku = skuVivo(id);
+    const { data: anterior } = await ejecutar(SB.rpc('ing_quitar_imagen', { p_sku: sku.id }));
+    if (anterior) SB.storage.from(BUCKET_IMAGENES).remove([anterior]).catch(() => {});
+    Object.assign(sku, { imagen_ruta: null, miniatura: null });
+    programarRecarga();
+    return skuConAvance(sku, entregablesActivos());
+  },
+
+  /* ---------- Tablero e historial ---------- */
+  async obtenerTablero() {
+    const ents = entregablesActivos();
+    const activos = vivosSkus().filter(s => s.estatus_sku_id === ESTATUS_SKU.ACTIVO).map(s => skuConAvance(s, ents));
+    const cuenta = est => activos.filter(s => s.estado_avance === est).length;
+    const completos = cuenta('completo');
+    const por_familia = listaCatalogo(cache.familias).map(f => {
+      const de = activos.filter(s => s.familia_id === f.id);
+      const listos = de.filter(s => s.estado_avance === 'completo').length;
+      return { id: f.id, nombre: f.nombre, total: de.length, completos: listos, porcentaje: calcularPorcentaje(listos, de.length) };
+    }).filter(f => f.total > 0).sort((a, b) => compararNatural(a.nombre, b.nombre));
+    return {
+      total: activos.length, completos, en_proceso: cuenta('en_proceso'), sin_iniciar: cuenta('sin_iniciar'),
+      porcentaje_global: calcularPorcentaje(completos, activos.length),
+      por_entregable: ents.map(e => {
+        const listos = activos.filter(s => s.casillas.some(c => c.entregable_id === e.id && c.completado)).length;
+        return { id: e.id, nombre: e.nombre, completos: listos, porcentaje: calcularPorcentaje(listos, activos.length) };
+      }),
+      por_familia
+    };
+  },
+  async listarHistorial(filtros = {}) {
+    const { data, count } = await ejecutar(consultaHistorial(filtros).range(0, (filtros.limite || 50) - 1));
+    const usuarios = Object.values(cache.perfiles).filter(p => p.rol_id).map(p => ({ id: p.id, nombre: p.nombre })).sort((a, b) => compararNatural(a.nombre, b.nombre));
+    return { registros: (data || []).map(registroHistorial), total: count || 0, usuarios };
+  },
+  async exportarHistorial() {
+    return (await leerTodo(() => consultaHistorial({}))).map(registroHistorial);
+  },
+
+  /* ---------- Catálogos ---------- */
+  async listarFamilias({ incluir_inactivas = false } = {}) {
+    const skus = vivosSkus();
+    return listaCatalogo(cache.familias).filter(f => incluir_inactivas || f.activa)
+      .map(f => ({ id: f.id, nombre: f.nombre, activa: !!f.activa, skus: skus.filter(s => s.familia_id === f.id).length }))
+      .sort((a, b) => compararNatural(a.nombre, b.nombre));
+  },
+  async crearFamilia({ nombre }) {
+    exigirPermiso('administrar');
+    const err = validarNombreCatalogo(nombre, listaCatalogo(cache.familias), null, 'familia');
+    if (err) throw new ErrorApi(err, { tipo: 'validacion', campos: { nombre: err } });
+    try { const { data } = await ejecutar(SB.from('ing_familias').insert({ nombre: nombre.trim() }).select('id,nombre,activa').single()); programarRecarga(0); return data; }
+    catch (e) { if (e.tipo === 'duplicado') throw new ErrorApi('Ya existe una familia con ese nombre.', { tipo: 'validacion', campos: { nombre: 'Ya existe una familia con ese nombre.' } }); throw e; }
+  },
+  async actualizarFamilia(id, datos) {
+    exigirPermiso('administrar');
+    const cambio = {};
+    if (datos.nombre !== undefined) {
+      const err = validarNombreCatalogo(datos.nombre, listaCatalogo(cache.familias), id, 'familia');
+      if (err) throw new ErrorApi(err, { tipo: 'validacion', campos: { nombre: err } });
+      cambio.nombre = datos.nombre.trim();
+    }
+    if (datos.activa !== undefined) cambio.activa = !!datos.activa;
+    try { const [f] = await exigirFilas(SB.from('ing_familias').update(cambio).eq('id', id).select('id,nombre,activa')); programarRecarga(0); return f; }
+    catch (e) { if (e.tipo === 'duplicado') throw new ErrorApi('Ya existe una familia con ese nombre.', { tipo: 'validacion', campos: { nombre: 'Ya existe una familia con ese nombre.' } }); throw e; }
+  },
+  async listarEntregables({ incluir_inactivos = false } = {}) {
+    return listaCatalogo(cache.entregables).filter(e => incluir_inactivos || e.activo).sort((a, b) => a.orden - b.orden)
+      .map(e => ({ id: e.id, nombre: e.nombre, orden: e.orden, activo: !!e.activo }));
+  },
+  async crearEntregable({ nombre }) {
+    exigirPermiso('administrar');
+    const err = validarNombreCatalogo(nombre, listaCatalogo(cache.entregables), null, 'entregable');
+    if (err) throw new ErrorApi(err, { tipo: 'validacion', campos: { nombre: err } });
+    const orden = listaCatalogo(cache.entregables).reduce((m, e) => Math.max(m, e.orden), 0) + 1;
+    try { const { data } = await ejecutar(SB.from('ing_entregables').insert({ nombre: nombre.trim(), orden }).select('id,nombre,orden,activo').single()); programarRecarga(0); return data; }
+    catch (e) { if (e.tipo === 'duplicado') throw new ErrorApi('Ya existe un entregable con ese nombre.', { tipo: 'validacion', campos: { nombre: 'Ya existe un entregable con ese nombre.' } }); throw e; }
+  },
+  async actualizarEntregable(id, datos) {
+    exigirPermiso('administrar');
+    const cambio = {};
+    if (datos.nombre !== undefined) {
+      const err = validarNombreCatalogo(datos.nombre, listaCatalogo(cache.entregables), id, 'entregable');
+      if (err) throw new ErrorApi(err, { tipo: 'validacion', campos: { nombre: err } });
+      cambio.nombre = datos.nombre.trim();
+    }
+    if (datos.activo !== undefined) {
+      if (!datos.activo && entregablesActivos().length <= 1) throw new ErrorApi('Debe quedar al menos un entregable activo.', { tipo: 'validacion' });
+      cambio.activo = !!datos.activo;
+    }
+    try { const [e] = await exigirFilas(SB.from('ing_entregables').update(cambio).eq('id', id).select('id,nombre')); programarRecarga(0); return e; }
+    catch (e) { if (e.tipo === 'duplicado') throw new ErrorApi('Ya existe un entregable con ese nombre.', { tipo: 'validacion', campos: { nombre: 'Ya existe un entregable con ese nombre.' } }); throw e; }
+  },
+  async reordenarEntregable(id, direccion) {
+    exigirPermiso('administrar');
+    const lista = listaCatalogo(cache.entregables).sort((a, b) => a.orden - b.orden);
+    const i = lista.findIndex(e => e.id === id), j = direccion === 'subir' ? i - 1 : i + 1;
+    if (i < 0 || j < 0 || j >= lista.length) throw new ErrorApi('Ese entregable ya está en el extremo.', { tipo: 'validacion' });
+    await exigirFilas(SB.from('ing_entregables').update({ orden: lista[j].orden }).eq('id', lista[i].id).select('id'));
+    await exigirFilas(SB.from('ing_entregables').update({ orden: lista[i].orden }).eq('id', lista[j].id).select('id'));
+    programarRecarga(0);
+  },
+  async listarEstatusSku() { return listaCatalogo(cache.estatus).map(e => ({ id: e.id, nombre: e.nombre })); },
+
+  /* ---------- Usuarios ---------- */
+  async listarUsuarios() {
+    exigirPermiso('administrar');
+    const filas = await leerTodo(() => SB.from('ing_perfiles').select('id,nombre,email,rol_id,activo,created_at').is('deleted_at', null).order('created_at'));
+    const orden = u => (!u.rol_id ? 0 : u.activo ? 1 : 2);
+    return filas.map(u => ({ ...u, estado: !u.rol_id ? 'pendiente' : u.activo ? 'activo' : 'sin_acceso' }))
+      .sort((a, b) => orden(a) - orden(b) || compararNatural(a.nombre, b.nombre));
+  },
+  async actualizarUsuario(id, cambio) {
+    exigirPermiso('administrar');
+    const [u] = await exigirFilas(SB.from('ing_perfiles').update(cambio).eq('id', id).select('id,nombre,rol_id,activo'));
+    programarRecarga(0);
+    return u;
+  }
+};
+</script>
+
+<!-- ===== 4. ESTADO DE LA APLICACIÓN ===== -->
+<script>
+/* Única fuente de verdad de la interfaz. estado.sesion = { user_id, nombre, email, rol_id, rol_nombre }. */
+const FILTROS_SKUS_INICIALES = { busqueda: '', familia_id: '', avance: 'todos', pendiente_entregable_id: '', incluir_descontinuados: false };
+const FILTROS_HISTORIAL_INICIALES = { busqueda: '', user_id: '', marcado: 'todos', entregable_id: '' };
+const DETALLE_VACIO = { abierto: false, sku_id: null, cargando: false, error: null, datos: null, subiendoImagen: false, errorImagen: null };
+const AUTH_INICIAL = { pantalla: 'login', nombre: '', email: '', password: '', confirmar: '', error: null, mensaje: null, enviando: false };
+
+function temaInicial() {
+  try { const t = localStorage.getItem('ing-tema'); if (t === 'claro' || t === 'oscuro') return t; } catch (e) { /* sin almacenamiento */ }
+  return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'oscuro' : 'claro';
+}
+const estado = {
+  fase: 'iniciando', // iniciando | configuracion | auth | espera | app | error
+  errorFatal: null,
+  auth: { ...AUTH_INICIAL },
+  espera: { motivo: 'pendiente', email: '', revisando: false },
+  sesion: null,
+  vista: 'skus',
+  catalogos: { familias: [], entregables: [], estatus: [] },
+  skus: { cargando: false, error: null, datos: null, entregables: [], filtros: { ...FILTROS_SKUS_INICIALES }, celdaGuardando: null },
+  detalle: { ...DETALLE_VACIO },
+  tablero: { cargando: false, error: null, datos: null },
+  historial: { cargando: false, error: null, datos: null, total: 0, usuarios: [], filtros: { ...FILTROS_HISTORIAL_INICIALES }, limite: 50, exportando: false },
+  admin: { pestana: 'skus', cargando: false, error: null, skus: null, usuarios: null, familias: null, entregables: null },
+  pendientes: 0,
+  modal: null,
+  tema: temaInicial(),
+  avisos: []
+};
+const temporizadores = {};
+function conRetraso(clave, fn, ms = 200) { clearTimeout(temporizadores[clave]); temporizadores[clave] = setTimeout(fn, ms); }
+function alternarTema() {
+  estado.tema = estado.tema === 'oscuro' ? 'claro' : 'oscuro';
+  try { localStorage.setItem('ing-tema', estado.tema); } catch (e) { /* solo en esta visita */ }
+  render();
+}
+const urlApp = () => location.origin + location.pathname;
+
+/* ---------- Arranque y sesión ---------- */
+async function arrancar() {
+  if (!configurado()) { estado.fase = 'configuracion'; render(); return; }
+  if (!window.supabase || typeof window.supabase.createClient !== 'function') { estado.fase = 'error'; estado.errorFatal = 'No se pudo cargar la conexión con el servidor. Revisa tu conexión a internet y recarga la página.'; render(); return; }
+  const esRecuperacion = /type=recovery/.test(location.hash);
+  SB = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
+  SB.auth.onAuthStateChange(evento => {
+    if (evento === 'PASSWORD_RECOVERY') setTimeout(() => { estado.fase = 'auth'; estado.auth = { ...AUTH_INICIAL, pantalla: 'nueva_password' }; render(); }, 0);
+  });
+  try {
+    const { data } = await SB.auth.getSession();
+    if (esRecuperacion && data.session) { estado.fase = 'auth'; estado.auth = { ...AUTH_INICIAL, pantalla: 'nueva_password' }; render(); return; }
+    if (data.session) await entrarConSesion(data.session.user); else { estado.fase = 'auth'; render(); }
+  } catch (e) { estado.fase = 'error'; estado.errorFatal = errorDe(e).message; render(); }
+  if (location.hash && /access_token|error_description/.test(location.hash)) history.replaceState(null, '', urlApp());
+}
+async function entrarConSesion(usuario) {
+  estado.fase = 'iniciando'; render();
+  try {
+    const perfil = await DataService.obtenerMiPerfil(usuario.id);
+    if (!perfil || !perfil.rol_id || !perfil.activo) {
+      estado.fase = 'espera'; estado.espera = { motivo: perfil && perfil.rol_id && !perfil.activo ? 'sin_acceso' : 'pendiente', email: usuario.email, revisando: false };
+      render(); return;
+    }
+    const primeraVez = !estado.sesion;
+    estado.sesion = { user_id: perfil.id, nombre: perfil.nombre, email: perfil.email, rol_id: Number(perfil.rol_id), rol_nombre: NOMBRES_ROL[perfil.rol_id] };
+    await DataService.recargarTodo();
+    await cargarCatalogos();
+    if (primeraVez) estado.vista = estado.sesion.rol_id === ROLES.INGENIERO ? 'skus' : 'tablero';
+    estado.fase = 'app';
+    suscribirCambios();
+    cargarVista();
+  } catch (e) { estado.fase = 'error'; estado.errorFatal = e.message; render(); }
+}
+async function revisarAcceso() {
+  estado.espera.revisando = true; render();
+  const { data } = await SB.auth.getSession();
+  if (data.session) await entrarConSesion(data.session.user); else { estado.fase = 'auth'; render(); }
+}
+async function cerrarSesion() {
+  if (canal) { SB.removeChannel(canal); canal = null; }
+  await DataService.cerrarSesion();
+  Object.assign(estado, {
+    fase: 'auth', auth: { ...AUTH_INICIAL }, sesion: null, modal: null, detalle: { ...DETALLE_VACIO },
+    skus: { cargando: false, error: null, datos: null, entregables: [], filtros: { ...FILTROS_SKUS_INICIALES }, celdaGuardando: null },
+    tablero: { cargando: false, error: null, datos: null },
+    historial: { cargando: false, error: null, datos: null, total: 0, usuarios: [], filtros: { ...FILTROS_HISTORIAL_INICIALES }, limite: 50, exportando: false },
+    admin: { pestana: 'skus', cargando: false, error: null, skus: null, usuarios: null, familias: null, entregables: null }
+  });
+  cache.skus = new Map(); cache.perfiles = {};
+  render();
+}
+
+/* ---------- Formularios de acceso ---------- */
+function irAPantallaAuth(pantalla) { estado.auth = { ...AUTH_INICIAL, pantalla, email: estado.auth.email }; enfocarDespues = pantalla === 'registro' ? 'auth-nombre' : 'auth-email'; render(); }
+async function enviarAuth() {
+  const a = estado.auth;
+  const email = a.email.trim().toLowerCase();
+  const error = validarFormularioAuth(a.pantalla, { ...a, email });
+  if (error) { a.error = error; a.mensaje = null; render(); return; }
+  a.enviando = true; a.error = null; a.mensaje = null; render();
+  try {
+    if (a.pantalla === 'login') { const u = await DataService.iniciarSesion(email, a.password); await entrarConSesion(u); return; }
+    if (a.pantalla === 'registro') {
+      const r = await DataService.registrarse({ nombre: a.nombre.trim(), email, password: a.password });
+      if (r.conSesion) { await entrarConSesion(r.usuario); return; }
+      estado.auth = { ...AUTH_INICIAL, pantalla: 'login', email, mensaje: `Listo. Te enviamos un correo a ${email}: abre el enlace para confirmar tu cuenta y después inicia sesión. El jefe de ingeniería tendrá que aprobar tu acceso.` };
+    }
+    if (a.pantalla === 'recuperar') {
+      await DataService.recuperarPassword(email);
+      estado.auth = { ...AUTH_INICIAL, pantalla: 'login', email, mensaje: `Si existe una cuenta con ${email}, te llegará un correo con un enlace para crear una contraseña nueva. Revisa también la carpeta de spam.` };
+    }
+    if (a.pantalla === 'nueva_password') {
+      const u = await DataService.cambiarPassword(a.password);
+      agregarAviso('exito', 'Contraseña actualizada.');
+      await entrarConSesion(u); return;
+    }
+  } catch (e) { estado.auth.error = e.message; }
+  finally { estado.auth.enviando = false; render(); }
+}
+
+/* ---------- Tiempo real ---------- */
+function suscribirCambios() {
+  if (canal) SB.removeChannel(canal);
+  canal = SB.channel('ing-cambios');
+  for (const tabla of ['ing_sku_entregables', 'ing_skus', 'ing_familias', 'ing_entregables', 'ing_perfiles']) {
+    canal.on('postgres_changes', { event: '*', schema: 'public', table: tabla }, () => programarRecarga());
+  }
+  canal.subscribe();
+}
+function programarRecarga(ms = 700) { conRetraso('recarga', recargarYRefrescar, ms); }
+async function recargarYRefrescar() {
+  if (estado.fase !== 'app') return;
+  try { await DataService.recargarTodo(); } catch (e) { return; }
+  const yo = cache.perfiles[estado.sesion.user_id];
+  if (!yo || !yo.activo || !yo.rol_id) { const { data } = await SB.auth.getSession(); if (data.session) entrarConSesion(data.session.user); return; }
+  if (Number(yo.rol_id) !== estado.sesion.rol_id) {
+    estado.sesion.rol_id = Number(yo.rol_id); estado.sesion.rol_nombre = NOMBRES_ROL[yo.rol_id];
+    agregarAviso('exito', `Tu rol cambió a ${estado.sesion.rol_nombre}.`);
+  }
+  await cargarCatalogos();
+  refrescarVistas();
+}
+function refrescarVistas() {
+  if (estado.vista === 'skus') cargarSkus({ silencioso: true });
+  else if (estado.vista === 'tablero') cargarTablero({ silencioso: true });
+  else if (estado.vista === 'historial') cargarHistorial({ silencioso: true });
+  else if (estado.vista === 'admin' && puede(estado.sesion.rol_id, 'administrar')) recargarAdminSilencioso();
+  if (estado.detalle.abierto) refrescarDetalleSi(estado.detalle.sku_id);
+}
+
+/* ---------- Avisos ---------- */
+let siguienteAviso = 1;
+function agregarAviso(tipo, texto) {
+  const id = siguienteAviso++;
+  estado.avisos.push({ id, tipo, texto }); render();
+  setTimeout(() => cerrarAviso(id), tipo === 'error' ? 7000 : 4000);
+}
+function cerrarAviso(id) { estado.avisos = estado.avisos.filter(a => a.id !== id); render(); }
+
+/* ---------- Navegación ---------- */
+function irA(vista) { estado.vista = vista; estado.detalle.abierto = false; estado.modal = null; window.scrollTo(0, 0); cargarVista(); }
+function cargarVista() {
+  if (estado.vista === 'skus') cargarSkus();
+  else if (estado.vista === 'tablero') cargarTablero();
+  else if (estado.vista === 'historial') cargarHistorial();
+  else if (estado.vista === 'admin') { if (puede(estado.sesion.rol_id, 'administrar')) cargarAdmin(); else render(); }
+}
+async function cargarCatalogos() {
+  const [familias, entregables, estatus] = await Promise.all([
+    DataService.listarFamilias({ incluir_inactivas: true }), DataService.listarEntregables({ incluir_inactivos: true }), DataService.listarEstatusSku()
+  ]);
+  estado.catalogos = { familias, entregables, estatus };
+  estado.pendientes = Object.values(cache.perfiles).filter(p => !p.rol_id).length;
+  render();
+}
+
+/* ---------- Avance por SKU ---------- */
+async function cargarSkus({ silencioso = false } = {}) {
+  if (!silencioso) { estado.skus.cargando = true; estado.skus.error = null; render(); }
+  try { const r = await DataService.listarSkus(estado.skus.filtros); estado.skus.datos = r.skus; estado.skus.entregables = r.entregables; estado.skus.error = null; }
+  catch (e) { estado.skus.error = e.message; }
+  finally { estado.skus.cargando = false; render(); }
+}
+function cambiarFiltroSkus(campo, valor) {
+  estado.skus.filtros[campo] = valor; render();
+  if (campo === 'busqueda') conRetraso('skus', () => cargarSkus({ silencioso: true })); else cargarSkus({ silencioso: true });
+}
+function limpiarFiltrosSkus() { estado.skus.filtros = { ...FILTROS_SKUS_INICIALES }; cargarSkus({ silencioso: true }); }
+function verSkusFiltrados(parcial) { estado.skus.filtros = { ...FILTROS_SKUS_INICIALES, ...parcial }; irA('skus'); }
+function reemplazarSkuEnLista(sku) {
+  if (estado.skus.datos) estado.skus.datos = estado.skus.datos.map(s => s.id === sku.id ? sku : s);
+  if (estado.admin.skus) estado.admin.skus = estado.admin.skus.map(s => s.id === sku.id ? sku : s);
+}
+async function alternarCasilla(sku, casilla) {
+  if (!puede(estado.sesion.rol_id, 'marcar') || estado.skus.celdaGuardando) return;
+  if (casilla.completado) { abrirModalDesmarcar(sku, casilla); return; }
+  estado.skus.celdaGuardando = `${sku.id}-${casilla.entregable_id}`; render();
+  try {
+    // NO IMPLEMENTADO: comentario opcional al marcar — la función ing_marcar lo acepta, pero se acordó marcar con un solo clic
+    const actualizado = await DataService.marcarEntregable(sku.id, casilla.entregable_id);
+    reemplazarSkuEnLista(actualizado);
+    agregarAviso('exito', `Entregable marcado como correcto: ${casilla.nombre} en ${sku.clave}.`);
+    refrescarDetalleSi(sku.id);
+  } catch (e) {
+    agregarAviso('error', `No se pudo marcar ${casilla.nombre} en ${sku.clave}. ${e.message}`);
+    if (e.tipo === 'conflicto') programarRecarga(0);
+  } finally { estado.skus.celdaGuardando = null; render(); }
+}
+function abrirModalDesmarcar(sku, casilla) {
+  estado.modal = { tipo: 'desmarcar', sku_id: sku.id, sku_clave: sku.clave, entregable_id: casilla.entregable_id, entregable_nombre: casilla.nombre, marcado_por: casilla.completado_por_nombre, marcado_en: casilla.completado_en, causa: '', error: null, enviando: false };
+  enfocarDespues = 'causa-desmarcar'; render();
+}
+async function confirmarDesmarcar() {
+  const m = estado.modal;
+  const err = validarCausa(m.causa);
+  if (err) { m.error = err; enfocarDespues = 'causa-desmarcar'; render(); return; }
+  m.enviando = true; m.error = null; render();
+  try {
+    const actualizado = await DataService.desmarcarEntregable(m.sku_id, m.entregable_id, m.causa);
+    reemplazarSkuEnLista(actualizado);
+    estado.modal = null;
+    agregarAviso('exito', `Entregable desmarcado: ${m.entregable_nombre} en ${m.sku_clave}.`);
+    refrescarDetalleSi(m.sku_id);
+  } catch (e) {
+    if (e.campos && e.campos.causa) m.error = e.campos.causa;
+    else if (e.tipo === 'conflicto') { estado.modal = null; agregarAviso('error', e.message); programarRecarga(0); }
+    else m.error = e.message;
+  } finally { if (estado.modal) estado.modal.enviando = false; render(); }
+}
+
+/* ---------- Detalle de SKU ---------- */
+async function abrirDetalle(skuId) {
+  estado.detalle = { ...DETALLE_VACIO, abierto: true, sku_id: skuId, cargando: true };
+  enfocarDespues = 'cerrar-detalle'; render();
+  await cargarDetalle();
+}
+async function cargarDetalle() {
+  const id = estado.detalle.sku_id;
+  estado.detalle.cargando = true; estado.detalle.error = null; render();
+  try { const d = await DataService.obtenerSku(id); if (estado.detalle.sku_id === id) estado.detalle.datos = d; }
+  catch (e) { if (estado.detalle.sku_id === id) estado.detalle.error = e.message; }
+  finally { if (estado.detalle.sku_id === id) { estado.detalle.cargando = false; render(); } }
+}
+function refrescarDetalleSi(skuId) {
+  if (!estado.detalle.abierto || estado.detalle.sku_id !== skuId) return;
+  DataService.obtenerSku(skuId).then(d => {
+    if (estado.detalle.sku_id !== skuId) return;
+    if (estado.detalle.datos && estado.detalle.datos.imagen_ruta === d.imagen_ruta && !d.imagen_url) d.imagen_url = estado.detalle.datos.imagen_url;
+    estado.detalle.datos = d; render();
+  }).catch(e => { if (estado.detalle.sku_id === skuId) { estado.detalle.error = e.message; render(); } });
+}
+function cerrarDetalle() { estado.detalle.abierto = false; render(); }
+async function subirImagenSku(archivo) {
+  const d = estado.detalle;
+  if (!archivo || !d.datos) return;
+  const err = validarImagen({ type: archivo.type, size: archivo.size });
+  if (err) { d.errorImagen = err; render(); return; }
+  d.subiendoImagen = true; d.errorImagen = null; render();
+  try {
+    const actualizado = await DataService.subirImagenSku(d.datos.id, archivo);
+    reemplazarSkuEnLista(actualizado);
+    d.datos = { ...d.datos, imagen_url: actualizado.imagen_url, imagen_ruta: actualizado.imagen_ruta, tiene_imagen: true, miniatura: actualizado.miniatura };
+    agregarAviso('exito', `Imagen guardada: ${actualizado.clave}.`);
+  } catch (e) { d.errorImagen = e.campos ? e.campos.imagen : e.message; }
+  finally { d.subiendoImagen = false; render(); }
+}
+function pedirQuitarImagen(sku) {
+  abrirConfirmacion({
+    titulo: `Quitar imagen de ${sku.clave}`,
+    mensaje: `Se quitará la imagen de referencia de ${sku.clave} (${sku.descripcion}). Puedes subir otra cuando quieras.`,
+    textoBoton: 'Quitar imagen', peligro: true,
+    accion: async () => {
+      const actualizado = await DataService.quitarImagenSku(sku.id);
+      reemplazarSkuEnLista(actualizado);
+      if (estado.detalle.datos && estado.detalle.datos.id === sku.id) estado.detalle.datos = { ...estado.detalle.datos, imagen_url: null, imagen_ruta: null, tiene_imagen: false, miniatura: null };
+      agregarAviso('exito', `Imagen quitada: ${sku.clave}.`);
+    }
+  });
+}
+
+/* ---------- Tablero ---------- */
+async function cargarTablero({ silencioso = false } = {}) {
+  if (!silencioso) { estado.tablero.cargando = true; estado.tablero.error = null; render(); }
+  try { estado.tablero.datos = await DataService.obtenerTablero(); estado.tablero.error = null; }
+  catch (e) { estado.tablero.error = e.message; }
+  finally { estado.tablero.cargando = false; render(); }
+}
+
+/* ---------- Historial ---------- */
+let peticionHistorial = 0;
+async function cargarHistorial({ silencioso = false } = {}) {
+  const n = ++peticionHistorial;
+  if (!silencioso) { estado.historial.cargando = true; estado.historial.error = null; render(); }
+  try {
+    const r = await DataService.listarHistorial({ ...estado.historial.filtros, limite: estado.historial.limite });
+    if (n !== peticionHistorial) return;
+    estado.historial.datos = r.registros; estado.historial.total = r.total; estado.historial.usuarios = r.usuarios; estado.historial.error = null;
+  } catch (e) { if (n === peticionHistorial) estado.historial.error = e.message; }
+  finally { if (n === peticionHistorial) { estado.historial.cargando = false; render(); } }
+}
+function cambiarFiltroHistorial(campo, valor) {
+  estado.historial.filtros[campo] = valor; estado.historial.limite = 50; render();
+  if (campo === 'busqueda') conRetraso('historial', () => cargarHistorial({ silencioso: true }), 350); else cargarHistorial({ silencioso: true });
+}
+function limpiarFiltrosHistorial() { estado.historial.filtros = { ...FILTROS_HISTORIAL_INICIALES }; estado.historial.limite = 50; cargarHistorial({ silencioso: true }); }
+function verMasHistorial() { estado.historial.limite += 50; cargarHistorial({ silencioso: true }); }
+
+/* ---------- Exportar (respaldo en CSV para Excel) ---------- */
+function descargarCsv(nombre, filas) {
+  const celda = v => { let t = v === null || v === undefined ? '' : String(v); if (/^[=+\-@]/.test(t)) t = "'" + t; return /[",\n;]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t; };
+  const texto = '\uFEFF' + filas.map(f => f.map(celda).join(',')).join('\r\n');
+  const url = URL.createObjectURL(new Blob([texto], { type: 'text/csv;charset=utf-8' }));
+  const a = document.createElement('a'); a.href = url; a.download = nombre; document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+const fechaArchivo = () => new Date().toISOString().slice(0, 10);
+async function exportarAvance() {
+  try {
+    const r = await DataService.listarSkus({ incluir_descontinuados: true });
+    const filas = [['SKU', 'Descripción', 'Familia', 'Estatus', ...r.entregables.map(e => e.nombre), 'Avance %']];
+    for (const s of r.skus) filas.push([s.clave, s.descripcion, s.familia_nombre, s.estatus_nombre, ...s.casillas.map(c => c.completado ? 'Sí' : 'No'), s.porcentaje]);
+    descargarCsv(`avance-ingenieria-${fechaArchivo()}.csv`, filas);
+    agregarAviso('exito', `Avance exportado: ${r.skus.length} SKUs.`);
+  } catch (e) { agregarAviso('error', `No se pudo exportar: ${e.message}`); }
+}
+async function exportarHistorial() {
+  estado.historial.exportando = true; render();
+  try {
+    const regs = await DataService.exportarHistorial();
+    const filas = [['Fecha', 'SKU', 'Entregable', 'Acción', 'Usuario', 'Comentario o causa']];
+    for (const r of regs) filas.push([formatearFechaHora(r.fecha), r.sku_clave, r.entregable_nombre, r.marcado ? 'Marcó correcto' : 'Desmarcó', r.usuario_nombre, r.comentario || '']);
+    descargarCsv(`historial-ingenieria-${fechaArchivo()}.csv`, filas);
+    agregarAviso('exito', `Historial exportado: ${regs.length} movimientos.`);
+  } catch (e) { agregarAviso('error', `No se pudo exportar: ${e.message}`); }
+  finally { estado.historial.exportando = false; render(); }
+}
+
+/* ---------- Administración ---------- */
+function cambiarPestanaAdmin(p) { estado.admin.pestana = p; cargarAdmin(); }
+async function cargarAdmin() {
+  estado.admin.cargando = true; estado.admin.error = null; render();
+  try { await recargarAdmin(); } catch (e) { estado.admin.error = e.message; }
+  finally { estado.admin.cargando = false; render(); }
+}
+async function recargarAdmin() {
+  const p = estado.admin.pestana;
+  if (p === 'skus') estado.admin.skus = (await DataService.listarSkus({ incluir_descontinuados: true })).skus;
+  if (p === 'usuarios') estado.admin.usuarios = await DataService.listarUsuarios();
+  if (p === 'familias') estado.admin.familias = await DataService.listarFamilias({ incluir_inactivas: true });
+  if (p === 'entregables') estado.admin.entregables = await DataService.listarEntregables({ incluir_inactivos: true });
+}
+async function recargarAdminSilencioso() { try { await recargarAdmin(); } catch (e) { agregarAviso('error', e.message); } render(); }
+
+function abrirModalSku(sku) {
+  const familiaInicial = (estado.catalogos.familias.find(f => f.activa) || {}).id || '';
+  estado.modal = {
+    tipo: 'sku', id: sku ? sku.id : null, clave_original: sku ? sku.clave : null,
+    datos: sku
+      ? { clave: sku.clave, descripcion: sku.descripcion, familia_id: String(sku.familia_id), estatus_sku_id: String(sku.estatus_sku_id), observaciones: sku.observaciones || '' }
+      : { clave: '', descripcion: '', familia_id: String(familiaInicial), estatus_sku_id: String(ESTATUS_SKU.ACTIVO), observaciones: '' },
+    errores: {}, error: null, enviando: false
+  };
+  enfocarDespues = 'sku-clave'; render();
+}
+async function guardarSku() {
+  const m = estado.modal;
+  const limpio = limpiarDatosSku(m.datos);
+  const errores = validarSku(limpio, [], m.id);
+  if (errores) { m.errores = errores; render(); return; }
+  m.enviando = true; m.errores = {}; m.error = null; render();
+  try {
+    const r = m.id ? await DataService.actualizarSku(m.id, limpio) : await DataService.crearSku(limpio);
+    estado.modal = null;
+    agregarAviso('exito', m.id ? `SKU guardado: ${r.clave}.` : `SKU creado: ${r.clave}.`);
+  } catch (e) { if (e.campos) m.errores = e.campos; else m.error = e.message; }
+  finally { if (estado.modal) estado.modal.enviando = false; render(); }
+}
+function pedirEliminarSku(sku) {
+  abrirConfirmacion({
+    titulo: `Eliminar SKU ${sku.clave}`,
+    mensaje: `Se eliminará ${sku.clave} (${sku.descripcion}) y dejará de contar en el avance. Su historial se conserva. Si solo salió del catálogo, mejor cámbiale el estatus a Descontinuado.`,
+    textoBoton: 'Eliminar SKU', peligro: true,
+    accion: async () => {
+      await DataService.eliminarSku(sku.id);
+      agregarAviso('exito', `SKU eliminado: ${sku.clave}.`);
+      if (estado.detalle.sku_id === sku.id) estado.detalle.abierto = false;
+      recargarAdminSilencioso();
+    }
+  });
+}
+function abrirModalCatalogo(entidad, registro) {
+  estado.modal = { tipo: 'catalogo', entidad, id: registro ? registro.id : null, nombre: registro ? registro.nombre : '', error: null, enviando: false };
+  enfocarDespues = 'catalogo-nombre'; render();
+}
+async function guardarCatalogo() {
+  const m = estado.modal;
+  const err = validarNombreCatalogo(m.nombre, [], m.id, m.entidad);
+  if (err) { m.error = err; render(); return; }
+  m.enviando = true; m.error = null; render();
+  try {
+    let r;
+    if (m.entidad === 'familia') r = m.id ? await DataService.actualizarFamilia(m.id, { nombre: m.nombre }) : await DataService.crearFamilia({ nombre: m.nombre });
+    else r = m.id ? await DataService.actualizarEntregable(m.id, { nombre: m.nombre }) : await DataService.crearEntregable({ nombre: m.nombre });
+    estado.modal = null;
+    const etiqueta = m.entidad === 'familia' ? 'Familia' : 'Entregable';
+    agregarAviso('exito', m.id ? `${etiqueta} guardado: ${r.nombre}.` : `${etiqueta} creado: ${r.nombre}.`);
+  } catch (e) { m.error = e.campos ? e.campos.nombre : e.message; }
+  finally { if (estado.modal) estado.modal.enviando = false; render(); }
+}
+async function cambiarActivoFamilia(f, activa) {
+  try { await DataService.actualizarFamilia(f.id, { activa }); agregarAviso('exito', activa ? `Familia activada: ${f.nombre}.` : `Familia desactivada: ${f.nombre}.`); }
+  catch (e) { agregarAviso('error', e.message); }
+}
+function pedirCambioActivoEntregable(e, activo) {
+  const ejecutarCambio = async () => {
+    await DataService.actualizarEntregable(e.id, { activo });
+    agregarAviso('exito', activo ? `Entregable activado: ${e.nombre}.` : `Entregable desactivado: ${e.nombre}.`);
+  };
+  if (activo) { ejecutarCambio().catch(err => agregarAviso('error', err.message)); return; }
+  abrirConfirmacion({
+    titulo: `Desactivar entregable ${e.nombre}`,
+    mensaje: `Los porcentajes de todos los SKUs se recalcularán sin ${e.nombre}. Las marcas no se borran: si lo vuelves a activar, regresan tal como estaban.`,
+    textoBoton: 'Desactivar entregable', peligro: true, accion: ejecutarCambio
+  });
+}
+async function moverEntregable(e, direccion) {
+  try { await DataService.reordenarEntregable(e.id, direccion); } catch (err) { agregarAviso('error', err.message); }
+}
+
+/* ---------- Usuarios ---------- */
+function abrirModalAprobar(u) {
+  estado.modal = { tipo: 'aprobar', user_id: u.id, nombre: u.nombre, email: u.email, rol_id: String(u.rol_id || ROLES.INGENIERO), error: null, enviando: false };
+  enfocarDespues = 'aprobar-rol'; render();
+}
+async function guardarAprobacion() {
+  const m = estado.modal;
+  m.enviando = true; m.error = null; render();
+  try {
+    await DataService.actualizarUsuario(m.user_id, { rol_id: Number(m.rol_id), activo: true });
+    estado.modal = null;
+    agregarAviso('exito', `Acceso otorgado a ${m.nombre} como ${NOMBRES_ROL[m.rol_id]}.`);
+    recargarAdminSilencioso();
+  } catch (e) { m.error = e.message; }
+  finally { if (estado.modal) estado.modal.enviando = false; render(); }
+}
+async function cambiarRolUsuario(u, rolId) {
+  try {
+    await DataService.actualizarUsuario(u.id, { rol_id: Number(rolId) });
+    agregarAviso('exito', `Rol actualizado: ${u.nombre} ahora es ${NOMBRES_ROL[rolId]}.`);
+  } catch (e) { agregarAviso('error', e.message); }
+  recargarAdminSilencioso();
+}
+function pedirCambioAcceso(u, activo) {
+  const ejecutarCambio = async () => {
+    await DataService.actualizarUsuario(u.id, { activo });
+    agregarAviso('exito', activo ? `Acceso restaurado a ${u.nombre}.` : `Acceso quitado a ${u.nombre}.`);
+    recargarAdminSilencioso();
+  };
+  if (activo) { ejecutarCambio().catch(e => agregarAviso('error', e.message)); return; }
+  abrirConfirmacion({
+    titulo: `Quitar acceso a ${u.nombre}`,
+    mensaje: `${u.nombre} ya no podrá entrar al aplicativo. Lo que marcó o desmarcó se conserva en el historial. Puedes restaurarle el acceso cuando quieras.`,
+    textoBoton: 'Quitar acceso', peligro: true, accion: ejecutarCambio
+  });
+}
+
+/* ---------- Diálogo de confirmación ---------- */
+function abrirConfirmacion({ titulo, mensaje, textoBoton, peligro = false, accion }) {
+  estado.modal = { tipo: 'confirmar', titulo, mensaje, textoBoton, peligro, accion, error: null, enviando: false };
+  enfocarDespues = 'confirmar-cancelar'; render();
+}
+async function ejecutarConfirmacion() {
+  const m = estado.modal;
+  m.enviando = true; m.error = null; render();
+  try { await m.accion(); if (estado.modal === m) estado.modal = null; }
+  catch (e) { m.error = e.message; }
+  finally { if (estado.modal === m) m.enviando = false; render(); }
+}
+function cerrarModal() { if (estado.modal && estado.modal.enviando) return; estado.modal = null; render(); }
+</script>
+
+<!-- ===== 5. REGLAS DE NEGOCIO Y VALIDACIONES ===== -->
+<script>
+const ROLES = { INGENIERO: 1, JEFE: 2, CONSULTA: 3 };
+const ESTATUS_SKU = { ACTIVO: 1, DESCONTINUADO: 2 };
+const NOMBRES_ROL = { 1: 'Ingeniero', 2: 'Jefe de ingeniería', 3: 'Consulta' };
+
+/* Quién puede hacer qué. ver: los tres roles; marcar/desmarcar: ingeniero y jefe; administrar: solo jefe. */
+const PERMISOS = { ver: [ROLES.INGENIERO, ROLES.JEFE, ROLES.CONSULTA], marcar: [ROLES.INGENIERO, ROLES.JEFE], administrar: [ROLES.JEFE] };
+function puede(rolId, accion) { return (PERMISOS[accion] || []).includes(rolId); }
+
+const LIMITES = { imagenMaxMb: 10, causaMin: 10, causaMax: 255, claveMax: 30, descripcionMax: 150, observacionesMax: 1000, nombreCatalogoMax: 60 };
+
+/* Al desmarcar, la causa es obligatoria y debe decir algo útil (mínimo 10 caracteres). */
+function validarCausa(texto) {
+  const t = String(texto || '').trim();
+  if (!t) return 'Escribe la causa por la que desmarcas este entregable.';
+  if (t.length < LIMITES.causaMin) return `Describe la causa con un poco más de detalle (mínimo ${LIMITES.causaMin} caracteres).`;
+  if (t.length > LIMITES.causaMax) return `La causa no puede pasar de ${LIMITES.causaMax} caracteres.`;
+  return null;
+}
+
+/* Imagen de referencia: JPG, PNG o WEBP de hasta 10 MB; se optimiza en el navegador antes de guardarse. */
+const TIPOS_IMAGEN = ['image/jpeg', 'image/png', 'image/webp'];
+function validarImagen({ type, size }) {
+  if (!TIPOS_IMAGEN.includes(type)) return 'La imagen debe ser JPG, PNG o WEBP.';
+  if (size > LIMITES.imagenMaxMb * 1024 * 1024) return `La imagen no puede pesar más de ${LIMITES.imagenMaxMb} MB.`;
+  return null;
+}
+
+/* La clave se guarda en mayúsculas y sin espacios: "sil 12a" → "SIL12A". */
+function normalizarClave(clave) { return String(clave || '').trim().toUpperCase().replace(/\s+/g, ''); }
+function limpiarDatosSku(d) {
+  return {
+    clave: normalizarClave(d.clave), descripcion: String(d.descripcion || '').trim(),
+    familia_id: d.familia_id ? Number(d.familia_id) : null, estatus_sku_id: d.estatus_sku_id ? Number(d.estatus_sku_id) : null,
+    observaciones: String(d.observaciones || '').trim() || null
+  };
+}
+function validarSku(d, skusExistentes, idActual) {
+  const e = {};
+  if (!d.clave) e.clave = 'Escribe el SKU.';
+  else if (!/^[A-Z0-9][A-Z0-9-]*$/.test(d.clave)) e.clave = 'Usa solo letras, números y guiones (por ejemplo SIL-12A).';
+  else if (d.clave.length > LIMITES.claveMax) e.clave = `El SKU no puede pasar de ${LIMITES.claveMax} caracteres.`;
+  else if (skusExistentes.some(s => s.id !== idActual && normalizarClave(s.clave) === d.clave)) e.clave = `Ya existe el SKU ${d.clave}.`;
+  if (!d.descripcion) e.descripcion = 'Escribe la descripción.';
+  else if (d.descripcion.length > LIMITES.descripcionMax) e.descripcion = `La descripción no puede pasar de ${LIMITES.descripcionMax} caracteres.`;
+  if (!d.familia_id) e.familia_id = 'Elige la familia.';
+  if (!d.estatus_sku_id) e.estatus_sku_id = 'Elige el estatus.';
+  if (d.observaciones && d.observaciones.length > LIMITES.observacionesMax) e.observaciones = `Las observaciones no pueden pasar de ${LIMITES.observacionesMax} caracteres.`;
+  return Object.keys(e).length ? e : null;
+}
+function validarNombreCatalogo(nombre, existentes, idActual, entidad) {
+  const n = String(nombre || '').trim();
+  const art = entidad === 'familia' ? 'la familia' : 'el entregable';
+  if (!n) return `Escribe el nombre de ${art}.`;
+  if (n.length > LIMITES.nombreCatalogoMax) return `El nombre no puede pasar de ${LIMITES.nombreCatalogoMax} caracteres.`;
+  if (existentes.some(x => x.id !== idActual && normalizarTexto(x.nombre) === normalizarTexto(n))) return `Ya existe ${entidad === 'familia' ? 'una familia' : 'un entregable'} con ese nombre.`;
+  return null;
+}
+/* Formularios de acceso. Contraseñas de mínimo 8 caracteres (configura lo mismo en Supabase → Authentication). */
+function validarFormularioAuth(pantalla, d) {
+  const correoValido = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(d.email);
+  if (pantalla === 'registro' && !d.nombre.trim()) return 'Escribe tu nombre completo.';
+  if (pantalla !== 'nueva_password' && !correoValido) return 'Escribe un correo válido.';
+  if (pantalla === 'recuperar') return null;
+  if (!d.password) return 'Escribe tu contraseña.';
+  if (pantalla !== 'login' && d.password.length < 8) return 'La contraseña debe tener al menos 8 caracteres.';
+  if (pantalla !== 'login' && !(/[A-Za-z]/.test(d.password) && /\d/.test(d.password))) return 'La contraseña debe combinar letras y números.';
+  if (pantalla !== 'login' && d.password !== d.confirmar) return 'Las contraseñas no coinciden.';
+  return null;
+}
+
+/* Avance: completados ÷ entregables activos, redondeado a entero. Un SKU está completo solo al 100 %. */
+function calcularPorcentaje(completados, total) { return total ? Math.round((completados * 100) / total) : 0; }
+function estadoAvance(completados, total) {
+  if (total > 0 && completados === total) return 'completo';
+  if (completados === 0) return 'sin_iniciar';
+  return 'en_proceso';
+}
+/* Orden natural: SIL-2 antes que SIL-10, y letras en orden alfabético sin importar mayúsculas ni acentos. */
+function compararNatural(a, b) { return String(a).localeCompare(String(b), 'es', { numeric: true, sensitivity: 'base' }); }
+function normalizarTexto(t) { return String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim(); }
+</script>
+
+<!-- ===== 6. INTERFAZ (COMPONENTES) ===== -->
+<script>
+/* ---------- Utilidades de interfaz (no son componentes) ---------- */
+function h(etiqueta, props, ...hijos) {
+  const el = document.createElement(etiqueta);
+  let valor;
+  for (const [k, v] of Object.entries(props || {})) {
+    if (v === null || v === undefined || v === false) continue;
+    if (k === 'class') el.className = v;
+    else if (k === 'value') valor = v;
+    else if (k === 'checked') el.checked = true;
+    else if (k.startsWith('on') && typeof v === 'function') el.addEventListener(k.slice(2).toLowerCase(), v);
+    else el.setAttribute(k, v === true ? '' : String(v));
+  }
+  for (const hijo of hijos.flat(Infinity)) {
+    if (hijo === null || hijo === undefined || hijo === false || hijo === '') continue;
+    el.append(hijo instanceof Node ? hijo : document.createTextNode(String(hijo))); // textContent, nunca innerHTML
+  }
+  if (valor !== undefined) el.value = String(valor);
+  return el;
+}
+const ICONOS = {
+  check: 'M5 12.5l4.5 4.5L19 7.5', x: 'M6 6l12 12M18 6L6 18', buscar: 'M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15zM21 21l-5.2-5.2',
+  alerta: 'M12 9v4M12 17h.01M10.3 3.9L2.4 17.5A2 2 0 0 0 4.1 20.5h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z',
+  candado: 'M7 11V8a5 5 0 0 1 10 0v3M5 11h14v10H5z', mas: 'M12 5v14M5 12h14', arriba: 'M12 19V5M6 11l6-6 6 6', abajo: 'M12 5v14M6 13l6 6 6-6',
+  sol: 'M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10zM12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4', luna: 'M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z',
+  editar: 'M4 20h4L19 9l-4-4L4 16v4zM13.5 6.5l4 4', imagen: 'M4 5h16v14H4zM4 16l4-4 4 4 3-3 5 5M15 9.5h.01', deshacer: 'M9 14L4 9l5-5M4 9h10a6 6 0 0 1 0 12h-3', caja: 'M3 7l9-4 9 4v10l-9 4-9-4V7zM3 7l9 4 9-4M12 11v10'
+};
+function icono(nombre, clases = 'w-4 h-4') {
+  const NS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('viewBox', '0 0 24 24'); svg.setAttribute('fill', 'none'); svg.setAttribute('stroke', 'currentColor');
+  svg.setAttribute('stroke-width', '2'); svg.setAttribute('stroke-linecap', 'round'); svg.setAttribute('stroke-linejoin', 'round');
+  svg.setAttribute('class', `shrink-0 ${clases}`); svg.setAttribute('aria-hidden', 'true');
+  const path = document.createElementNS(NS, 'path'); path.setAttribute('d', ICONOS[nombre]); svg.append(path);
+  return svg;
+}
+function formatearFechaHora(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return `${d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })}, ${d.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}`;
+}
+const CLS = {
+  btnBase: 'inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-[#18202A] disabled:cursor-not-allowed disabled:opacity-60',
+  get btnPrimario() { return `${this.btnBase} bg-[#1E4E79] dark:bg-[#2F6DA3] text-white hover:bg-[#163B5C] dark:hover:bg-[#3A7DB8] focus-visible:ring-[#1E4E79] dark:focus-visible:ring-[#7FB2E5]`; },
+  get btnSecundario() { return `${this.btnBase} border border-[#C3CBD4] dark:border-[#3A4756] bg-white dark:bg-[#18202A] text-[#1B2430] dark:text-[#E6EAEF] hover:bg-[#F4F6F8] dark:hover:bg-[#243040] focus-visible:ring-[#1E4E79] dark:focus-visible:ring-[#7FB2E5]`; },
+  get btnPeligro() { return `${this.btnBase} bg-[#B42318] dark:bg-[#C8372B] text-white hover:bg-[#8F1C13] dark:hover:bg-[#A82E24] focus-visible:ring-[#B42318] dark:focus-visible:ring-[#F28B82]`; },
+  btnChico: 'inline-flex items-center gap-1.5 rounded-md border border-[#C3CBD4] dark:border-[#3A4756] bg-white dark:bg-[#18202A] px-2.5 py-1 text-xs font-medium text-[#1B2430] dark:text-[#E6EAEF] hover:bg-[#F4F6F8] dark:hover:bg-[#243040] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1E4E79] dark:focus-visible:ring-[#7FB2E5] disabled:cursor-not-allowed disabled:opacity-50',
+  enlace: 'rounded-sm font-medium text-[#1E4E79] dark:text-[#7FB2E5] underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1E4E79] dark:focus-visible:ring-[#7FB2E5]',
+  input: 'block w-full rounded-md border border-[#C3CBD4] dark:border-[#3A4756] bg-white dark:bg-[#18202A] px-3 py-2 text-sm text-[#1B2430] dark:text-[#E6EAEF] placeholder:text-[#7A8594] dark:placeholder:text-[#7F8B99] focus:border-[#1E4E79] dark:focus:border-[#7FB2E5] focus:outline-none focus:ring-1 focus:ring-[#1E4E79] dark:focus:ring-[#7FB2E5] disabled:bg-[#F4F6F8] dark:disabled:bg-[#243040]',
+  inputError: 'block w-full rounded-md border border-[#B42318] dark:border-[#F28B82] bg-white dark:bg-[#18202A] px-3 py-2 text-sm text-[#1B2430] dark:text-[#E6EAEF] placeholder:text-[#7A8594] dark:placeholder:text-[#7F8B99] focus:border-[#B42318] dark:focus:border-[#F28B82] focus:outline-none focus:ring-1 focus:ring-[#B42318] dark:focus:ring-[#F28B82]',
+  etiqueta: 'mb-1 block text-sm font-medium text-[#1B2430] dark:text-[#E6EAEF]',
+  errorCampo: 'mt-1 flex items-start gap-1 text-sm text-[#B42318] dark:text-[#F28B82]',
+  panel: 'rounded-md border border-[#D5DBE2] dark:border-[#2E3A48] bg-white dark:bg-[#18202A]',
+  th: 'border-b border-[#D5DBE2] dark:border-[#2E3A48] bg-[#F7F9FA] dark:bg-[#1F2833] px-3 py-2 text-left text-xs font-semibold text-[#5B6675] dark:text-[#9AA7B6]',
+  td: 'border-b border-[#E3E7EC] dark:border-[#26313D] px-3 py-2 align-middle text-sm'
+};
+function Spinner(clases = 'w-4 h-4') { return h('span', { class: `inline-block rounded-full border-2 border-[#1E4E79] dark:border-[#7FB2E5] border-t-transparent motion-safe:animate-spin ${clases}`, 'aria-hidden': 'true' }); }
+function ErrorCampo(texto, id) { return texto ? h('p', { class: CLS.errorCampo, id }, icono('alerta', 'w-4 h-4 mt-0.5'), texto) : null; }
+
+/* COMPONENTE: MiniaturaSku */
+function MiniaturaSku(sku, clases = 'h-9 w-9') {
+  return sku.miniatura
+    ? h('img', { src: sku.miniatura, alt: `Imagen de referencia de ${sku.clave}`, class: `${clases} shrink-0 rounded border border-[#E3E7EC] dark:border-[#26313D] bg-white object-contain`, loading: 'lazy' })
+    : h('span', { class: `${clases} flex shrink-0 items-center justify-center rounded border border-dashed border-[#C3CBD4] dark:border-[#3A4756] bg-[#F7F9FA] dark:bg-[#1F2833] text-[#9AA5B1] dark:text-[#5F6C7B]`, title: 'Sin imagen' }, icono('imagen', 'w-4 h-4'), h('span', { class: 'sr-only' }, 'Sin imagen'));
+}
+/* FIN COMPONENTE: MiniaturaSku */
+
+/* COMPONENTE: BotonTema */
+function BotonTema() {
+  const oscuro = estado.tema === 'oscuro';
+  return h('button', { type: 'button', id: 'boton-tema', class: CLS.btnChico, 'aria-pressed': String(oscuro), onClick: alternarTema, title: oscuro ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro' },
+    icono(oscuro ? 'sol' : 'luna', 'w-3.5 h-3.5'), oscuro ? 'Modo claro' : 'Modo oscuro');
+}
+/* FIN COMPONENTE: BotonTema */
+
+/* COMPONENTE: EstadoCargando */
+function EstadoCargando(texto = 'Cargando información…', filas = 6) {
+  return h('div', { class: `${CLS.panel} p-4`, role: 'status', 'aria-live': 'polite' },
+    h('span', { class: 'sr-only' }, texto),
+    h('div', { class: 'space-y-3 motion-safe:animate-pulse', 'aria-hidden': 'true' },
+      Array.from({ length: filas }, (_, i) => h('div', { class: 'flex gap-3' },
+        h('div', { class: 'h-5 w-20 rounded bg-[#E3E7EC] dark:bg-[#26313D]' }),
+        h('div', { class: `h-5 rounded bg-[#E3E7EC] dark:bg-[#26313D] ${i % 2 ? 'w-1/2' : 'w-2/3'}` }),
+        h('div', { class: 'h-5 flex-1 rounded bg-[#EEF1F4] dark:bg-[#10151B]' })))));
+}
+/* FIN COMPONENTE: EstadoCargando */
+
+/* COMPONENTE: EstadoVacio */
+function EstadoVacio({ titulo, texto, accion }) {
+  return h('div', { class: `${CLS.panel} flex flex-col items-center px-6 py-12 text-center` },
+    icono('caja', 'w-8 h-8 text-[#7A8594] dark:text-[#7F8B99]'),
+    h('h2', { class: 'mt-3 text-base font-semibold' }, titulo),
+    h('p', { class: 'mt-1 max-w-md text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, texto),
+    accion ? h('div', { class: 'mt-4' }, accion) : null);
+}
+/* FIN COMPONENTE: EstadoVacio */
+
+/* COMPONENTE: EstadoError */
+function EstadoError(mensaje, onReintentar) {
+  return h('div', { class: 'rounded-md border border-[#E7B4AE] dark:border-[#6B2E29] bg-[#FDF3F2] dark:bg-[#3A1D1B] px-6 py-8 text-center', role: 'alert' },
+    h('div', { class: 'flex justify-center text-[#B42318] dark:text-[#F28B82]' }, icono('alerta', 'w-7 h-7')),
+    h('h2', { class: 'mt-2 text-base font-semibold' }, 'No se pudo cargar la información'),
+    h('p', { class: 'mt-1 text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, `${mensaje} Revisa tu conexión e intenta de nuevo; si sigue fallando, avisa a Sistemas.`),
+    h('button', { type: 'button', class: `${CLS.btnSecundario} mt-4`, onClick: onReintentar }, 'Reintentar'));
+}
+/* FIN COMPONENTE: EstadoError */
+
+/* COMPONENTE: EstadoSinPermiso */
+function EstadoSinPermiso() {
+  return h('div', { class: `${CLS.panel} flex flex-col items-center px-6 py-12 text-center` },
+    icono('candado', 'w-8 h-8 text-[#5B6675] dark:text-[#9AA7B6]'),
+    h('h2', { class: 'mt-3 text-base font-semibold' }, 'Tu rol no tiene acceso a esta sección'),
+    h('p', { class: 'mt-1 max-w-md text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, 'Administración es solo para el jefe de ingeniería. Si necesitas dar de alta un SKU o un usuario, pídeselo a él.'),
+    h('button', { type: 'button', class: `${CLS.btnSecundario} mt-4`, onClick: () => irA('skus') }, 'Ir al avance por SKU'));
+}
+/* FIN COMPONENTE: EstadoSinPermiso */
+
+
+
+
+
+/* COMPONENTE: PantallaAcceso (marco común de inicio, configuración, espera y errores) */
+function MarcoAcceso(...contenido) {
+  return h('div', { class: 'relative flex min-h-screen items-center justify-center px-4 py-10' },
+    h('div', { class: 'absolute right-4 top-4' }, BotonTema()),
+    h('div', { class: 'w-full max-w-sm' },
+      h('div', { class: 'mb-6' },
+        h('p', { class: 'text-sm font-medium text-[#5B6675] dark:text-[#9AA7B6]' }, 'Línea Italia'),
+        h('p', { class: 'text-2xl font-semibold tracking-tight' }, 'Ingeniería de producto'),
+        h('p', { class: 'mt-1 text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, 'Control de entregables de ingeniería del catálogo.')),
+      contenido));
+}
+function PantallaInicio() {
+  if (estado.fase === 'configuracion') return MarcoAcceso(h('div', { class: `${CLS.panel} p-6 text-sm` },
+    h('h1', { class: 'text-base font-semibold' }, 'Falta conectar con Supabase'),
+    h('p', { class: 'mt-2 text-[#5B6675] dark:text-[#9AA7B6]' }, 'Abre index.html, busca la sección "2. CONFIGURACIÓN" y pega la Project URL y la llave anon public de tu proyecto de Supabase. La guía GUIA.md explica dónde encontrarlas.')));
+  if (estado.fase === 'error') return MarcoAcceso(h('div', { class: `${CLS.panel} p-6 text-center`, role: 'alert' },
+    h('div', { class: 'flex justify-center text-[#B42318] dark:text-[#F28B82]' }, icono('alerta', 'w-7 h-7')),
+    h('h1', { class: 'mt-2 text-base font-semibold' }, 'No se pudo abrir el aplicativo'),
+    h('p', { class: 'mt-1 text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, estado.errorFatal),
+    h('button', { type: 'button', class: `${CLS.btnSecundario} mt-4`, onClick: () => location.reload() }, 'Volver a intentar')));
+  if (estado.fase === 'espera') {
+    const e = estado.espera;
+    const pendiente = e.motivo === 'pendiente';
+    return MarcoAcceso(h('div', { class: `${CLS.panel} p-6 text-sm` },
+      h('h1', { class: 'text-base font-semibold' }, pendiente ? 'Tu cuenta está en espera de aprobación' : 'Tu acceso está desactivado'),
+      h('p', { class: 'mt-2 text-[#5B6675] dark:text-[#9AA7B6]' }, pendiente
+        ? `Ya creaste tu cuenta (${e.email}). El jefe de ingeniería tiene que aprobarla y asignarte un rol desde Administración. Cuando lo haga, presiona "Revisar de nuevo".`
+        : `La cuenta ${e.email} ya no tiene acceso. Si crees que es un error, pídele al jefe de ingeniería que te lo restaure.`),
+      h('div', { class: 'mt-4 flex flex-wrap gap-2' },
+        h('button', { type: 'button', class: CLS.btnPrimario, onClick: revisarAcceso, disabled: e.revisando }, e.revisando ? [Spinner('w-4 h-4 border-white border-t-transparent'), 'Revisando…'] : 'Revisar de nuevo'),
+        h('button', { type: 'button', class: CLS.btnSecundario, onClick: cerrarSesion }, 'Cerrar sesión'))));
+  }
+  return MarcoAcceso(h('div', { class: `${CLS.panel} flex items-center justify-center gap-3 p-8 text-sm text-[#5B6675] dark:text-[#9AA7B6]`, role: 'status' }, Spinner('w-5 h-5'), 'Cargando…'));
+}
+/* FIN COMPONENTE: PantallaAcceso */
+
+/* COMPONENTE: FormularioAuth */
+function FormularioAuth() {
+  const a = estado.auth;
+  const titulos = { login: 'Iniciar sesión', registro: 'Crear cuenta', recuperar: 'Recuperar contraseña', nueva_password: 'Crea tu contraseña nueva' };
+  const botones = { login: ['Iniciar sesión', 'Iniciando sesión…'], registro: ['Crear cuenta', 'Creando cuenta…'], recuperar: ['Enviar enlace', 'Enviando…'], nueva_password: ['Guardar contraseña', 'Guardando…'] };
+  const campo = (id, etiqueta, clave, tipo, autocomplete, ayuda) => h('div', null,
+    h('label', { for: id, class: CLS.etiqueta }, etiqueta),
+    h('input', { id, type: tipo, class: CLS.input, autocomplete, value: a[clave], onInput: ev => { estado.auth[clave] = ev.target.value; } }),
+    ayuda ? h('p', { class: 'mt-1 text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, ayuda) : null);
+  const enlace = (texto, pantalla) => h('button', { type: 'button', class: `${CLS.enlace} dark:text-[#7FB2E5] text-sm`, onClick: () => irAPantallaAuth(pantalla) }, texto);
+  return MarcoAcceso(
+    h('form', { class: `${CLS.panel} space-y-4 p-6`, novalidate: true, onSubmit: ev => { ev.preventDefault(); enviarAuth(); } },
+      h('h1', { class: 'text-lg font-semibold' }, titulos[a.pantalla]),
+      a.pantalla === 'recuperar' ? h('p', { class: 'text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, 'Te enviaremos un enlace para crear una contraseña nueva.') : null,
+      a.pantalla === 'registro' ? campo('auth-nombre', 'Nombre completo', 'nombre', 'text', 'name') : null,
+      a.pantalla !== 'nueva_password' ? campo('auth-email', 'Correo', 'email', 'email', 'email') : null,
+      a.pantalla !== 'recuperar' ? campo('auth-password', a.pantalla === 'login' ? 'Contraseña' : 'Contraseña nueva', 'password', 'password', a.pantalla === 'login' ? 'current-password' : 'new-password', a.pantalla === 'login' ? null : 'Mínimo 8 caracteres, con letras y números.') : null,
+      a.pantalla === 'registro' || a.pantalla === 'nueva_password' ? campo('auth-confirmar', 'Confirma la contraseña', 'confirmar', 'password', 'new-password') : null,
+      a.mensaje ? h('p', { class: 'flex items-start gap-2 rounded-md border border-[#B7D9C4] dark:border-[#2B5A40] bg-[#E6F2EB] dark:bg-[#173526] px-3 py-2 text-sm text-[#1B2430] dark:text-[#E6EAEF]', role: 'status' }, h('span', { class: 'text-[#1F7A4D] dark:text-[#5CC48E]' }, icono('check', 'w-4 h-4 mt-0.5')), a.mensaje) : null,
+      a.error ? h('p', { class: 'flex items-start gap-2 rounded-md border border-[#E7B4AE] dark:border-[#6B2E29] bg-[#FDF3F2] dark:bg-[#3A1D1B] px-3 py-2 text-sm text-[#8F1C13] dark:text-[#F5B3AC]', role: 'alert' }, icono('alerta', 'w-4 h-4 mt-0.5'), a.error) : null,
+      h('button', { type: 'submit', class: `${CLS.btnPrimario} w-full`, disabled: a.enviando }, a.enviando ? [Spinner('w-4 h-4 border-white border-t-transparent'), botones[a.pantalla][1]] : botones[a.pantalla][0]),
+      h('div', { class: 'flex flex-wrap justify-between gap-2 pt-1' },
+        a.pantalla === 'login' ? [enlace('¿Olvidaste tu contraseña?', 'recuperar'), enlace('Crear cuenta', 'registro')] : null,
+        a.pantalla === 'registro' ? [h('span', { class: 'text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, '¿Ya tienes cuenta?'), enlace('Iniciar sesión', 'login')] : null,
+        a.pantalla === 'recuperar' ? enlace('Volver a iniciar sesión', 'login') : null)),
+    a.pantalla === 'registro' ? h('p', { class: 'mt-3 text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, 'Al crear tu cuenta, el jefe de ingeniería tendrá que aprobarla antes de que puedas ver la información.') : null);
+}
+/* FIN COMPONENTE: FormularioAuth */
+
+/* COMPONENTE: BarraSuperior */
+function BarraSuperior() {
+  const s = estado.sesion;
+  const secciones = [
+    { vista: 'skus', texto: 'Avance por SKU' }, { vista: 'tablero', texto: 'Tablero' }, { vista: 'historial', texto: 'Historial' }
+  ];
+  if (puede(s.rol_id, 'administrar')) secciones.push({ vista: 'admin', texto: estado.pendientes ? `Administración (${estado.pendientes})` : 'Administración' });
+  return h('header', { class: 'border-b border-[#D5DBE2] dark:border-[#2E3A48] bg-white dark:bg-[#18202A]' },
+    h('div', { class: 'mx-auto flex max-w-[1400px] flex-wrap items-center gap-x-8 gap-y-2 px-4 sm:px-6' },
+      h('div', { class: 'py-3' },
+        h('p', { class: 'text-base font-semibold leading-tight' }, 'Ingeniería de producto'),
+        h('p', { class: 'text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, 'Línea Italia')),
+      h('nav', { class: 'order-last -mx-3 flex w-full flex-wrap gap-1 lg:order-none lg:mx-0 lg:w-auto lg:flex-1', 'aria-label': 'Secciones' },
+        secciones.map(sec => {
+          const activa = estado.vista === sec.vista;
+          return h('button', {
+            type: 'button', id: `nav-${sec.vista}`, 'aria-current': activa ? 'page' : null, onClick: () => irA(sec.vista),
+            class: `-mb-px border-b-2 px-3 py-3 text-sm lg:py-4 font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1E4E79] dark:focus-visible:ring-[#7FB2E5] ${activa ? 'border-[#1E4E79] dark:border-[#7FB2E5] text-[#1E4E79] dark:text-[#7FB2E5]' : 'border-transparent text-[#5B6675] dark:text-[#9AA7B6] hover:text-[#1B2430] dark:hover:text-[#E6EAEF]'}`
+          }, sec.texto);
+        })),
+      h('div', { class: 'ml-auto flex items-center gap-4 py-3' },
+        h('div', { class: 'text-right' },
+          h('p', { class: 'text-sm font-medium leading-tight' }, s.nombre),
+          h('p', { class: 'text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, s.rol_nombre)),
+        BotonTema(),
+        h('button', { type: 'button', class: CLS.btnChico, onClick: cerrarSesion }, 'Cerrar sesión'))));
+}
+/* FIN COMPONENTE: BarraSuperior */
+
+/* COMPONENTE: EncabezadoVista */
+function EncabezadoVista(titulo, descripcion, acciones) {
+  return h('div', { class: 'mb-5 flex flex-wrap items-end justify-between gap-3' },
+    h('div', null, h('h1', { class: 'text-xl font-semibold tracking-tight' }, titulo), descripcion ? h('p', { class: 'mt-0.5 text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, descripcion) : null),
+    acciones ? h('div', { class: 'flex gap-2' }, acciones) : null);
+}
+/* FIN COMPONENTE: EncabezadoVista */
+
+/* COMPONENTE: VistaSkus */
+function VistaSkus() {
+  const s = estado.skus;
+  const esJefe = puede(estado.sesion.rol_id, 'administrar');
+  const descripcion = puede(estado.sesion.rol_id, 'marcar')
+    ? 'Haz clic en una casilla para marcar el entregable como correcto. Para desmarcarlo tendrás que escribir la causa.'
+    : 'Vista de consulta: puedes ver el avance y el detalle de cada SKU, pero no marcar casillas.';
+  let contenido;
+  if (s.error) contenido = EstadoError(s.error, () => cargarSkus());
+  else if (!s.datos || (s.cargando && !s.datos.length)) contenido = EstadoCargando('Cargando SKUs…', 8);
+  else if (!s.datos.length) contenido = hayFiltrosSkus()
+    ? EstadoVacio({ titulo: 'Ningún SKU coincide con los filtros', texto: 'Prueba con otra búsqueda o quita algún filtro.', accion: h('button', { type: 'button', class: CLS.btnSecundario, onClick: limpiarFiltrosSkus }, 'Limpiar filtros') })
+    : EstadoVacio({ titulo: 'Todavía no hay SKUs dados de alta', texto: esJefe ? 'Da de alta el primer SKU para empezar a registrar su avance.' : 'El jefe de ingeniería da de alta los SKUs desde Administración.', accion: esJefe ? h('button', { type: 'button', class: CLS.btnPrimario, onClick: () => abrirModalSku(null) }, icono('mas'), 'Nuevo SKU') : null });
+  else contenido = MatrizSkus();
+  return h('section', null,
+    EncabezadoVista('Avance por SKU', descripcion, esJefe ? h('button', { type: 'button', class: CLS.btnPrimario, onClick: () => abrirModalSku(null) }, icono('mas'), 'Nuevo SKU') : null),
+    FiltrosSkus(),
+    contenido);
+}
+function hayFiltrosSkus() { const f = estado.skus.filtros; return !!(f.busqueda || f.familia_id || f.avance !== 'todos' || f.pendiente_entregable_id || f.incluir_descontinuados); }
+/* FIN COMPONENTE: VistaSkus */
+
+/* COMPONENTE: FiltrosSkus */
+function FiltrosSkus() {
+  const f = estado.skus.filtros;
+  const entregablesActivos = estado.catalogos.entregables.filter(e => e.activo);
+  const total = estado.skus.datos ? estado.skus.datos.length : null;
+  const sel = (id, etiqueta, valor, opciones, campo) => h('div', { class: 'min-w-[10rem] flex-1 sm:flex-none' },
+    h('label', { for: id, class: 'mb-1 block text-xs font-medium text-[#5B6675] dark:text-[#9AA7B6]' }, etiqueta),
+    h('select', { id, class: CLS.input, value: valor, onChange: ev => cambiarFiltroSkus(campo, ev.target.value) }, opciones.map(([v, t]) => h('option', { value: v }, t))));
+  return h('div', { class: 'mb-4 flex flex-wrap items-end gap-3' },
+    h('div', { class: 'w-full sm:w-72' },
+      h('label', { for: 'filtro-busqueda', class: 'mb-1 block text-xs font-medium text-[#5B6675] dark:text-[#9AA7B6]' }, 'Buscar'),
+      h('div', { class: 'relative' },
+        h('span', { class: 'pointer-events-none absolute inset-y-0 left-3 flex items-center text-[#7A8594] dark:text-[#7F8B99]' }, icono('buscar')),
+        h('input', { id: 'filtro-busqueda', type: 'search', class: `${CLS.input} pl-9`, placeholder: 'SKU o descripción', value: f.busqueda, onInput: ev => cambiarFiltroSkus('busqueda', ev.target.value) }))),
+    sel('filtro-familia', 'Familia', f.familia_id, [['', 'Todas las familias'], ...estado.catalogos.familias.map(x => [String(x.id), x.nombre])], 'familia_id'),
+    sel('filtro-avance', 'Avance', f.avance, [['todos', 'Todos'], ['completo', 'Completos'], ['en_proceso', 'En proceso'], ['sin_iniciar', 'Sin iniciar']], 'avance'),
+    sel('filtro-pendiente', 'Con pendiente en', f.pendiente_entregable_id, [['', 'Cualquier entregable'], ...entregablesActivos.map(x => [String(x.id), x.nombre])], 'pendiente_entregable_id'),
+    h('label', { for: 'filtro-descontinuados', class: 'flex items-center gap-2 pb-2 text-sm' },
+      h('input', { id: 'filtro-descontinuados', type: 'checkbox', class: 'h-4 w-4 accent-[#1E4E79] dark:accent-[#7FB2E5]', checked: f.incluir_descontinuados, onChange: ev => cambiarFiltroSkus('incluir_descontinuados', ev.target.checked) }),
+      'Incluir descontinuados'),
+    h('div', { class: 'flex items-center gap-3 pb-2 text-sm text-[#5B6675] dark:text-[#9AA7B6] sm:ml-auto' },
+      estado.skus.cargando && estado.skus.datos ? Spinner() : null,
+      total !== null ? h('span', { 'aria-live': 'polite' }, total === 1 ? '1 SKU' : `${total} SKUs`) : null,
+      hayFiltrosSkus() ? h('button', { type: 'button', class: CLS.enlace, onClick: limpiarFiltrosSkus }, 'Limpiar filtros') : null));
+}
+/* FIN COMPONENTE: FiltrosSkus */
+
+/* COMPONENTE: MatrizSkus */
+function MatrizSkus() {
+  const ents = estado.skus.entregables;
+  return h('div', { class: `${CLS.panel} max-h-[calc(100vh-17rem)] min-h-[20rem] overflow-auto`, 'data-scroll-id': 'matriz' },
+    h('table', { class: 'min-w-full border-separate border-spacing-0 text-sm' },
+      h('caption', { class: 'sr-only' }, 'Entregables de ingeniería por SKU. Cada casilla marcada indica que el entregable está correcto.'),
+      h('thead', null, h('tr', null,
+        h('th', { scope: 'col', class: `${CLS.th} sticky left-0 top-0 z-20 min-w-[10rem]` }, 'SKU'),
+        h('th', { scope: 'col', class: `${CLS.th} sticky top-0 z-10 min-w-[16rem]` }, 'Descripción'),
+        h('th', { scope: 'col', class: `${CLS.th} sticky top-0 z-10` }, 'Familia'),
+        ents.map(e => h('th', { scope: 'col', class: `${CLS.th} sticky top-0 z-10 w-24 min-w-[6rem] border-l border-l-[#E3E7EC] dark:border-l-[#26313D] text-center leading-tight` }, e.nombre)),
+        h('th', { scope: 'col', class: `${CLS.th} sticky top-0 z-10 min-w-[10rem] border-l border-l-[#E3E7EC] dark:border-l-[#26313D]` }, 'Avance'))),
+      h('tbody', null, estado.skus.datos.map(sku => FilaSku(sku)))));
+}
+function FilaSku(sku) {
+  return h('tr', { class: 'group' },
+    h('th', { scope: 'row', class: `${CLS.td} sticky left-0 z-[5] bg-white dark:bg-[#18202A] text-left font-semibold tabular-nums group-hover:bg-[#F7F9FA] dark:group-hover:bg-[#1F2833]` },
+      h('button', { type: 'button', id: `abrir-${sku.id}`, class: `${CLS.enlace} flex items-center gap-3`, onClick: () => abrirDetalle(sku.id), 'aria-label': `Ver detalle de ${sku.clave}` }, MiniaturaSku(sku), h('span', null, sku.clave))),
+    h('td', { class: `${CLS.td} group-hover:bg-[#F7F9FA] dark:group-hover:bg-[#1F2833] ${sku.descontinuado ? 'text-[#5B6675] dark:text-[#9AA7B6]' : ''}` },
+      sku.descripcion, sku.descontinuado ? h('span', { class: 'ml-2 inline-block rounded border border-[#C3CBD4] dark:border-[#3A4756] px-1.5 text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, 'Descontinuado') : null),
+    h('td', { class: `${CLS.td} whitespace-nowrap text-[#5B6675] dark:text-[#9AA7B6] group-hover:bg-[#F7F9FA] dark:group-hover:bg-[#1F2833]` }, sku.familia_nombre),
+    sku.casillas.map(c => CeldaEntregable(sku, c)),
+    h('td', { class: `${CLS.td} border-l border-l-[#E3E7EC] dark:border-l-[#26313D] group-hover:bg-[#F7F9FA] dark:group-hover:bg-[#1F2833]` }, AvanceSku(sku)));
+}
+/* FIN COMPONENTE: MatrizSkus */
+
+/* COMPONENTE: CeldaEntregable */
+function CeldaEntregable(sku, c) {
+  const editable = puede(estado.sesion.rol_id, 'marcar');
+  const guardando = estado.skus.celdaGuardando === `${sku.id}-${c.entregable_id}`;
+  const detalle = c.completado ? `Correcto. Marcado por ${c.completado_por_nombre}, ${formatearFechaHora(c.completado_en)}` : 'Pendiente';
+  const accion = editable ? (c.completado ? '. Clic para desmarcar' : '. Clic para marcar como correcto') : '';
+  const contenido = guardando ? Spinner('w-4 h-4')
+    : c.completado ? icono('check', 'w-5 h-5')
+    : h('span', { class: 'block h-4 w-4 rounded-sm border-2 border-[#9AA5B1] dark:border-[#5F6C7B]', 'aria-hidden': 'true' });
+  const color = c.completado ? `bg-[#E6F2EB] dark:bg-[#173526] text-[#1F7A4D] dark:text-[#5CC48E] ${editable ? 'hover:bg-[#D3E8DB] dark:hover:bg-[#1D422F]' : ''}` : `bg-white dark:bg-[#18202A] ${editable ? 'hover:bg-[#EEF3F8] dark:hover:bg-[#22303F]' : ''}`;
+  return h('td', { class: 'border-b border-l border-[#E3E7EC] dark:border-[#26313D] p-0' },
+    h('button', {
+      type: 'button', id: `celda-${sku.id}-${c.entregable_id}`, title: detalle,
+      'aria-label': `${c.nombre} de ${sku.clave}: ${detalle}${accion}`, 'aria-pressed': String(c.completado),
+      disabled: !editable || guardando, onClick: () => alternarCasilla(sku, c),
+      class: `flex h-11 w-full items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#1E4E79] dark:focus-visible:ring-[#7FB2E5] ${color} ${editable ? 'cursor-pointer' : 'cursor-default'}`
+    }, contenido));
+}
+/* FIN COMPONENTE: CeldaEntregable */
+
+/* COMPONENTE: AvanceSku */
+function AvanceSku(sku) {
+  const texto = sku.estado_avance === 'completo' ? 'Completo' : sku.estado_avance === 'sin_iniciar' ? 'Sin iniciar' : `${sku.completados} de ${sku.total}`;
+  const colorBarra = sku.estado_avance === 'completo' ? 'bg-[#1F7A4D] dark:bg-[#2E9A63]' : 'bg-[#C98A1B] dark:bg-[#D9A03A]';
+  return h('div', null,
+    h('div', { class: 'flex items-baseline justify-between gap-2' },
+      h('span', { class: 'text-sm font-semibold tabular-nums' }, `${sku.porcentaje}%`),
+      h('span', { class: `flex items-center gap-1 text-xs ${sku.estado_avance === 'completo' ? 'font-medium text-[#1F7A4D] dark:text-[#5CC48E]' : 'text-[#5B6675] dark:text-[#9AA7B6]'}` },
+        sku.estado_avance === 'completo' ? icono('check', 'w-3.5 h-3.5') : null, texto)),
+    h('div', { class: 'mt-1 h-1.5 w-full overflow-hidden rounded-full bg-[#E3E7EC] dark:bg-[#26313D]', role: 'presentation' },
+      h('div', { class: `h-full rounded-full ${colorBarra} w-[${sku.porcentaje}%]` })));
+}
+/* FIN COMPONENTE: AvanceSku */
+
+/* COMPONENTE: PanelDetalleSku */
+function PanelDetalleSku() {
+  const d = estado.detalle;
+  const editable = puede(estado.sesion.rol_id, 'marcar');
+  const esJefe = puede(estado.sesion.rol_id, 'administrar');
+  let cuerpo;
+  if (d.error) cuerpo = h('div', { class: 'p-6' }, EstadoError(d.error, cargarDetalle));
+  else if (!d.datos) cuerpo = h('div', { class: 'p-6' }, EstadoCargando('Cargando detalle del SKU…', 5));
+  else {
+    const s = d.datos;
+    cuerpo = h('div', { class: 'space-y-6 p-6' },
+      ImagenReferencia(s, editable),
+      h('dl', { class: 'grid grid-cols-2 gap-x-4 gap-y-3 text-sm' },
+        h('div', null, h('dt', { class: 'text-[#5B6675] dark:text-[#9AA7B6]' }, 'Familia'), h('dd', { class: 'font-medium' }, s.familia_nombre)),
+        h('div', null, h('dt', { class: 'text-[#5B6675] dark:text-[#9AA7B6]' }, 'Estatus'), h('dd', { class: 'font-medium' }, s.estatus_nombre)),
+        h('div', { class: 'col-span-2' }, h('dt', { class: 'mb-1 text-[#5B6675] dark:text-[#9AA7B6]' }, 'Avance'), h('dd', null, AvanceSku(s))),
+        s.observaciones ? h('div', { class: 'col-span-2' }, h('dt', { class: 'text-[#5B6675] dark:text-[#9AA7B6]' }, 'Observaciones'), h('dd', { class: 'whitespace-pre-line' }, s.observaciones)) : null),
+      h('section', null,
+        h('h3', { class: 'mb-2 text-sm font-semibold' }, 'Entregables'),
+        h('ul', { class: 'divide-y divide-[#E3E7EC] dark:divide-[#26313D] rounded-md border border-[#D5DBE2] dark:border-[#2E3A48]' }, s.casillas.map(c =>
+          h('li', { class: 'flex items-center gap-3 px-3 py-2.5' },
+            h('span', { class: c.completado ? 'text-[#1F7A4D] dark:text-[#5CC48E]' : 'text-[#9AA5B1] dark:text-[#5F6C7B]' }, c.completado ? icono('check', 'w-5 h-5') : h('span', { class: 'block h-4 w-4 rounded-sm border-2 border-current', 'aria-hidden': 'true' })),
+            h('div', { class: 'min-w-0 flex-1' },
+              h('p', { class: 'text-sm font-medium' }, c.nombre),
+              h('p', { class: 'text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, c.completado ? `Correcto. ${c.completado_por_nombre}, ${formatearFechaHora(c.completado_en)}` : 'Pendiente')),
+            editable ? h('button', {
+              type: 'button', class: CLS.btnChico, disabled: !!estado.skus.celdaGuardando,
+              onClick: () => alternarCasilla(s, c)
+            }, c.completado ? [icono('deshacer', 'w-3.5 h-3.5'), 'Desmarcar'] : [icono('check', 'w-3.5 h-3.5'), 'Marcar correcto']) : null)))),
+      h('section', null,
+        h('h3', { class: 'mb-2 text-sm font-semibold' }, 'Historial de este SKU'),
+        s.historial.length
+          ? h('ol', { class: 'space-y-3' }, s.historial.map(r => ItemHistorial(r)))
+          : h('p', { class: 'text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, 'Nadie ha marcado ni desmarcado entregables de este SKU todavía.')));
+  }
+  const titulo = d.datos ? d.datos.clave : 'Detalle del SKU';
+  return h('div', { class: 'fixed inset-0 z-40 flex justify-end' },
+    h('button', { type: 'button', class: 'absolute inset-0 h-full w-full cursor-default bg-[#1B2430]/30 dark:bg-[#000000]/30', 'aria-label': 'Cerrar detalle', tabindex: '-1', onClick: cerrarDetalle }),
+    h('aside', { class: 'relative flex h-full w-full max-w-lg flex-col bg-white dark:bg-[#18202A] shadow-xl', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'titulo-detalle' },
+      h('div', { class: 'flex items-start gap-3 border-b border-[#D5DBE2] dark:border-[#2E3A48] px-6 py-4' },
+        h('div', { class: 'min-w-0 flex-1' },
+          h('h2', { id: 'titulo-detalle', class: 'text-xl font-semibold tabular-nums' }, titulo),
+          d.datos ? h('p', { class: 'text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, d.datos.descripcion) : null),
+        esJefe && d.datos ? h('button', { type: 'button', class: CLS.btnChico, onClick: () => abrirModalSku(d.datos) }, icono('editar', 'w-3.5 h-3.5'), 'Editar SKU') : null,
+        h('button', { type: 'button', id: 'cerrar-detalle', class: 'rounded-md p-1.5 text-[#5B6675] dark:text-[#9AA7B6] hover:bg-[#F4F6F8] dark:hover:bg-[#243040] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1E4E79] dark:focus-visible:ring-[#7FB2E5]', 'aria-label': 'Cerrar detalle', onClick: cerrarDetalle }, icono('x', 'w-5 h-5'))),
+      h('div', { class: 'flex-1 overflow-y-auto', 'data-scroll-id': 'detalle' }, cuerpo)));
+}
+function ImagenReferencia(s, editable) {
+  const d = estado.detalle;
+  return h('section', null,
+    h('h3', { class: 'mb-2 text-sm font-semibold' }, 'Imagen de referencia'),
+    s.imagen_url
+      ? h('div', { class: 'flex h-56 items-center justify-center overflow-hidden rounded-md border border-[#D5DBE2] dark:border-[#2E3A48] bg-[#F7F9FA] dark:bg-[#E9EDF1]' },
+          h('img', { src: s.imagen_url, alt: `Imagen de referencia de ${s.clave}`, class: 'max-h-full max-w-full object-contain' }))
+      : s.tiene_imagen
+        ? h('div', { class: 'flex h-56 items-center justify-center gap-2 rounded-md border border-[#D5DBE2] dark:border-[#2E3A48] text-sm text-[#5B6675] dark:text-[#9AA7B6]', role: 'status' },
+            d.cargando ? [Spinner('w-5 h-5'), h('span', { class: 'sr-only' }, 'Cargando imagen…')] : 'No se pudo cargar la imagen. Cierra y vuelve a abrir el detalle.')
+      : h('div', { class: 'flex h-40 flex-col items-center justify-center gap-2 rounded-md border border-dashed border-[#C3CBD4] dark:border-[#3A4756] bg-[#F7F9FA] dark:bg-[#1F2833] text-sm text-[#5B6675] dark:text-[#9AA7B6]' },
+          icono('imagen', 'w-7 h-7 text-[#9AA5B1] dark:text-[#5F6C7B]'), editable ? 'Este SKU todavía no tiene imagen.' : 'Este SKU no tiene imagen de referencia.'),
+    editable ? h('div', { class: 'mt-2 flex flex-wrap items-center gap-2' },
+      h('input', { id: 'imagen-sku', type: 'file', accept: TIPOS_IMAGEN.join(','), class: 'sr-only', tabindex: '-1', 'aria-hidden': 'true',
+        onChange: ev => { const f = ev.target.files && ev.target.files[0]; ev.target.value = ''; subirImagenSku(f); } }),
+      h('button', { type: 'button', class: CLS.btnChico, disabled: d.subiendoImagen, onClick: () => document.getElementById('imagen-sku').click() },
+        d.subiendoImagen ? [Spinner('w-3.5 h-3.5'), 'Subiendo…'] : [icono('imagen', 'w-3.5 h-3.5'), s.tiene_imagen ? 'Cambiar imagen' : 'Subir imagen']),
+      s.tiene_imagen ? h('button', { type: 'button', class: `${CLS.btnChico} text-[#B42318] dark:text-[#F28B82]`, disabled: d.subiendoImagen, onClick: () => pedirQuitarImagen(s) }, 'Quitar imagen') : null,
+      h('span', { class: 'text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, `JPG, PNG o WEBP de hasta ${LIMITES.imagenMaxMb} MB; se optimiza al guardar.`)) : null,
+    ErrorCampo(d.errorImagen, 'imagen-error'));
+}
+function ItemHistorial(r) {
+  return h('li', { class: 'flex gap-3 text-sm' },
+    h('span', { class: `mt-0.5 ${r.marcado ? 'text-[#1F7A4D] dark:text-[#5CC48E]' : 'text-[#B42318] dark:text-[#F28B82]'}` }, icono(r.marcado ? 'check' : 'deshacer', 'w-4 h-4')),
+    h('div', { class: 'min-w-0' },
+      h('p', null, h('span', { class: 'font-medium' }, r.usuario_nombre), r.marcado ? ' marcó correcto ' : ' desmarcó ', h('span', { class: 'font-medium' }, r.entregable_nombre)),
+      r.comentario ? h('p', { class: 'mt-0.5 text-[#1B2430] dark:text-[#E6EAEF]' }, `Causa: ${r.comentario}`) : null,
+      h('p', { class: 'text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, formatearFechaHora(r.fecha))));
+}
+/* FIN COMPONENTE: PanelDetalleSku */
+
+/* COMPONENTE: VistaTablero */
+function VistaTablero() {
+  const t = estado.tablero;
+  let contenido;
+  if (t.error) contenido = EstadoError(t.error, cargarTablero);
+  else if (!t.datos) contenido = EstadoCargando('Cargando tablero…', 6);
+  else if (!t.datos.total) contenido = EstadoVacio({ titulo: 'Aún no hay SKUs activos que medir', texto: 'El tablero se llena en cuanto haya SKUs activos dados de alta.', accion: null });
+  else contenido = h('div', { class: 'space-y-5' }, ResumenTablero(), h('div', { class: 'grid gap-5 lg:grid-cols-5' }, GraficaAvanceGlobal(), GraficaAvancePorEntregable()), AvancePorFamilia());
+  return h('section', null,
+    EncabezadoVista('Tablero de avance', 'Solo cuentan los SKUs activos. Un SKU está completo cuando todos sus entregables están marcados como correctos.',
+      t.datos && t.cargando ? h('span', { class: 'flex items-center gap-2 text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, Spinner(), 'Actualizando') : null),
+    contenido);
+}
+/* FIN COMPONENTE: VistaTablero */
+
+/* COMPONENTE: ResumenTablero */
+function ResumenTablero() {
+  const d = estado.tablero.datos;
+  const cifra = (valor, etiqueta, filtro) => h('button', {
+    type: 'button', onClick: () => verSkusFiltrados(filtro),
+    class: 'flex flex-col items-start px-5 py-4 text-left hover:bg-[#F7F9FA] dark:hover:bg-[#1F2833] focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#1E4E79] dark:focus-visible:ring-[#7FB2E5]'
+  }, h('span', { class: 'text-3xl font-semibold tabular-nums' }, valor), h('span', { class: 'text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, etiqueta), h('span', { class: 'mt-1 text-xs font-medium text-[#1E4E79] dark:text-[#7FB2E5]' }, 'Ver SKUs'));
+  return h('div', { class: `${CLS.panel} grid grid-cols-2 divide-[#E3E7EC] dark:divide-[#26313D] md:grid-cols-4 md:divide-x` },
+    cifra(d.total, 'SKUs activos', {}),
+    cifra(d.completos, 'Completos', { avance: 'completo' }),
+    cifra(d.en_proceso, 'En proceso', { avance: 'en_proceso' }),
+    cifra(d.sin_iniciar, 'Sin iniciar', { avance: 'sin_iniciar' }));
+}
+/* FIN COMPONENTE: ResumenTablero */
+
+/* COMPONENTE: GraficaAvanceGlobal */
+function GraficaAvanceGlobal() {
+  const d = estado.tablero.datos;
+  const pct = n => `${calcularPorcentaje(n, d.total)}%`;
+  const leyenda = [['Completos', d.completos, 'bg-[#1F7A4D] dark:bg-[#2E9A63]'], ['En proceso', d.en_proceso, 'bg-[#C98A1B] dark:bg-[#D9A03A]'], ['Sin iniciar', d.sin_iniciar, 'bg-[#B8C1CB] dark:bg-[#4A5663]']];
+  return h('div', { class: `${CLS.panel} p-5 lg:col-span-2` },
+    h('h2', { class: 'text-base font-semibold' }, 'SKUs completos'),
+    h('p', { class: 'text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, 'Porcentaje global de SKUs con todos sus entregables correctos.'),
+    typeof Chart === 'undefined' ? GraficaNoDisponible() :
+      h('div', { class: 'relative mx-auto mt-4 h-56 max-w-[14rem]' },
+        h('canvas', { id: 'grafica-global', role: 'img', 'aria-label': `${d.porcentaje_global}% de SKUs completos: ${d.completos} de ${d.total}` }),
+        h('div', { class: 'pointer-events-none absolute inset-0 flex flex-col items-center justify-center' },
+          h('span', { class: 'text-4xl font-semibold tabular-nums' }, `${d.porcentaje_global}%`),
+          h('span', { class: 'text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, `${d.completos} de ${d.total} SKUs`))),
+    h('ul', { class: 'mt-4 space-y-1.5 text-sm' }, leyenda.map(([t, n, c]) => h('li', { class: 'flex items-center gap-2' },
+      h('span', { class: `h-3 w-3 rounded-sm ${c}`, 'aria-hidden': 'true' }), h('span', { class: 'flex-1' }, t),
+      h('span', { class: 'tabular-nums text-[#5B6675] dark:text-[#9AA7B6]' }, n === 1 ? '1 SKU' : `${n} SKUs`), h('span', { class: 'w-12 text-right font-medium tabular-nums' }, pct(n))))));
+}
+/* FIN COMPONENTE: GraficaAvanceGlobal */
+
+/* COMPONENTE: GraficaAvancePorEntregable */
+function GraficaAvancePorEntregable() {
+  const d = estado.tablero.datos;
+  return h('div', { class: `${CLS.panel} p-5 lg:col-span-3` },
+    h('h2', { class: 'text-base font-semibold' }, 'Avance por entregable'),
+    h('p', { class: 'text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, 'Porcentaje de SKUs activos que ya tienen cada entregable correcto. Haz clic en una barra para ver los SKUs que lo tienen pendiente.'),
+    typeof Chart === 'undefined' ? GraficaNoDisponible() : h('div', { class: 'relative mt-4 h-72' }, h('canvas', { id: 'grafica-entregables', class: 'cursor-pointer', role: 'img', 'aria-label': 'Avance por entregable' })),
+    h('table', { class: 'sr-only' },
+      h('caption', null, 'Avance por entregable'),
+      h('tbody', null, d.por_entregable.map(e => h('tr', null, h('th', null, e.nombre), h('td', null, `${e.porcentaje}%, ${e.completos} de ${d.total} SKUs`))))));
+}
+function GraficaNoDisponible() {
+  return h('p', { class: 'mt-4 rounded-md border border-[#E9D29B] dark:border-[#5C4A1F] bg-[#FFF4DB] dark:bg-[#3A2F14] px-3 py-2 text-sm text-[#5C4410] dark:text-[#F0D9A0]' }, 'No se pudo cargar la librería de gráficas. Los números siguen disponibles en la tabla de abajo y en el resumen.');
+}
+/* FIN COMPONENTE: GraficaAvancePorEntregable */
+
+/* COMPONENTE: AvancePorFamilia */
+function AvancePorFamilia() {
+  const d = estado.tablero.datos;
+  return h('div', { class: `${CLS.panel} overflow-hidden` },
+    h('div', { class: 'px-5 pt-5' }, h('h2', { class: 'text-base font-semibold' }, 'Avance por familia'), h('p', { class: 'text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, 'SKUs completos sobre SKUs activos de cada familia.')),
+    h('div', { class: 'mt-3 overflow-x-auto', 'data-scroll-id': 'familias' },
+      h('table', { class: 'min-w-full border-separate border-spacing-0' },
+        h('thead', null, h('tr', null,
+          h('th', { scope: 'col', class: `${CLS.th} pl-5` }, 'Familia'),
+          h('th', { scope: 'col', class: `${CLS.th} text-right` }, 'SKUs activos'),
+          h('th', { scope: 'col', class: `${CLS.th} text-right` }, 'Completos'),
+          h('th', { scope: 'col', class: `${CLS.th} w-1/3 min-w-[12rem]` }, 'Avance'),
+          h('th', { scope: 'col', class: `${CLS.th} pr-5` }, h('span', { class: 'sr-only' }, 'Acciones')))),
+        h('tbody', null, d.por_familia.map(f => h('tr', null,
+          h('th', { scope: 'row', class: `${CLS.td} pl-5 text-left font-medium` }, f.nombre),
+          h('td', { class: `${CLS.td} text-right tabular-nums` }, f.total),
+          h('td', { class: `${CLS.td} text-right tabular-nums` }, f.completos),
+          h('td', { class: CLS.td }, h('div', { class: 'flex items-center gap-3' },
+            h('div', { class: 'h-2 flex-1 overflow-hidden rounded-full bg-[#E3E7EC] dark:bg-[#26313D]', role: 'presentation' }, h('div', { class: `h-full rounded-full bg-[#1F7A4D] dark:bg-[#2E9A63] w-[${f.porcentaje}%]` })),
+            h('span', { class: 'w-10 text-right text-sm font-semibold tabular-nums' }, `${f.porcentaje}%`))),
+          h('td', { class: `${CLS.td} pr-5 text-right` }, h('button', { type: 'button', class: `${CLS.enlace} text-sm`, onClick: () => verSkusFiltrados({ familia_id: String(f.id) }) }, `Ver ${f.nombre.toLowerCase()}`))))))));
+}
+/* FIN COMPONENTE: AvancePorFamilia */
+
+/* COMPONENTE: VistaHistorial */
+function VistaHistorial() {
+  const hs = estado.historial;
+  const f = hs.filtros;
+  const hayFiltros = f.busqueda || f.user_id || f.marcado !== 'todos' || f.entregable_id;
+  const sel = (id, etiqueta, valor, opciones, campo) => h('div', { class: 'min-w-[10rem] flex-1 sm:flex-none' },
+    h('label', { for: id, class: 'mb-1 block text-xs font-medium text-[#5B6675] dark:text-[#9AA7B6]' }, etiqueta),
+    h('select', { id, class: CLS.input, value: valor, onChange: ev => cambiarFiltroHistorial(campo, ev.target.value) }, opciones.map(([v, t]) => h('option', { value: v }, t))));
+  let contenido;
+  if (hs.error) contenido = EstadoError(hs.error, cargarHistorial);
+  else if (!hs.datos) contenido = EstadoCargando('Cargando historial…', 8);
+  else if (!hs.datos.length) contenido = hayFiltros
+    ? EstadoVacio({ titulo: 'Ningún movimiento coincide con los filtros', texto: 'Prueba con otro SKU o quita algún filtro.', accion: h('button', { type: 'button', class: CLS.btnSecundario, onClick: limpiarFiltrosHistorial }, 'Limpiar filtros') })
+    : EstadoVacio({ titulo: 'Todavía no hay movimientos', texto: 'Aquí aparecerá cada vez que alguien marque o desmarque un entregable.', accion: h('button', { type: 'button', class: CLS.btnSecundario, onClick: () => irA('skus') }, 'Ir al avance por SKU') });
+  else contenido = h('div', null,
+    h('div', { class: `${CLS.panel} overflow-x-auto`, 'data-scroll-id': 'historial' },
+      h('table', { class: 'min-w-full border-separate border-spacing-0' },
+        h('thead', null, h('tr', null, ['Fecha', 'SKU', 'Entregable', 'Acción', 'Usuario', 'Comentario o causa'].map(t => h('th', { scope: 'col', class: CLS.th }, t)))),
+        h('tbody', null, hs.datos.map(r => h('tr', null,
+          h('td', { class: `${CLS.td} whitespace-nowrap tabular-nums text-[#5B6675] dark:text-[#9AA7B6]` }, formatearFechaHora(r.fecha)),
+          h('td', { class: `${CLS.td} whitespace-nowrap font-semibold tabular-nums` },
+            r.sku_eliminado || !r.sku_id ? h('span', { class: 'text-[#5B6675] dark:text-[#9AA7B6]' }, `${r.sku_clave} (eliminado)`) : h('button', { type: 'button', class: CLS.enlace, onClick: () => abrirDetalle(r.sku_id) }, r.sku_clave)),
+          h('td', { class: `${CLS.td} whitespace-nowrap` }, r.entregable_nombre),
+          h('td', { class: `${CLS.td} whitespace-nowrap` }, h('span', { class: `inline-flex items-center gap-1.5 font-medium ${r.marcado ? 'text-[#1F7A4D] dark:text-[#5CC48E]' : 'text-[#B42318] dark:text-[#F28B82]'}` }, icono(r.marcado ? 'check' : 'deshacer', 'w-4 h-4'), r.marcado ? 'Marcó correcto' : 'Desmarcó')),
+          h('td', { class: `${CLS.td} whitespace-nowrap` }, r.usuario_nombre),
+          h('td', { class: `${CLS.td} min-w-[16rem] ${r.comentario ? '' : 'text-[#7A8594] dark:text-[#7F8B99]'}` }, r.comentario || '—')))))),
+    h('div', { class: 'mt-3 flex items-center justify-between text-sm text-[#5B6675] dark:text-[#9AA7B6]' },
+      h('span', null, `Mostrando ${hs.datos.length} de ${hs.total} movimientos`),
+      hs.datos.length < hs.total ? h('button', { type: 'button', class: CLS.btnSecundario, onClick: verMasHistorial, disabled: hs.cargando }, hs.cargando ? 'Cargando…' : 'Ver más movimientos') : null));
+  return h('section', null,
+    EncabezadoVista('Historial', 'Cada vez que alguien marca o desmarca un entregable. Los más recientes primero.', h('button', { type: 'button', class: CLS.btnSecundario, onClick: exportarHistorial, disabled: hs.exportando || !hs.total }, hs.exportando ? [Spinner(), 'Exportando…'] : 'Exportar historial (CSV)')),
+    h('div', { class: 'mb-4 flex flex-wrap items-end gap-3' },
+      h('div', { class: 'w-full sm:w-60' },
+        h('label', { for: 'historial-busqueda', class: 'mb-1 block text-xs font-medium text-[#5B6675] dark:text-[#9AA7B6]' }, 'SKU'),
+        h('input', { id: 'historial-busqueda', type: 'search', class: CLS.input, placeholder: 'Por ejemplo SIL-12', value: f.busqueda, onInput: ev => cambiarFiltroHistorial('busqueda', ev.target.value) })),
+      sel('historial-usuario', 'Usuario', f.user_id, [['', 'Todos'], ...hs.usuarios.map(u => [String(u.id), u.nombre])], 'user_id'),
+      sel('historial-accion', 'Acción', f.marcado, [['todos', 'Todas'], ['1', 'Marcó correcto'], ['0', 'Desmarcó']], 'marcado'),
+      sel('historial-entregable', 'Entregable', f.entregable_id, [['', 'Todos'], ...estado.catalogos.entregables.map(e => [String(e.id), e.nombre])], 'entregable_id'),
+      hayFiltros ? h('button', { type: 'button', class: `${CLS.enlace} pb-2 text-sm`, onClick: limpiarFiltrosHistorial }, 'Limpiar filtros') : null),
+    contenido);
+}
+/* FIN COMPONENTE: VistaHistorial */
+
+/* COMPONENTE: VistaAdministracion */
+function VistaAdministracion() {
+  if (!puede(estado.sesion.rol_id, 'administrar')) return h('section', null, EncabezadoVista('Administración', null, null), EstadoSinPermiso());
+  const a = estado.admin;
+  const pendientes = estado.pendientes;
+  const pestanas = [['skus', 'SKUs'], ['usuarios', pendientes ? `Usuarios (${pendientes} por aprobar)` : 'Usuarios'], ['familias', 'Familias'], ['entregables', 'Entregables']];
+  const datos = { skus: a.skus, usuarios: a.usuarios, familias: a.familias, entregables: a.entregables }[a.pestana];
+  let contenido;
+  if (a.error) contenido = EstadoError(a.error, cargarAdmin);
+  else if (!datos || (a.cargando && !datos.length)) contenido = EstadoCargando('Cargando…', 6);
+  else contenido = { skus: AdminSkus, usuarios: AdminUsuarios, familias: AdminFamilias, entregables: AdminEntregables }[a.pestana]();
+  return h('section', null,
+    EncabezadoVista('Administración', 'Alta de SKUs, acceso de las personas y catálogos del aplicativo.', null),
+    h('div', { class: 'mb-4 flex gap-1 border-b border-[#D5DBE2] dark:border-[#2E3A48]', role: 'tablist' }, pestanas.map(([id, t]) => h('button', {
+      type: 'button', role: 'tab', id: `pestana-${id}`, 'aria-selected': String(a.pestana === id), onClick: () => cambiarPestanaAdmin(id),
+      class: `-mb-px border-b-2 px-3 py-2 text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1E4E79] dark:focus-visible:ring-[#7FB2E5] ${a.pestana === id ? 'border-[#1E4E79] dark:border-[#7FB2E5] text-[#1E4E79] dark:text-[#7FB2E5]' : 'border-transparent text-[#5B6675] dark:text-[#9AA7B6] hover:text-[#1B2430] dark:hover:text-[#E6EAEF]'}`
+    }, t))),
+    contenido);
+}
+function TablaAdmin(encabezados, filas) {
+  return h('div', { class: `${CLS.panel} overflow-x-auto`, 'data-scroll-id': `admin-${estado.admin.pestana}` },
+    h('table', { class: 'min-w-full border-separate border-spacing-0' },
+      h('thead', null, h('tr', null, encabezados.map(([t, extra]) => h('th', { scope: 'col', class: `${CLS.th} ${extra || ''}` }, t)))),
+      h('tbody', null, filas)));
+}
+function BarraAdmin(texto, boton) { return h('div', { class: 'mb-3 flex flex-wrap items-center justify-between gap-3' }, h('p', { class: 'text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, texto), boton); }
+/* FIN COMPONENTE: VistaAdministracion */
+
+/* COMPONENTE: AdminSkus */
+function AdminSkus() {
+  const lista = estado.admin.skus;
+  const boton = h('div', { class: 'flex flex-wrap gap-2' },
+    lista.length ? h('button', { type: 'button', class: CLS.btnSecundario, onClick: exportarAvance }, 'Exportar avance (CSV)') : null,
+    h('button', { type: 'button', class: CLS.btnPrimario, onClick: () => abrirModalSku(null) }, icono('mas'), 'Nuevo SKU'));
+  if (!lista.length) return h('div', null, EstadoVacio({ titulo: 'Todavía no hay SKUs', texto: 'Da de alta el primer SKU; se crean automáticamente sus casillas sin marcar.', accion: boton }));
+  return h('div', null,
+    BarraAdmin(`${lista.length} SKUs, incluidos los descontinuados. Al dar de alta un SKU se crean sus casillas sin marcar.`, boton),
+    TablaAdmin([['SKU'], ['Descripción'], ['Familia'], ['Estatus'], ['Avance', 'text-right'], [h('span', { class: 'sr-only' }, 'Acciones')]],
+      lista.map(s => h('tr', null,
+        h('th', { scope: 'row', class: `${CLS.td} text-left font-semibold tabular-nums` }, h('div', { class: 'flex items-center gap-3' }, MiniaturaSku(s), s.clave)),
+        h('td', { class: CLS.td }, s.descripcion),
+        h('td', { class: `${CLS.td} whitespace-nowrap` }, s.familia_nombre),
+        h('td', { class: `${CLS.td} whitespace-nowrap ${s.descontinuado ? 'text-[#5B6675] dark:text-[#9AA7B6]' : ''}` }, s.estatus_nombre),
+        h('td', { class: `${CLS.td} text-right tabular-nums` }, `${s.porcentaje}%`),
+        h('td', { class: `${CLS.td} whitespace-nowrap text-right` },
+          h('div', { class: 'flex justify-end gap-2' },
+            h('button', { type: 'button', class: CLS.btnChico, onClick: () => abrirModalSku(s), 'aria-label': `Editar ${s.clave}` }, icono('editar', 'w-3.5 h-3.5'), 'Editar'),
+            h('button', { type: 'button', class: `${CLS.btnChico} text-[#B42318] dark:text-[#F28B82]`, onClick: () => pedirEliminarSku(s), 'aria-label': `Eliminar ${s.clave}` }, 'Eliminar')))))));
+}
+/* FIN COMPONENTE: AdminSkus */
+
+
+
+
+/* COMPONENTE: AdminUsuarios */
+function AdminUsuarios() {
+  const lista = estado.admin.usuarios;
+  const roles = [ROLES.INGENIERO, ROLES.JEFE, ROLES.CONSULTA];
+  return h('div', null,
+    BarraAdmin('Cada persona crea su cuenta desde la pantalla de inicio con "Crear cuenta". Aquí apruebas su acceso, eliges su rol o se lo quitas.', null),
+    TablaAdmin([['Nombre'], ['Correo'], ['Rol'], ['Acceso'], [h('span', { class: 'sr-only' }, 'Acciones')]],
+      lista.map(u => {
+        const esUnoMismo = u.id === estado.sesion.user_id;
+        return h('tr', null,
+          h('th', { scope: 'row', class: `${CLS.td} text-left font-medium` }, u.nombre, esUnoMismo ? h('span', { class: 'ml-2 text-xs font-normal text-[#5B6675] dark:text-[#9AA7B6]' }, '(tú)') : null),
+          h('td', { class: `${CLS.td} whitespace-nowrap text-[#5B6675] dark:text-[#9AA7B6]` }, u.email),
+          h('td', { class: CLS.td }, u.estado === 'pendiente' ? h('span', { class: 'text-[#5B6675] dark:text-[#9AA7B6]' }, 'Sin asignar') : [
+            h('label', { for: `rol-${u.id}`, class: 'sr-only' }, `Rol de ${u.nombre}`),
+            h('select', { id: `rol-${u.id}`, class: `${CLS.input} min-w-[11rem] py-1.5`, value: u.rol_id, disabled: esUnoMismo, onChange: ev => cambiarRolUsuario(u, ev.target.value) },
+              roles.map(r => h('option', { value: r }, NOMBRES_ROL[r])))]),
+          h('td', { class: `${CLS.td} whitespace-nowrap` },
+            u.estado === 'pendiente' ? h('span', { class: 'inline-flex items-center gap-1 font-medium text-[#B26A00] dark:text-[#E0A650]' }, icono('alerta', 'w-3.5 h-3.5'), 'Por aprobar')
+              : u.estado === 'activo' ? h('span', { class: 'inline-flex items-center gap-1 text-[#1F7A4D] dark:text-[#5CC48E]' }, icono('check', 'w-3.5 h-3.5'), 'Con acceso')
+              : h('span', { class: 'text-[#5B6675] dark:text-[#9AA7B6]' }, 'Sin acceso')),
+          h('td', { class: `${CLS.td} whitespace-nowrap text-right` },
+            esUnoMismo ? null
+              : u.estado === 'pendiente' ? h('button', { type: 'button', class: CLS.btnChico, onClick: () => abrirModalAprobar(u) }, icono('check', 'w-3.5 h-3.5'), 'Aprobar')
+              : u.estado === 'activo' ? h('button', { type: 'button', class: `${CLS.btnChico} text-[#B42318] dark:text-[#F28B82]`, onClick: () => pedirCambioAcceso(u, false) }, 'Quitar acceso')
+              : h('button', { type: 'button', class: CLS.btnChico, onClick: () => pedirCambioAcceso(u, true) }, 'Restaurar acceso')));
+      })));
+}
+/* FIN COMPONENTE: AdminUsuarios */
+
+/* COMPONENTE: AdminFamilias */
+function AdminFamilias() {
+  const lista = estado.admin.familias;
+  const boton = h('button', { type: 'button', class: CLS.btnPrimario, onClick: () => abrirModalCatalogo('familia', null) }, icono('mas'), 'Nueva familia');
+  if (!lista.length) return EstadoVacio({ titulo: 'No hay familias', texto: 'Crea al menos una familia para poder dar de alta SKUs.', accion: boton });
+  return h('div', null,
+    BarraAdmin('Una familia inactiva deja de ofrecerse al dar de alta SKUs; los SKUs que ya la usan no cambian.', boton),
+    TablaAdmin([['Familia'], ['SKUs', 'text-right'], ['Estado'], [h('span', { class: 'sr-only' }, 'Acciones')]],
+      lista.map(f => h('tr', null,
+        h('th', { scope: 'row', class: `${CLS.td} text-left font-medium` }, f.nombre),
+        h('td', { class: `${CLS.td} text-right tabular-nums` }, f.skus),
+        h('td', { class: CLS.td }, f.activa ? 'Activa' : h('span', { class: 'text-[#5B6675] dark:text-[#9AA7B6]' }, 'Inactiva')),
+        h('td', { class: `${CLS.td} whitespace-nowrap text-right` }, h('div', { class: 'flex justify-end gap-2' },
+          h('button', { type: 'button', class: CLS.btnChico, onClick: () => abrirModalCatalogo('familia', f), 'aria-label': `Editar ${f.nombre}` }, icono('editar', 'w-3.5 h-3.5'), 'Editar'),
+          h('button', { type: 'button', class: CLS.btnChico, onClick: () => cambiarActivoFamilia(f, !f.activa) }, f.activa ? 'Desactivar' : 'Activar')))))));
+}
+/* FIN COMPONENTE: AdminFamilias */
+
+/* COMPONENTE: AdminEntregables */
+function AdminEntregables() {
+  const lista = estado.admin.entregables;
+  const boton = h('button', { type: 'button', class: CLS.btnPrimario, onClick: () => abrirModalCatalogo('entregable', null) }, icono('mas'), 'Nuevo entregable');
+  return h('div', null,
+    BarraAdmin('El orden define las columnas de la matriz. Un entregable nuevo aparece sin marcar en todos los SKUs y baja su porcentaje.', boton),
+    TablaAdmin([['Orden', 'w-20'], ['Entregable'], ['Estado'], [h('span', { class: 'sr-only' }, 'Acciones')]],
+      lista.map((e, i) => h('tr', null,
+        h('td', { class: `${CLS.td} tabular-nums text-[#5B6675] dark:text-[#9AA7B6]` }, i + 1),
+        h('th', { scope: 'row', class: `${CLS.td} text-left font-medium` }, e.nombre),
+        h('td', { class: CLS.td }, e.activo ? 'Activo' : h('span', { class: 'text-[#5B6675] dark:text-[#9AA7B6]' }, 'Inactivo, no cuenta en el avance')),
+        h('td', { class: `${CLS.td} whitespace-nowrap text-right` }, h('div', { class: 'flex justify-end gap-2' },
+          h('button', { type: 'button', class: CLS.btnChico, disabled: i === 0, onClick: () => moverEntregable(e, 'subir'), 'aria-label': `Subir ${e.nombre}` }, icono('arriba', 'w-3.5 h-3.5')),
+          h('button', { type: 'button', class: CLS.btnChico, disabled: i === lista.length - 1, onClick: () => moverEntregable(e, 'bajar'), 'aria-label': `Bajar ${e.nombre}` }, icono('abajo', 'w-3.5 h-3.5')),
+          h('button', { type: 'button', class: CLS.btnChico, onClick: () => abrirModalCatalogo('entregable', e), 'aria-label': `Editar ${e.nombre}` }, icono('editar', 'w-3.5 h-3.5'), 'Editar'),
+          h('button', { type: 'button', class: CLS.btnChico, onClick: () => pedirCambioActivoEntregable(e, !e.activo) }, e.activo ? 'Desactivar' : 'Activar')))))));
+}
+/* FIN COMPONENTE: AdminEntregables */
+
+/* COMPONENTE: Modal (contenedor común de diálogos) */
+function Modal() {
+  const m = estado.modal;
+  if (!m) return null;
+  const contenido = { desmarcar: ModalDesmarcar, sku: ModalSku, catalogo: ModalCatalogo, aprobar: ModalAprobar, confirmar: ModalConfirmacion }[m.tipo]();
+  return h('div', { class: 'fixed inset-0 z-50 flex items-center justify-center p-4' },
+    h('button', { type: 'button', class: 'absolute inset-0 h-full w-full cursor-default bg-[#1B2430]/40 dark:bg-[#000000]/40', 'aria-label': 'Cerrar diálogo', tabindex: '-1', onClick: cerrarModal }),
+    h('div', { class: 'relative max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg bg-white dark:bg-[#18202A] p-6 shadow-xl', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'titulo-modal' }, contenido));
+}
+function PieModal(textoBoton, onConfirmar, { peligro = false, enviando = false, textoEnviando = 'Guardando…' } = {}) {
+  return h('div', { class: 'mt-6 flex flex-wrap justify-end gap-2' },
+    h('button', { type: 'button', id: 'confirmar-cancelar', class: CLS.btnSecundario, onClick: cerrarModal, disabled: enviando }, 'Cancelar'),
+    h('button', { type: 'submit', class: peligro ? CLS.btnPeligro : CLS.btnPrimario, disabled: enviando, onClick: ev => { ev.preventDefault(); onConfirmar(); } },
+      enviando ? [Spinner('w-4 h-4 border-white border-t-transparent'), textoEnviando] : textoBoton));
+}
+function ErrorModal(texto) { return texto ? h('p', { class: 'mt-4 flex items-start gap-2 rounded-md border border-[#E7B4AE] dark:border-[#6B2E29] bg-[#FDF3F2] dark:bg-[#3A1D1B] px-3 py-2 text-sm text-[#8F1C13] dark:text-[#F5B3AC]', role: 'alert' }, icono('alerta', 'w-4 h-4 mt-0.5'), texto) : null; }
+/* FIN COMPONENTE: Modal */
+
+/* COMPONENTE: ModalDesmarcar */
+function ModalDesmarcar() {
+  const m = estado.modal;
+  const largo = m.causa.trim().length;
+  return h('form', { novalidate: true, onSubmit: ev => { ev.preventDefault(); confirmarDesmarcar(); } },
+    h('h2', { id: 'titulo-modal', class: 'text-lg font-semibold' }, `Desmarcar ${m.entregable_nombre} de ${m.sku_clave}`),
+    h('p', { class: 'mt-1 text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, `Lo marcó ${m.marcado_por || 'otra persona'} (${formatearFechaHora(m.marcado_en)}). El SKU bajará su avance y la causa quedará en el historial para quien lo retome.`),
+    h('div', { class: 'mt-4' },
+      h('label', { for: 'causa-desmarcar', class: CLS.etiqueta }, 'Causa (obligatoria)'),
+      h('textarea', { id: 'causa-desmarcar', rows: '4', maxlength: String(LIMITES.causaMax), class: m.error ? CLS.inputError : CLS.input, placeholder: 'Por ejemplo: el DXF no coincide con la cota del plano de ensamble.', 'aria-invalid': m.error ? 'true' : null, 'aria-describedby': 'causa-ayuda', disabled: m.enviando, value: m.causa, onInput: ev => { estado.modal.causa = ev.target.value; if (estado.modal.error) { estado.modal.error = null; render(); } } }),
+      m.error ? ErrorCampo(m.error, 'causa-ayuda') : h('p', { id: 'causa-ayuda', class: 'mt-1 text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, `Mínimo ${LIMITES.causaMin} caracteres. Escribe qué hay que corregir.`)),
+    PieModal('Desmarcar entregable', confirmarDesmarcar, { peligro: true, enviando: m.enviando, textoEnviando: 'Desmarcando…' }));
+}
+/* FIN COMPONENTE: ModalDesmarcar */
+
+/* COMPONENTE: ModalSku */
+function ModalSku() {
+  const m = estado.modal;
+  const e = m.errores || {};
+  const campo = (nombre, valor) => { estado.modal.datos[nombre] = valor; if (estado.modal.errores[nombre]) { delete estado.modal.errores[nombre]; render(); } };
+  const familias = estado.catalogos.familias.filter(f => f.activa || String(f.id) === m.datos.familia_id);
+  const grupo = (id, etiqueta, control, error) => h('div', null, h('label', { for: id, class: CLS.etiqueta }, etiqueta), control, ErrorCampo(error, `${id}-error`));
+  return h('form', { novalidate: true, onSubmit: ev => { ev.preventDefault(); guardarSku(); } },
+    h('h2', { id: 'titulo-modal', class: 'text-lg font-semibold' }, m.id ? `Editar SKU ${m.clave_original}` : 'Nuevo SKU'),
+    m.id ? null : h('p', { class: 'mt-1 text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, 'Se crearán sus casillas de entregables sin marcar. La imagen de referencia se sube desde el detalle del SKU.'),
+    h('div', { class: 'mt-4 space-y-4' },
+      grupo('sku-clave', 'SKU', h('input', { id: 'sku-clave', class: `${e.clave ? CLS.inputError : CLS.input} uppercase tabular-nums`, maxlength: String(LIMITES.claveMax), placeholder: 'Por ejemplo SIL-12A', 'aria-invalid': e.clave ? 'true' : null, value: m.datos.clave, onInput: ev => campo('clave', ev.target.value) }), e.clave),
+      grupo('sku-descripcion', 'Descripción', h('input', { id: 'sku-descripcion', class: e.descripcion ? CLS.inputError : CLS.input, maxlength: String(LIMITES.descripcionMax), 'aria-invalid': e.descripcion ? 'true' : null, value: m.datos.descripcion, onInput: ev => campo('descripcion', ev.target.value) }), e.descripcion),
+      h('div', { class: 'grid gap-4 sm:grid-cols-2' },
+        grupo('sku-familia', 'Familia', h('select', { id: 'sku-familia', class: e.familia_id ? CLS.inputError : CLS.input, value: m.datos.familia_id, onChange: ev => campo('familia_id', ev.target.value) },
+          h('option', { value: '' }, 'Elige una familia'), familias.map(f => h('option', { value: f.id }, f.nombre))), e.familia_id),
+        grupo('sku-estatus', 'Estatus', h('select', { id: 'sku-estatus', class: e.estatus_sku_id ? CLS.inputError : CLS.input, value: m.datos.estatus_sku_id, onChange: ev => campo('estatus_sku_id', ev.target.value) },
+          estado.catalogos.estatus.map(s => h('option', { value: s.id }, s.nombre))), e.estatus_sku_id)),
+      grupo('sku-observaciones', 'Observaciones (opcional)', h('textarea', { id: 'sku-observaciones', rows: '3', class: e.observaciones ? CLS.inputError : CLS.input, maxlength: String(LIMITES.observacionesMax), value: m.datos.observaciones, onInput: ev => campo('observaciones', ev.target.value) }), e.observaciones)),
+    ErrorModal(m.error),
+    PieModal(m.id ? 'Guardar SKU' : 'Crear SKU', guardarSku, { enviando: m.enviando }));
+}
+/* FIN COMPONENTE: ModalSku */
+
+/* COMPONENTE: ModalCatalogo */
+function ModalCatalogo() {
+  const m = estado.modal;
+  const esFamilia = m.entidad === 'familia';
+  const titulo = m.id ? `Editar ${esFamilia ? 'familia' : 'entregable'}` : esFamilia ? 'Nueva familia' : 'Nuevo entregable';
+  return h('form', { novalidate: true, onSubmit: ev => { ev.preventDefault(); guardarCatalogo(); } },
+    h('h2', { id: 'titulo-modal', class: 'text-lg font-semibold' }, titulo),
+    !esFamilia && !m.id ? h('p', { class: 'mt-1 text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, 'Aparecerá como columna nueva en la matriz, sin marcar en todos los SKUs.') : null,
+    h('div', { class: 'mt-4' },
+      h('label', { for: 'catalogo-nombre', class: CLS.etiqueta }, 'Nombre'),
+      h('input', { id: 'catalogo-nombre', class: m.error ? CLS.inputError : CLS.input, maxlength: String(LIMITES.nombreCatalogoMax), value: m.nombre, onInput: ev => { estado.modal.nombre = ev.target.value; if (estado.modal.error) { estado.modal.error = null; render(); } } }),
+      ErrorCampo(m.error, 'catalogo-error')),
+    PieModal(m.id ? `Guardar ${esFamilia ? 'familia' : 'entregable'}` : `Crear ${esFamilia ? 'familia' : 'entregable'}`, guardarCatalogo, { enviando: m.enviando }));
+}
+/* FIN COMPONENTE: ModalCatalogo */
+
+
+/* COMPONENTE: ModalAprobar */
+function ModalAprobar() {
+  const m = estado.modal;
+  const descripciones = { 1: 'Marca y desmarca entregables de cualquier SKU y sube imágenes.', 2: 'Todo lo del ingeniero, más alta de SKUs, catálogos y aprobación de usuarios.', 3: 'Ve avance, tablero e historial sin modificar nada.' };
+  return h('form', { novalidate: true, onSubmit: ev => { ev.preventDefault(); guardarAprobacion(); } },
+    h('h2', { id: 'titulo-modal', class: 'text-lg font-semibold' }, `Aprobar a ${m.nombre}`),
+    h('p', { class: 'mt-1 text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, `Confirma que ${m.email} es de alguien de tu equipo antes de darle acceso.`),
+    h('div', { class: 'mt-4' },
+      h('label', { for: 'aprobar-rol', class: CLS.etiqueta }, 'Rol'),
+      h('select', { id: 'aprobar-rol', class: CLS.input, value: m.rol_id, onChange: ev => { estado.modal.rol_id = ev.target.value; render(); } },
+        [ROLES.INGENIERO, ROLES.JEFE, ROLES.CONSULTA].map(r => h('option', { value: r }, NOMBRES_ROL[r]))),
+      h('p', { class: 'mt-1 text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, descripciones[m.rol_id])),
+    ErrorModal(m.error),
+    PieModal('Dar acceso', guardarAprobacion, { enviando: m.enviando }));
+}
+/* FIN COMPONENTE: ModalAprobar */
+
+/* COMPONENTE: ModalConfirmacion */
+function ModalConfirmacion() {
+  const m = estado.modal;
+  return h('div', null,
+    h('h2', { id: 'titulo-modal', class: 'text-lg font-semibold' }, m.titulo),
+    h('p', { class: 'mt-2 text-sm text-[#1B2430] dark:text-[#E6EAEF]' }, m.mensaje),
+    ErrorModal(m.error),
+    PieModal(m.textoBoton, ejecutarConfirmacion, { peligro: m.peligro, enviando: m.enviando, textoEnviando: 'Procesando…' }));
+}
+/* FIN COMPONENTE: ModalConfirmacion */
+
+/* COMPONENTE: Avisos */
+function Avisos() {
+  return h('div', { class: 'pointer-events-none fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] right-4 z-[60] flex w-[calc(100%-2rem)] max-w-sm flex-col gap-2', 'aria-live': 'polite' },
+    estado.avisos.map(a => h('div', {
+      class: `pointer-events-auto flex items-start gap-2 rounded-md border border-[#D5DBE2] dark:border-[#2E3A48] border-l-4 bg-white dark:bg-[#18202A] px-4 py-3 text-sm shadow-md ${a.tipo === 'error' ? 'border-l-[#B42318] dark:border-l-[#F28B82]' : 'border-l-[#1F7A4D] dark:border-l-[#5CC48E]'}`,
+      role: a.tipo === 'error' ? 'alert' : 'status'
+    },
+      h('span', { class: a.tipo === 'error' ? 'text-[#B42318] dark:text-[#F28B82]' : 'text-[#1F7A4D] dark:text-[#5CC48E]' }, icono(a.tipo === 'error' ? 'alerta' : 'check', 'w-4 h-4 mt-0.5')),
+      h('p', { class: 'flex-1' }, a.texto),
+      h('button', { type: 'button', class: 'rounded p-0.5 text-[#5B6675] dark:text-[#9AA7B6] hover:bg-[#F4F6F8] dark:hover:bg-[#243040] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1E4E79] dark:focus-visible:ring-[#7FB2E5]', 'aria-label': 'Cerrar aviso', onClick: () => cerrarAviso(a.id) }, icono('x', 'w-4 h-4')))));
+}
+/* FIN COMPONENTE: Avisos */
+
+/* COMPONENTE: App (raíz) */
+function App() {
+  if (estado.fase === 'auth') return h('div', null, FormularioAuth(), Avisos());
+  if (estado.fase !== 'app' || !estado.sesion) return h('div', null, PantallaInicio(), Avisos());
+  const vistas = { skus: VistaSkus, tablero: VistaTablero, historial: VistaHistorial, admin: VistaAdministracion };
+  return h('div', { class: 'flex min-h-screen flex-col' },
+    BarraSuperior(),
+    h('main', { class: 'mx-auto w-full max-w-[1400px] flex-1 px-4 py-6 sm:px-6' }, vistas[estado.vista]()),
+    estado.detalle.abierto ? PanelDetalleSku() : null,
+    Modal(),
+    Avisos());
+}
+/* FIN COMPONENTE: App */
+
+/* ---------- Dibujo (en React esto lo hace el propio React) ---------- */
+let graficas = [];
+let enfocarDespues = null;
+function render() {
+  const activo = document.activeElement;
+  const idFoco = activo && activo.id ? activo.id : null;
+  let seleccion = null;
+  try { if (idFoco && typeof activo.selectionStart === 'number') seleccion = [activo.selectionStart, activo.selectionEnd]; } catch (e) { /* inputs sin selección */ }
+  const scrolls = {};
+  document.querySelectorAll('[data-scroll-id]').forEach(el => { scrolls[el.dataset.scrollId] = [el.scrollLeft, el.scrollTop]; });
+  graficas.forEach(g => g.destroy()); graficas = [];
+  const oscuro = estado.tema === 'oscuro';
+  document.documentElement.classList.toggle('dark', oscuro);
+  document.documentElement.setAttribute('data-theme', oscuro ? 'dark' : 'light');
+  document.getElementById('app').replaceChildren(App());
+  document.querySelectorAll('[data-scroll-id]').forEach(el => { const s = scrolls[el.dataset.scrollId]; if (s) { el.scrollLeft = s[0]; el.scrollTop = s[1]; } });
+  const objetivo = enfocarDespues || idFoco; enfocarDespues = null;
+  if (objetivo) {
+    const el = document.getElementById(objetivo);
+    if (el && !el.disabled) { el.focus({ preventScroll: true }); if (seleccion && objetivo === idFoco) { try { el.setSelectionRange(seleccion[0], seleccion[1]); } catch (e) { /* select/checkbox */ } } }
+  }
+  montarGraficas();
+}
+function montarGraficas() {
+  if (estado.fase !== 'app' || !estado.sesion || estado.vista !== 'tablero' || !estado.tablero.datos || typeof Chart === 'undefined') return;
+  const d = estado.tablero.datos;
+  const oscuro = estado.tema === 'oscuro';
+  const C = oscuro
+    ? { superficie: '#18202A', exito: '#2E9A63', ambar: '#D9A03A', gris: '#4A5663', barra: '#4F8BC4', texto: '#E6EAEF', suave: '#9AA7B6', rejilla: '#26313D' }
+    : { superficie: '#FFFFFF', exito: '#1F7A4D', ambar: '#C98A1B', gris: '#B8C1CB', barra: '#1E4E79', texto: '#1B2430', suave: '#5B6675', rejilla: '#E3E7EC' };
+  Chart.defaults.color = C.suave;
+  const global = document.getElementById('grafica-global');
+  if (global) graficas.push(new Chart(global, {
+    type: 'doughnut',
+    data: { labels: ['Completos', 'En proceso', 'Sin iniciar'], datasets: [{ data: [d.completos, d.en_proceso, d.sin_iniciar], backgroundColor: [C.exito, C.ambar, C.gris], borderColor: C.superficie, borderWidth: 2 }] },
+    options: { cutout: '72%', maintainAspectRatio: false, animation: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.raw} SKUs` } } } }
+  }));
+  const barras = document.getElementById('grafica-entregables');
+  if (barras) graficas.push(new Chart(barras, {
+    type: 'bar',
+    data: { labels: d.por_entregable.map(e => e.nombre), datasets: [{ data: d.por_entregable.map(e => e.porcentaje), backgroundColor: d.por_entregable.map(e => e.porcentaje === 100 ? C.exito : C.barra), borderRadius: 3, barThickness: 22 }] },
+    options: {
+      indexAxis: 'y', maintainAspectRatio: false, animation: false,
+      scales: { x: { min: 0, max: 100, ticks: { callback: v => `${v}%`, color: C.suave }, grid: { color: C.rejilla } }, y: { ticks: { color: C.texto }, grid: { display: false } } },
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` ${ctx.raw}% (${d.por_entregable[ctx.dataIndex].completos} de ${d.total} SKUs)` } } },
+      onClick: (ev, els) => { if (els.length) { const e = d.por_entregable[els[0].index]; setTimeout(() => verSkusFiltrados({ pendiente_entregable_id: String(e.id) }), 0); } }
+    }
+  }));
+}
+</script>
+
+<!-- ===== 7. ARRANQUE ===== -->
+<script>
+if (typeof Chart !== 'undefined') { Chart.defaults.font.family = '"IBM Plex Sans", system-ui, sans-serif'; Chart.defaults.font.size = 12; }
+document.addEventListener('keydown', ev => {
+  if (ev.key !== 'Escape') return;
+  if (estado.modal) cerrarModal();
+  else if (estado.detalle.abierto) cerrarDetalle();
+});
+render();
+arrancar();
+</script>
+</body>
+</html>
