@@ -55,6 +55,11 @@
 </script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.1/dist/umd/supabase.js"></script>
+<style media="print">
+  /* Reporte: hoja en horizontal, con los colores de las barras incluidos */
+  @page { size: landscape; margin: 10mm; }
+  html, body { background: #FFFFFF !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+</style>
 </head>
 <body class="h-full bg-[#EEF1F4] dark:bg-[#10151B] font-sans text-[#1B2430] dark:text-[#E6EAEF] antialiased pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
 <div id="app"></div>
@@ -84,7 +89,7 @@ const CONFIG = {
 const BUCKET_IMAGENES = 'ing-imagenes';
 let SB = null;      // cliente de Supabase
 let canal = null;   // canal de tiempo real
-const cache = { skus: new Map(), familias: {}, entregables: {}, estatus: {}, perfiles: {} };
+const cache = { skus: new Map(), familias: {}, lineas: {}, entregables: {}, estatus: {}, perfiles: {} };
 const urlsFirmadas = new Map(); // ruta → { url, vence }
 function configurado() { return /^https:\/\/.+\.supabase\.co\/?$/.test(CONFIG.SUPABASE_URL) && !CONFIG.SUPABASE_URL.includes('TU-PROYECTO') && CONFIG.SUPABASE_ANON_KEY.length > 30; }
 </script>
@@ -143,7 +148,7 @@ function skuVivo(id) {
 function normalizarSku(f) {
   const casillas = {};
   for (const [k, v] of Object.entries(f.casillas || {})) casillas[k] = { completado: !!v.c, por: v.por || null, en: v.en || null };
-  return { ...f, id: Number(f.id), familia_id: Number(f.familia_id), estatus_sku_id: Number(f.estatus_sku_id), casillas };
+  return { ...f, id: Number(f.id), familia_id: Number(f.familia_id), linea_id: f.linea_id != null ? Number(f.linea_id) : null, estatus_sku_id: Number(f.estatus_sku_id), casillas };
 }
 function avanceDeSku(sku, ents) {
   const casillas = ents.map(e => {
@@ -156,13 +161,21 @@ function avanceDeSku(sku, ents) {
 }
 function skuConAvance(sku, ents) {
   const fam = cache.familias[String(sku.familia_id)];
+  const lin = sku.linea_id != null ? cache.lineas[String(sku.linea_id)] : null;
   const est = cache.estatus[String(sku.estatus_sku_id)];
   return {
     id: sku.id, clave: sku.clave, descripcion: sku.descripcion, familia_id: sku.familia_id, estatus_sku_id: sku.estatus_sku_id,
     observaciones: sku.observaciones || null, miniatura: sku.miniatura || null, tiene_imagen: !!sku.imagen_ruta, imagen_ruta: sku.imagen_ruta || null,
-    familia_nombre: fam ? fam.nombre : '—', estatus_nombre: est ? est.nombre : '—',
+    familia_nombre: fam ? fam.nombre : '—', linea_id: sku.linea_id, linea_nombre: lin ? lin.nombre : '—', estatus_nombre: est ? est.nombre : '—',
     descontinuado: sku.estatus_sku_id === ESTATUS_SKU.DESCONTINUADO, ...avanceDeSku(sku, ents)
   };
+}
+function avancePorGrupo(skus, grupos, campo) {
+  return grupos.map(g => {
+    const de = skus.filter(s => s[campo] === g.id);
+    const listos = de.filter(s => s.estado_avance === 'completo').length;
+    return { id: g.id, nombre: g.nombre, total: de.length, completos: listos, porcentaje: calcularPorcentaje(listos, de.length) };
+  }).filter(g => g.total > 0).sort((a, b) => compararNatural(a.nombre, b.nombre));
 }
 function registroHistorial(r) {
   return {
@@ -267,6 +280,8 @@ const DataService = {
       leerTodo(() => SB.from('ing_v_skus').select('*').order('id'))
     ]);
     cache.familias = porId(fam); cache.entregables = porId(ent); cache.estatus = porId(est);
+    try { cache.lineas = porId(await leerTodo(() => SB.from('ing_lineas').select('id,nombre,activa').is('deleted_at', null).order('id'))); }
+    catch (e) { cache.lineas = {}; } // la actualización de líneas aún no se ejecuta en Supabase
     cache.perfiles = Object.fromEntries(per.map(p => [p.id, p]));
     cache.skus = new Map(skus.map(f => { const s = normalizarSku(f); return [s.id, s]; }));
   },
@@ -278,6 +293,7 @@ const DataService = {
     if (!filtros.incluir_descontinuados) lista = lista.filter(s => !s.descontinuado);
     if (filtros.busqueda) { const q = normalizarTexto(filtros.busqueda); lista = lista.filter(s => normalizarTexto(`${s.clave} ${s.descripcion}`).includes(q)); }
     if (filtros.familia_id) lista = lista.filter(s => s.familia_id === Number(filtros.familia_id));
+    if (filtros.linea_id) lista = lista.filter(s => s.linea_id === Number(filtros.linea_id));
     if (filtros.avance && filtros.avance !== 'todos') lista = lista.filter(s => s.estado_avance === filtros.avance);
     if (filtros.pendiente_entregable_id) { const id = Number(filtros.pendiente_entregable_id); lista = lista.filter(s => s.casillas.some(c => c.entregable_id === id && !c.completado)); }
     lista.sort((a, b) => compararNatural(a.clave, b.clave));
@@ -379,6 +395,7 @@ const DataService = {
       const listos = de.filter(s => s.estado_avance === 'completo').length;
       return { id: f.id, nombre: f.nombre, total: de.length, completos: listos, porcentaje: calcularPorcentaje(listos, de.length) };
     }).filter(f => f.total > 0).sort((a, b) => compararNatural(a.nombre, b.nombre));
+    const por_linea = avancePorGrupo(activos, listaCatalogo(cache.lineas), 'linea_id');
     return {
       total: activos.length, completos, en_proceso: cuenta('en_proceso'), sin_iniciar: cuenta('sin_iniciar'),
       porcentaje_global: calcularPorcentaje(completos, activos.length),
@@ -386,7 +403,7 @@ const DataService = {
         const listos = activos.filter(s => s.casillas.some(c => c.entregable_id === e.id && c.completado)).length;
         return { id: e.id, nombre: e.nombre, completos: listos, porcentaje: calcularPorcentaje(listos, activos.length) };
       }),
-      por_familia
+      por_familia, por_linea
     };
   },
   async listarHistorial(filtros = {}) {
@@ -423,6 +440,68 @@ const DataService = {
     if (datos.activa !== undefined) cambio.activa = !!datos.activa;
     try { const [f] = await exigirFilas(SB.from('ing_familias').update(cambio).eq('id', id).select('id,nombre,activa')); programarRecarga(0); return f; }
     catch (e) { if (e.tipo === 'duplicado') throw new ErrorApi('Ya existe una familia con ese nombre.', { tipo: 'validacion', campos: { nombre: 'Ya existe una familia con ese nombre.' } }); throw e; }
+  },
+  async listarLineas({ incluir_inactivas = false } = {}) {
+    const skus = vivosSkus();
+    return listaCatalogo(cache.lineas).filter(l => incluir_inactivas || l.activa)
+      .map(l => ({ id: l.id, nombre: l.nombre, activa: !!l.activa, skus: skus.filter(s => s.linea_id === l.id).length }))
+      .sort((a, b) => compararNatural(a.nombre, b.nombre));
+  },
+  async crearLinea({ nombre }) {
+    exigirPermiso('administrar');
+    const err = validarNombreCatalogo(nombre, listaCatalogo(cache.lineas), null, 'linea');
+    if (err) throw new ErrorApi(err, { tipo: 'validacion', campos: { nombre: err } });
+    try { const { data } = await ejecutar(SB.from('ing_lineas').insert({ nombre: nombre.trim() }).select('id,nombre,activa').single()); programarRecarga(0); return data; }
+    catch (e) { if (e.tipo === 'duplicado') throw new ErrorApi('Ya existe una línea con ese nombre.', { tipo: 'validacion', campos: { nombre: 'Ya existe una línea con ese nombre.' } }); throw e; }
+  },
+  async actualizarLinea(id, datos) {
+    exigirPermiso('administrar');
+    const cambio = {};
+    if (datos.nombre !== undefined) {
+      const err = validarNombreCatalogo(datos.nombre, listaCatalogo(cache.lineas), id, 'linea');
+      if (err) throw new ErrorApi(err, { tipo: 'validacion', campos: { nombre: err } });
+      cambio.nombre = datos.nombre.trim();
+    }
+    if (datos.activa !== undefined) cambio.activa = !!datos.activa;
+    try { const [l] = await exigirFilas(SB.from('ing_lineas').update(cambio).eq('id', id).select('id,nombre,activa')); programarRecarga(0); return l; }
+    catch (e) { if (e.tipo === 'duplicado') throw new ErrorApi('Ya existe una línea con ese nombre.', { tipo: 'validacion', campos: { nombre: 'Ya existe una línea con ese nombre.' } }); throw e; }
+  },
+  /* Reporte semanal o mensual: avance al día de hoy + actividad del periodo [desde, hasta). */
+  async obtenerReporte({ desde, hasta, familia_id, linea_id }) {
+    const ents = entregablesActivos();
+    const enFiltro = s => (!familia_id || s.familia_id === Number(familia_id)) && (!linea_id || s.linea_id === Number(linea_id));
+    const todos = vivosSkus().filter(enFiltro);
+    const ids = new Set(todos.map(s => s.id));
+    const activos = todos.filter(s => s.estatus_sku_id === ESTATUS_SKU.ACTIVO).map(s => skuConAvance(s, ents));
+    const filas = await leerTodo(() => SB.from('ing_v_historial').select('*').gte('fecha', desde.toISOString()).lt('fecha', hasta.toISOString()).order('fecha').order('id'));
+    const movs = filas.map(registroHistorial).filter(r => ids.has(r.sku_id));
+    const enPeriodo = f => { const t = new Date(f).getTime(); return t >= desde.getTime() && t < hasta.getTime(); };
+    const completadosPeriodo = activos.filter(s => s.estado_avance === 'completo').map(s => {
+      const ultima = s.casillas.reduce((m, c) => (c.completado_en && (!m || c.completado_en > m) ? c.completado_en : m), null);
+      return { ...s, completado_en: ultima };
+    }).filter(s => s.completado_en && enPeriodo(s.completado_en)).sort((a, b) => compararNatural(a.clave, b.clave));
+    const porUsuario = new Map();
+    for (const r of movs) {
+      const u = porUsuario.get(r.user_id) || { nombre: r.usuario_nombre, marcados: 0, desmarcados: 0, skus: new Set() };
+      if (r.marcado) u.marcados++; else u.desmarcados++;
+      u.skus.add(r.sku_id); porUsuario.set(r.user_id, u);
+    }
+    const cuenta = est => activos.filter(s => s.estado_avance === est).length;
+    const completos = cuenta('completo');
+    return {
+      total: activos.length, completos, en_proceso: cuenta('en_proceso'), sin_iniciar: cuenta('sin_iniciar'),
+      porcentaje_global: calcularPorcentaje(completos, activos.length),
+      marcados: movs.filter(r => r.marcado).length, desmarcados: movs.filter(r => !r.marcado).length,
+      completados_periodo: completadosPeriodo,
+      por_entregable: ents.map(e => {
+        const listos = activos.filter(s => s.casillas.some(c => c.entregable_id === e.id && c.completado)).length;
+        return { id: e.id, nombre: e.nombre, completos: listos, porcentaje: calcularPorcentaje(listos, activos.length), marcados_periodo: movs.filter(r => r.marcado && r.entregable_id === e.id).length };
+      }),
+      por_familia: avancePorGrupo(activos, listaCatalogo(cache.familias), 'familia_id'),
+      por_linea: avancePorGrupo(activos, listaCatalogo(cache.lineas), 'linea_id'),
+      por_usuario: [...porUsuario.values()].map(u => ({ nombre: u.nombre, marcados: u.marcados, desmarcados: u.desmarcados, skus: u.skus.size })).sort((a, b) => b.marcados - a.marcados || compararNatural(a.nombre, b.nombre)),
+      desmarcados_detalle: movs.filter(r => !r.marcado).sort((a, b) => a.fecha.localeCompare(b.fecha))
+    };
   },
   async listarEntregables({ incluir_inactivos = false } = {}) {
     return listaCatalogo(cache.entregables).filter(e => incluir_inactivos || e.activo).sort((a, b) => a.orden - b.orden)
@@ -482,7 +561,7 @@ const DataService = {
 <!-- ===== 4. ESTADO DE LA APLICACIÓN ===== -->
 <script>
 /* Única fuente de verdad de la interfaz. estado.sesion = { user_id, nombre, email, rol_id, rol_nombre }. */
-const FILTROS_SKUS_INICIALES = { busqueda: '', familia_id: '', avance: 'todos', pendiente_entregable_id: '', incluir_descontinuados: false };
+const FILTROS_SKUS_INICIALES = { busqueda: '', familia_id: '', linea_id: '', avance: 'todos', pendiente_entregable_id: '', incluir_descontinuados: false };
 const FILTROS_HISTORIAL_INICIALES = { busqueda: '', user_id: '', marcado: 'todos', entregable_id: '' };
 const DETALLE_VACIO = { abierto: false, sku_id: null, cargando: false, error: null, datos: null, subiendoImagen: false, errorImagen: null };
 const AUTH_INICIAL = { pantalla: 'login', nombre: '', email: '', password: '', confirmar: '', error: null, mensaje: null, enviando: false };
@@ -498,13 +577,14 @@ const estado = {
   espera: { motivo: 'pendiente', email: '', revisando: false },
   sesion: null,
   vista: 'skus',
-  catalogos: { familias: [], entregables: [], estatus: [] },
+  catalogos: { familias: [], lineas: [], entregables: [], estatus: [] },
   skus: { cargando: false, error: null, datos: null, entregables: [], filtros: { ...FILTROS_SKUS_INICIALES }, celdaGuardando: null },
   detalle: { ...DETALLE_VACIO },
   tablero: { cargando: false, error: null, datos: null },
   historial: { cargando: false, error: null, datos: null, total: 0, usuarios: [], filtros: { ...FILTROS_HISTORIAL_INICIALES }, limite: 50, exportando: false },
-  admin: { pestana: 'skus', cargando: false, error: null, skus: null, usuarios: null, familias: null, entregables: null },
+  admin: { pestana: 'skus', cargando: false, error: null, skus: null, usuarios: null, familias: null, lineas: null, entregables: null },
   pendientes: 0,
+  reporte: { abierto: false, cargando: false, error: null, datos: null, config: null },
   modal: null,
   tema: temaInicial(),
   avisos: []
@@ -565,7 +645,7 @@ async function cerrarSesion() {
     skus: { cargando: false, error: null, datos: null, entregables: [], filtros: { ...FILTROS_SKUS_INICIALES }, celdaGuardando: null },
     tablero: { cargando: false, error: null, datos: null },
     historial: { cargando: false, error: null, datos: null, total: 0, usuarios: [], filtros: { ...FILTROS_HISTORIAL_INICIALES }, limite: 50, exportando: false },
-    admin: { pestana: 'skus', cargando: false, error: null, skus: null, usuarios: null, familias: null, entregables: null }
+    admin: { pestana: 'skus', cargando: false, error: null, skus: null, usuarios: null, familias: null, lineas: null, entregables: null }
   });
   cache.skus = new Map(); cache.perfiles = {};
   render();
@@ -603,7 +683,7 @@ async function enviarAuth() {
 function suscribirCambios() {
   if (canal) SB.removeChannel(canal);
   canal = SB.channel('ing-cambios');
-  for (const tabla of ['ing_sku_entregables', 'ing_skus', 'ing_familias', 'ing_entregables', 'ing_perfiles']) {
+  for (const tabla of ['ing_sku_entregables', 'ing_skus', 'ing_familias', 'ing_lineas', 'ing_entregables', 'ing_perfiles']) {
     canal.on('postgres_changes', { event: '*', schema: 'public', table: tabla }, () => programarRecarga());
   }
   canal.subscribe();
@@ -647,10 +727,10 @@ function cargarVista() {
   else if (estado.vista === 'admin') { if (puede(estado.sesion.rol_id, 'administrar')) cargarAdmin(); else render(); }
 }
 async function cargarCatalogos() {
-  const [familias, entregables, estatus] = await Promise.all([
-    DataService.listarFamilias({ incluir_inactivas: true }), DataService.listarEntregables({ incluir_inactivos: true }), DataService.listarEstatusSku()
+  const [familias, lineas, entregables, estatus] = await Promise.all([
+    DataService.listarFamilias({ incluir_inactivas: true }), DataService.listarLineas({ incluir_inactivas: true }), DataService.listarEntregables({ incluir_inactivos: true }), DataService.listarEstatusSku()
   ]);
-  estado.catalogos = { familias, entregables, estatus };
+  estado.catalogos = { familias, lineas, entregables, estatus };
   estado.pendientes = Object.values(cache.perfiles).filter(p => !p.rol_id).length;
   render();
 }
@@ -798,8 +878,8 @@ const fechaArchivo = () => new Date().toISOString().slice(0, 10);
 async function exportarAvance() {
   try {
     const r = await DataService.listarSkus({ incluir_descontinuados: true });
-    const filas = [['SKU', 'Descripción', 'Familia', 'Estatus', ...r.entregables.map(e => e.nombre), 'Avance %']];
-    for (const s of r.skus) filas.push([s.clave, s.descripcion, s.familia_nombre, s.estatus_nombre, ...s.casillas.map(c => c.completado ? 'Sí' : 'No'), s.porcentaje]);
+    const filas = [['SKU', 'Descripción', 'Familia', 'Línea', 'Estatus', ...r.entregables.map(e => e.nombre), 'Avance %']];
+    for (const s of r.skus) filas.push([s.clave, s.descripcion, s.familia_nombre, s.linea_nombre, s.estatus_nombre, ...s.casillas.map(c => c.completado ? 'Sí' : 'No'), s.porcentaje]);
     descargarCsv(`avance-ingenieria-${fechaArchivo()}.csv`, filas);
     agregarAviso('exito', `Avance exportado: ${r.skus.length} SKUs.`);
   } catch (e) { agregarAviso('error', `No se pudo exportar: ${e.message}`); }
@@ -828,17 +908,19 @@ async function recargarAdmin() {
   if (p === 'skus') estado.admin.skus = (await DataService.listarSkus({ incluir_descontinuados: true })).skus;
   if (p === 'usuarios') estado.admin.usuarios = await DataService.listarUsuarios();
   if (p === 'familias') estado.admin.familias = await DataService.listarFamilias({ incluir_inactivas: true });
+  if (p === 'lineas') estado.admin.lineas = await DataService.listarLineas({ incluir_inactivas: true });
   if (p === 'entregables') estado.admin.entregables = await DataService.listarEntregables({ incluir_inactivos: true });
 }
 async function recargarAdminSilencioso() { try { await recargarAdmin(); } catch (e) { agregarAviso('error', e.message); } render(); }
 
 function abrirModalSku(sku) {
   const familiaInicial = (estado.catalogos.familias.find(f => f.activa) || {}).id || '';
+  const lineaInicial = (estado.catalogos.lineas.find(l => l.activa && normalizarTexto(l.nombre) === 'coleccion italia') || estado.catalogos.lineas.find(l => l.activa) || {}).id || '';
   estado.modal = {
     tipo: 'sku', id: sku ? sku.id : null, clave_original: sku ? sku.clave : null,
     datos: sku
-      ? { clave: sku.clave, descripcion: sku.descripcion, familia_id: String(sku.familia_id), estatus_sku_id: String(sku.estatus_sku_id), observaciones: sku.observaciones || '' }
-      : { clave: '', descripcion: '', familia_id: String(familiaInicial), estatus_sku_id: String(ESTATUS_SKU.ACTIVO), observaciones: '' },
+      ? { clave: sku.clave, descripcion: sku.descripcion, familia_id: String(sku.familia_id), linea_id: sku.linea_id ? String(sku.linea_id) : String(lineaInicial), estatus_sku_id: String(sku.estatus_sku_id), observaciones: sku.observaciones || '' }
+      : { clave: '', descripcion: '', familia_id: String(familiaInicial), linea_id: String(lineaInicial), estatus_sku_id: String(ESTATUS_SKU.ACTIVO), observaciones: '' },
     errores: {}, error: null, enviando: false
   };
   enfocarDespues = 'sku-clave'; render();
@@ -881,13 +963,52 @@ async function guardarCatalogo() {
   try {
     let r;
     if (m.entidad === 'familia') r = m.id ? await DataService.actualizarFamilia(m.id, { nombre: m.nombre }) : await DataService.crearFamilia({ nombre: m.nombre });
+    else if (m.entidad === 'linea') r = m.id ? await DataService.actualizarLinea(m.id, { nombre: m.nombre }) : await DataService.crearLinea({ nombre: m.nombre });
     else r = m.id ? await DataService.actualizarEntregable(m.id, { nombre: m.nombre }) : await DataService.crearEntregable({ nombre: m.nombre });
     estado.modal = null;
-    const etiqueta = m.entidad === 'familia' ? 'Familia' : 'Entregable';
+    const etiqueta = { familia: 'Familia', linea: 'Línea', entregable: 'Entregable' }[m.entidad];
     agregarAviso('exito', m.id ? `${etiqueta} guardado: ${r.nombre}.` : `${etiqueta} creado: ${r.nombre}.`);
   } catch (e) { m.error = e.campos ? e.campos.nombre : e.message; }
   finally { if (estado.modal) estado.modal.enviando = false; render(); }
 }
+async function cambiarActivoLinea(l, activa) {
+  try { await DataService.actualizarLinea(l.id, { activa }); agregarAviso('exito', activa ? `Línea activada: ${l.nombre}.` : `Línea desactivada: ${l.nombre}.`); }
+  catch (e) { agregarAviso('error', e.message); }
+}
+
+/* ---------- Reporte semanal o mensual ---------- */
+function abrirModalReporte() {
+  const tipo = 'semanal';
+  estado.modal = { tipo: 'reporte', periodo_tipo: tipo, periodo: periodosReporte(tipo)[0].valor, familia_id: '', linea_id: '', error: null, enviando: false };
+  enfocarDespues = 'reporte-periodo'; render();
+}
+async function generarReporte() {
+  const m = estado.modal;
+  const periodo = periodosReporte(m.periodo_tipo).find(p => p.valor === m.periodo);
+  if (!periodo) { m.error = 'Elige un periodo.'; render(); return; }
+  const config = { tipo: m.periodo_tipo, periodo, familia_id: m.familia_id, linea_id: m.linea_id,
+    familia_nombre: (estado.catalogos.familias.find(f => String(f.id) === m.familia_id) || {}).nombre || null,
+    linea_nombre: (estado.catalogos.lineas.find(l => String(l.id) === m.linea_id) || {}).nombre || null,
+    generado_en: new Date().toISOString(), generado_por: estado.sesion.nombre };
+  m.enviando = true; m.error = null; render();
+  try {
+    const datos = await DataService.obtenerReporte({ desde: periodo.desde, hasta: periodo.hasta, familia_id: m.familia_id, linea_id: m.linea_id });
+    estado.modal = null;
+    estado.reporte = { abierto: true, cargando: false, error: null, datos, config };
+    window.scrollTo(0, 0);
+  } catch (e) { m.error = e.message; }
+  finally { if (estado.modal) estado.modal.enviando = false; render(); }
+}
+function imprimirReporte() {
+  const c = estado.reporte.config;
+  const tituloAnterior = document.title;
+  document.title = `Reporte ${c.tipo} ingeniería ${c.periodo.valor}`; // nombre sugerido del PDF
+  const restaurar = () => { document.title = tituloAnterior; window.removeEventListener('afterprint', restaurar); };
+  window.addEventListener('afterprint', restaurar);
+  window.print();
+}
+function cerrarReporte() { estado.reporte = { abierto: false, cargando: false, error: null, datos: null, config: null }; render(); }
+
 async function cambiarActivoFamilia(f, activa) {
   try { await DataService.actualizarFamilia(f.id, { activa }); agregarAviso('exito', activa ? `Familia activada: ${f.nombre}.` : `Familia desactivada: ${f.nombre}.`); }
   catch (e) { agregarAviso('error', e.message); }
@@ -994,7 +1115,7 @@ function normalizarClave(clave) { return String(clave || '').trim().toUpperCase(
 function limpiarDatosSku(d) {
   return {
     clave: normalizarClave(d.clave), descripcion: String(d.descripcion || '').trim(),
-    familia_id: d.familia_id ? Number(d.familia_id) : null, estatus_sku_id: d.estatus_sku_id ? Number(d.estatus_sku_id) : null,
+    familia_id: d.familia_id ? Number(d.familia_id) : null, ...(d.linea_id ? { linea_id: Number(d.linea_id) } : {}), estatus_sku_id: d.estatus_sku_id ? Number(d.estatus_sku_id) : null,
     observaciones: String(d.observaciones || '').trim() || null
   };
 }
@@ -1013,10 +1134,10 @@ function validarSku(d, skusExistentes, idActual) {
 }
 function validarNombreCatalogo(nombre, existentes, idActual, entidad) {
   const n = String(nombre || '').trim();
-  const art = entidad === 'familia' ? 'la familia' : 'el entregable';
+  const art = { familia: 'la familia', linea: 'la línea', entregable: 'el entregable' }[entidad];
   if (!n) return `Escribe el nombre de ${art}.`;
   if (n.length > LIMITES.nombreCatalogoMax) return `El nombre no puede pasar de ${LIMITES.nombreCatalogoMax} caracteres.`;
-  if (existentes.some(x => x.id !== idActual && normalizarTexto(x.nombre) === normalizarTexto(n))) return `Ya existe ${entidad === 'familia' ? 'una familia' : 'un entregable'} con ese nombre.`;
+  if (existentes.some(x => x.id !== idActual && normalizarTexto(x.nombre) === normalizarTexto(n))) return `Ya existe ${{ familia: 'una familia', linea: 'una línea', entregable: 'un entregable' }[entidad]} con ese nombre.`;
   return null;
 }
 /* Formularios de acceso. Contraseñas de mínimo 8 caracteres (configura lo mismo en Supabase → Authentication). */
@@ -1030,6 +1151,33 @@ function validarFormularioAuth(pantalla, d) {
   if (pantalla !== 'login' && !(/[A-Za-z]/.test(d.password) && /\d/.test(d.password))) return 'La contraseña debe combinar letras y números.';
   if (pantalla !== 'login' && d.password !== d.confirmar) return 'Las contraseñas no coinciden.';
   return null;
+}
+
+/* Periodos del reporte: semanas de lunes a domingo y meses naturales, los 12 más recientes (el primero es el que está en curso). */
+function periodosReporte(tipo) {
+  const hoy = new Date();
+  const iso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const corta = d => d.toLocaleDateString('es-MX', { day: 'numeric', month: 'short' }).replace('.', '');
+  const lista = [];
+  if (tipo === 'semanal') {
+    const lunes = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() - ((hoy.getDay() + 6) % 7));
+    for (let i = 0; i < 12; i++) {
+      const desde = new Date(lunes.getFullYear(), lunes.getMonth(), lunes.getDate() - 7 * i);
+      const hasta = new Date(desde.getFullYear(), desde.getMonth(), desde.getDate() + 7);
+      const domingo = new Date(hasta.getFullYear(), hasta.getMonth(), hasta.getDate() - 1);
+      const etiqueta = `Semana del ${corta(desde)} al ${corta(domingo)} ${domingo.getFullYear()}${i === 0 ? ' (en curso)' : ''}`;
+      lista.push({ valor: iso(desde), etiqueta, titulo: `Semana del ${corta(desde)} al ${corta(domingo)} de ${domingo.getFullYear()}`, desde, hasta });
+    }
+  } else {
+    for (let i = 0; i < 12; i++) {
+      const desde = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1);
+      const hasta = new Date(desde.getFullYear(), desde.getMonth() + 1, 1);
+      const mes = desde.toLocaleDateString('es-MX', { month: 'long', year: 'numeric' });
+      const titulo = mes.charAt(0).toUpperCase() + mes.slice(1);
+      lista.push({ valor: iso(desde), etiqueta: titulo + (i === 0 ? ' (en curso)' : ''), titulo, desde, hasta });
+    }
+  }
+  return lista;
 }
 
 /* Avance: completados ÷ entregables activos, redondeado a entero. Un SKU está completo solo al 100 %. */
@@ -1069,6 +1217,7 @@ const ICONOS = {
   check: 'M5 12.5l4.5 4.5L19 7.5', x: 'M6 6l12 12M18 6L6 18', buscar: 'M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15zM21 21l-5.2-5.2',
   alerta: 'M12 9v4M12 17h.01M10.3 3.9L2.4 17.5A2 2 0 0 0 4.1 20.5h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z',
   candado: 'M7 11V8a5 5 0 0 1 10 0v3M5 11h14v10H5z', mas: 'M12 5v14M5 12h14', arriba: 'M12 19V5M6 11l6-6 6 6', abajo: 'M12 5v14M6 13l6 6 6-6',
+  reporte: 'M7 3h7l5 5v13H7zM14 3v5h5M10 17v-3M13 17v-5M16 17v-2',
   sol: 'M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10zM12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4', luna: 'M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z',
   editar: 'M4 20h4L19 9l-4-4L4 16v4zM13.5 6.5l4 4', imagen: 'M4 5h16v14H4zM4 16l4-4 4 4 3-3 5 5M15 9.5h.01', deshacer: 'M9 14L4 9l5-5M4 9h10a6 6 0 0 1 0 12h-3', caja: 'M3 7l9-4 9 4v10l-9 4-9-4V7zM3 7l9 4 9-4M12 11v10'
 };
@@ -1287,7 +1436,7 @@ function VistaSkus() {
     FiltrosSkus(),
     contenido);
 }
-function hayFiltrosSkus() { const f = estado.skus.filtros; return !!(f.busqueda || f.familia_id || f.avance !== 'todos' || f.pendiente_entregable_id || f.incluir_descontinuados); }
+function hayFiltrosSkus() { const f = estado.skus.filtros; return !!(f.busqueda || f.familia_id || f.linea_id || f.avance !== 'todos' || f.pendiente_entregable_id || f.incluir_descontinuados); }
 /* FIN COMPONENTE: VistaSkus */
 
 /* COMPONENTE: FiltrosSkus */
@@ -1305,6 +1454,7 @@ function FiltrosSkus() {
         h('span', { class: 'pointer-events-none absolute inset-y-0 left-3 flex items-center text-[#7A8594] dark:text-[#7F8B99]' }, icono('buscar')),
         h('input', { id: 'filtro-busqueda', type: 'search', class: `${CLS.input} pl-9`, placeholder: 'SKU o descripción', value: f.busqueda, onInput: ev => cambiarFiltroSkus('busqueda', ev.target.value) }))),
     sel('filtro-familia', 'Familia', f.familia_id, [['', 'Todas las familias'], ...estado.catalogos.familias.map(x => [String(x.id), x.nombre])], 'familia_id'),
+    estado.catalogos.lineas.length ? sel('filtro-linea', 'Línea', f.linea_id, [['', 'Todas las líneas'], ...estado.catalogos.lineas.map(x => [String(x.id), x.nombre])], 'linea_id') : null,
     sel('filtro-avance', 'Avance', f.avance, [['todos', 'Todos'], ['completo', 'Completos'], ['en_proceso', 'En proceso'], ['sin_iniciar', 'Sin iniciar']], 'avance'),
     sel('filtro-pendiente', 'Con pendiente en', f.pendiente_entregable_id, [['', 'Cualquier entregable'], ...entregablesActivos.map(x => [String(x.id), x.nombre])], 'pendiente_entregable_id'),
     h('label', { for: 'filtro-descontinuados', class: 'flex items-center gap-2 pb-2 text-sm' },
@@ -1326,7 +1476,7 @@ function MatrizSkus() {
       h('thead', null, h('tr', null,
         h('th', { scope: 'col', class: `${CLS.th} sticky left-0 top-0 z-20 min-w-[10rem]` }, 'SKU'),
         h('th', { scope: 'col', class: `${CLS.th} sticky top-0 z-10 min-w-[16rem]` }, 'Descripción'),
-        h('th', { scope: 'col', class: `${CLS.th} sticky top-0 z-10` }, 'Familia'),
+        h('th', { scope: 'col', class: `${CLS.th} sticky top-0 z-10` }, estado.catalogos.lineas.length ? 'Familia / Línea' : 'Familia'),
         ents.map(e => h('th', { scope: 'col', class: `${CLS.th} sticky top-0 z-10 w-24 min-w-[6rem] border-l border-l-[#E3E7EC] dark:border-l-[#26313D] text-center leading-tight` }, e.nombre)),
         h('th', { scope: 'col', class: `${CLS.th} sticky top-0 z-10 min-w-[10rem] border-l border-l-[#E3E7EC] dark:border-l-[#26313D]` }, 'Avance'))),
       h('tbody', null, estado.skus.datos.map(sku => FilaSku(sku)))));
@@ -1337,7 +1487,7 @@ function FilaSku(sku) {
       h('button', { type: 'button', id: `abrir-${sku.id}`, class: `${CLS.enlace} flex items-center gap-3`, onClick: () => abrirDetalle(sku.id), 'aria-label': `Ver detalle de ${sku.clave}` }, MiniaturaSku(sku), h('span', null, sku.clave))),
     h('td', { class: `${CLS.td} group-hover:bg-[#F7F9FA] dark:group-hover:bg-[#1F2833] ${sku.descontinuado ? 'text-[#5B6675] dark:text-[#9AA7B6]' : ''}` },
       sku.descripcion, sku.descontinuado ? h('span', { class: 'ml-2 inline-block rounded border border-[#C3CBD4] dark:border-[#3A4756] px-1.5 text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, 'Descontinuado') : null),
-    h('td', { class: `${CLS.td} whitespace-nowrap text-[#5B6675] dark:text-[#9AA7B6] group-hover:bg-[#F7F9FA] dark:group-hover:bg-[#1F2833]` }, sku.familia_nombre),
+    h('td', { class: `${CLS.td} whitespace-nowrap text-[#5B6675] dark:text-[#9AA7B6] group-hover:bg-[#F7F9FA] dark:group-hover:bg-[#1F2833]` }, sku.familia_nombre, estado.catalogos.lineas.length ? h('span', { class: 'block text-xs text-[#7A8594] dark:text-[#7F8B99]' }, sku.linea_nombre) : null),
     sku.casillas.map(c => CeldaEntregable(sku, c)),
     h('td', { class: `${CLS.td} border-l border-l-[#E3E7EC] dark:border-l-[#26313D] group-hover:bg-[#F7F9FA] dark:group-hover:bg-[#1F2833]` }, AvanceSku(sku)));
 }
@@ -1391,6 +1541,7 @@ function PanelDetalleSku() {
       ImagenReferencia(s, editable),
       h('dl', { class: 'grid grid-cols-2 gap-x-4 gap-y-3 text-sm' },
         h('div', null, h('dt', { class: 'text-[#5B6675] dark:text-[#9AA7B6]' }, 'Familia'), h('dd', { class: 'font-medium' }, s.familia_nombre)),
+        estado.catalogos.lineas.length ? h('div', null, h('dt', { class: 'text-[#5B6675] dark:text-[#9AA7B6]' }, 'Línea'), h('dd', { class: 'font-medium' }, s.linea_nombre)) : null,
         h('div', null, h('dt', { class: 'text-[#5B6675] dark:text-[#9AA7B6]' }, 'Estatus'), h('dd', { class: 'font-medium' }, s.estatus_nombre)),
         h('div', { class: 'col-span-2' }, h('dt', { class: 'mb-1 text-[#5B6675] dark:text-[#9AA7B6]' }, 'Avance'), h('dd', null, AvanceSku(s))),
         s.observaciones ? h('div', { class: 'col-span-2' }, h('dt', { class: 'text-[#5B6675] dark:text-[#9AA7B6]' }, 'Observaciones'), h('dd', { class: 'whitespace-pre-line' }, s.observaciones)) : null),
@@ -1462,10 +1613,11 @@ function VistaTablero() {
   if (t.error) contenido = EstadoError(t.error, cargarTablero);
   else if (!t.datos) contenido = EstadoCargando('Cargando tablero…', 6);
   else if (!t.datos.total) contenido = EstadoVacio({ titulo: 'Aún no hay SKUs activos que medir', texto: 'El tablero se llena en cuanto haya SKUs activos dados de alta.', accion: null });
-  else contenido = h('div', { class: 'space-y-5' }, ResumenTablero(), h('div', { class: 'grid gap-5 lg:grid-cols-5' }, GraficaAvanceGlobal(), GraficaAvancePorEntregable()), AvancePorFamilia());
+  else contenido = h('div', { class: 'space-y-5' }, ResumenTablero(), h('div', { class: 'grid gap-5 lg:grid-cols-5' }, GraficaAvanceGlobal(), GraficaAvancePorEntregable()), h('div', { class: t.datos.por_linea.length ? 'grid gap-5 xl:grid-cols-2' : '' }, AvancePorFamilia(), t.datos.por_linea.length ? AvancePorLinea() : null));
   return h('section', null,
     EncabezadoVista('Tablero de avance', 'Solo cuentan los SKUs activos. Un SKU está completo cuando todos sus entregables están marcados como correctos.',
-      t.datos && t.cargando ? h('span', { class: 'flex items-center gap-2 text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, Spinner(), 'Actualizando') : null),
+      [t.datos && t.cargando ? h('span', { class: 'flex items-center gap-2 text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, Spinner(), 'Actualizando') : null,
+       t.datos && t.datos.total ? h('button', { type: 'button', class: CLS.btnPrimario, onClick: abrirModalReporte }, icono('reporte'), 'Generar reporte') : null]),
     contenido);
 }
 /* FIN COMPONENTE: VistaTablero */
@@ -1522,26 +1674,27 @@ function GraficaNoDisponible() {
 /* FIN COMPONENTE: GraficaAvancePorEntregable */
 
 /* COMPONENTE: AvancePorFamilia */
-function AvancePorFamilia() {
-  const d = estado.tablero.datos;
+function AvancePorFamilia() { const d = estado.tablero.datos; return TablaAvanceGrupo('Avance por familia', 'SKUs completos sobre SKUs activos de cada familia.', 'Familia', d.por_familia, 'familia_id', 'familias'); }
+function AvancePorLinea() { const d = estado.tablero.datos; return TablaAvanceGrupo('Avance por línea', 'SKUs completos sobre SKUs activos de cada línea.', 'Línea', d.por_linea, 'linea_id', 'lineas'); }
+function TablaAvanceGrupo(titulo, texto, etiqueta, filas, campo, scrollId) {
   return h('div', { class: `${CLS.panel} overflow-hidden` },
-    h('div', { class: 'px-5 pt-5' }, h('h2', { class: 'text-base font-semibold' }, 'Avance por familia'), h('p', { class: 'text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, 'SKUs completos sobre SKUs activos de cada familia.')),
-    h('div', { class: 'mt-3 overflow-x-auto', 'data-scroll-id': 'familias' },
+    h('div', { class: 'px-5 pt-5' }, h('h2', { class: 'text-base font-semibold' }, titulo), h('p', { class: 'text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, texto)),
+    h('div', { class: 'mt-3 overflow-x-auto', 'data-scroll-id': scrollId },
       h('table', { class: 'min-w-full border-separate border-spacing-0' },
         h('thead', null, h('tr', null,
-          h('th', { scope: 'col', class: `${CLS.th} pl-5` }, 'Familia'),
+          h('th', { scope: 'col', class: `${CLS.th} pl-5` }, etiqueta),
           h('th', { scope: 'col', class: `${CLS.th} text-right` }, 'SKUs activos'),
           h('th', { scope: 'col', class: `${CLS.th} text-right` }, 'Completos'),
           h('th', { scope: 'col', class: `${CLS.th} w-1/3 min-w-[12rem]` }, 'Avance'),
           h('th', { scope: 'col', class: `${CLS.th} pr-5` }, h('span', { class: 'sr-only' }, 'Acciones')))),
-        h('tbody', null, d.por_familia.map(f => h('tr', null,
+        h('tbody', null, filas.map(f => h('tr', null,
           h('th', { scope: 'row', class: `${CLS.td} pl-5 text-left font-medium` }, f.nombre),
           h('td', { class: `${CLS.td} text-right tabular-nums` }, f.total),
           h('td', { class: `${CLS.td} text-right tabular-nums` }, f.completos),
           h('td', { class: CLS.td }, h('div', { class: 'flex items-center gap-3' },
             h('div', { class: 'h-2 flex-1 overflow-hidden rounded-full bg-[#E3E7EC] dark:bg-[#26313D]', role: 'presentation' }, h('div', { class: `h-full rounded-full bg-[#1F7A4D] dark:bg-[#2E9A63] w-[${f.porcentaje}%]` })),
             h('span', { class: 'w-10 text-right text-sm font-semibold tabular-nums' }, `${f.porcentaje}%`))),
-          h('td', { class: `${CLS.td} pr-5 text-right` }, h('button', { type: 'button', class: `${CLS.enlace} text-sm`, onClick: () => verSkusFiltrados({ familia_id: String(f.id) }) }, `Ver ${f.nombre.toLowerCase()}`))))))));
+          h('td', { class: `${CLS.td} pr-5 text-right` }, h('button', { type: 'button', class: `${CLS.enlace} text-sm`, onClick: () => verSkusFiltrados({ [campo]: String(f.id) }) }, `Ver ${f.nombre.toLowerCase()}`))))))));
 }
 /* FIN COMPONENTE: AvancePorFamilia */
 
@@ -1593,12 +1746,12 @@ function VistaAdministracion() {
   if (!puede(estado.sesion.rol_id, 'administrar')) return h('section', null, EncabezadoVista('Administración', null, null), EstadoSinPermiso());
   const a = estado.admin;
   const pendientes = estado.pendientes;
-  const pestanas = [['skus', 'SKUs'], ['usuarios', pendientes ? `Usuarios (${pendientes} por aprobar)` : 'Usuarios'], ['familias', 'Familias'], ['entregables', 'Entregables']];
-  const datos = { skus: a.skus, usuarios: a.usuarios, familias: a.familias, entregables: a.entregables }[a.pestana];
+  const pestanas = [['skus', 'SKUs'], ['usuarios', pendientes ? `Usuarios (${pendientes} por aprobar)` : 'Usuarios'], ['familias', 'Familias'], ['lineas', 'Líneas'], ['entregables', 'Entregables']];
+  const datos = { skus: a.skus, usuarios: a.usuarios, familias: a.familias, lineas: a.lineas, entregables: a.entregables }[a.pestana];
   let contenido;
   if (a.error) contenido = EstadoError(a.error, cargarAdmin);
   else if (!datos || (a.cargando && !datos.length)) contenido = EstadoCargando('Cargando…', 6);
-  else contenido = { skus: AdminSkus, usuarios: AdminUsuarios, familias: AdminFamilias, entregables: AdminEntregables }[a.pestana]();
+  else contenido = { skus: AdminSkus, usuarios: AdminUsuarios, familias: AdminFamilias, lineas: AdminLineas, entregables: AdminEntregables }[a.pestana]();
   return h('section', null,
     EncabezadoVista('Administración', 'Alta de SKUs, acceso de las personas y catálogos del aplicativo.', null),
     h('div', { class: 'mb-4 flex gap-1 border-b border-[#D5DBE2] dark:border-[#2E3A48]', role: 'tablist' }, pestanas.map(([id, t]) => h('button', {
@@ -1625,11 +1778,12 @@ function AdminSkus() {
   if (!lista.length) return h('div', null, EstadoVacio({ titulo: 'Todavía no hay SKUs', texto: 'Da de alta el primer SKU; se crean automáticamente sus casillas sin marcar.', accion: boton }));
   return h('div', null,
     BarraAdmin(`${lista.length} SKUs, incluidos los descontinuados. Al dar de alta un SKU se crean sus casillas sin marcar.`, boton),
-    TablaAdmin([['SKU'], ['Descripción'], ['Familia'], ['Estatus'], ['Avance', 'text-right'], [h('span', { class: 'sr-only' }, 'Acciones')]],
+    TablaAdmin([['SKU'], ['Descripción'], ['Familia'], ['Línea'], ['Estatus'], ['Avance', 'text-right'], [h('span', { class: 'sr-only' }, 'Acciones')]],
       lista.map(s => h('tr', null,
         h('th', { scope: 'row', class: `${CLS.td} text-left font-semibold tabular-nums` }, h('div', { class: 'flex items-center gap-3' }, MiniaturaSku(s), s.clave)),
         h('td', { class: CLS.td }, s.descripcion),
         h('td', { class: `${CLS.td} whitespace-nowrap` }, s.familia_nombre),
+        h('td', { class: `${CLS.td} whitespace-nowrap` }, s.linea_nombre),
         h('td', { class: `${CLS.td} whitespace-nowrap ${s.descontinuado ? 'text-[#5B6675] dark:text-[#9AA7B6]' : ''}` }, s.estatus_nombre),
         h('td', { class: `${CLS.td} text-right tabular-nums` }, `${s.porcentaje}%`),
         h('td', { class: `${CLS.td} whitespace-nowrap text-right` },
@@ -1689,6 +1843,24 @@ function AdminFamilias() {
 }
 /* FIN COMPONENTE: AdminFamilias */
 
+/* COMPONENTE: AdminLineas */
+function AdminLineas() {
+  const lista = estado.admin.lineas;
+  const boton = h('button', { type: 'button', class: CLS.btnPrimario, onClick: () => abrirModalCatalogo('linea', null) }, icono('mas'), 'Nueva línea');
+  if (!lista.length) return EstadoVacio({ titulo: 'No hay líneas', texto: 'Ejecuta en Supabase el archivo actualizacion_lineas.sql para cargar las líneas del catálogo.', accion: null });
+  return h('div', null,
+    BarraAdmin('Una línea inactiva deja de ofrecerse al dar de alta SKUs; los SKUs que ya la usan no cambian. Los SKUs sin línea quedan en Colección Italia.', boton),
+    TablaAdmin([['Línea'], ['SKUs', 'text-right'], ['Estado'], [h('span', { class: 'sr-only' }, 'Acciones')]],
+      lista.map(l => h('tr', null,
+        h('th', { scope: 'row', class: `${CLS.td} text-left font-medium` }, l.nombre),
+        h('td', { class: `${CLS.td} text-right tabular-nums` }, l.skus),
+        h('td', { class: CLS.td }, l.activa ? 'Activa' : h('span', { class: 'text-[#5B6675] dark:text-[#9AA7B6]' }, 'Inactiva')),
+        h('td', { class: `${CLS.td} whitespace-nowrap text-right` }, h('div', { class: 'flex justify-end gap-2' },
+          h('button', { type: 'button', class: CLS.btnChico, onClick: () => abrirModalCatalogo('linea', l), 'aria-label': `Editar ${l.nombre}` }, icono('editar', 'w-3.5 h-3.5'), 'Editar'),
+          h('button', { type: 'button', class: CLS.btnChico, onClick: () => cambiarActivoLinea(l, !l.activa) }, l.activa ? 'Desactivar' : 'Activar')))))));
+}
+/* FIN COMPONENTE: AdminLineas */
+
 /* COMPONENTE: AdminEntregables */
 function AdminEntregables() {
   const lista = estado.admin.entregables;
@@ -1712,7 +1884,7 @@ function AdminEntregables() {
 function Modal() {
   const m = estado.modal;
   if (!m) return null;
-  const contenido = { desmarcar: ModalDesmarcar, sku: ModalSku, catalogo: ModalCatalogo, aprobar: ModalAprobar, confirmar: ModalConfirmacion }[m.tipo]();
+  const contenido = { desmarcar: ModalDesmarcar, sku: ModalSku, catalogo: ModalCatalogo, aprobar: ModalAprobar, reporte: ModalReporte, confirmar: ModalConfirmacion }[m.tipo]();
   return h('div', { class: 'fixed inset-0 z-50 flex items-center justify-center p-4' },
     h('button', { type: 'button', class: 'absolute inset-0 h-full w-full cursor-default bg-[#1B2430]/40 dark:bg-[#000000]/40', 'aria-label': 'Cerrar diálogo', tabindex: '-1', onClick: cerrarModal }),
     h('div', { class: 'relative max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg bg-white dark:bg-[#18202A] p-6 shadow-xl', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'titulo-modal' }, contenido));
@@ -1747,6 +1919,7 @@ function ModalSku() {
   const e = m.errores || {};
   const campo = (nombre, valor) => { estado.modal.datos[nombre] = valor; if (estado.modal.errores[nombre]) { delete estado.modal.errores[nombre]; render(); } };
   const familias = estado.catalogos.familias.filter(f => f.activa || String(f.id) === m.datos.familia_id);
+  const lineas = estado.catalogos.lineas.filter(l => l.activa || String(l.id) === m.datos.linea_id);
   const grupo = (id, etiqueta, control, error) => h('div', null, h('label', { for: id, class: CLS.etiqueta }, etiqueta), control, ErrorCampo(error, `${id}-error`));
   return h('form', { novalidate: true, onSubmit: ev => { ev.preventDefault(); guardarSku(); } },
     h('h2', { id: 'titulo-modal', class: 'text-lg font-semibold' }, m.id ? `Editar SKU ${m.clave_original}` : 'Nuevo SKU'),
@@ -1759,6 +1932,7 @@ function ModalSku() {
           h('option', { value: '' }, 'Elige una familia'), familias.map(f => h('option', { value: f.id }, f.nombre))), e.familia_id),
         grupo('sku-estatus', 'Estatus', h('select', { id: 'sku-estatus', class: e.estatus_sku_id ? CLS.inputError : CLS.input, value: m.datos.estatus_sku_id, onChange: ev => campo('estatus_sku_id', ev.target.value) },
           estado.catalogos.estatus.map(s => h('option', { value: s.id }, s.nombre))), e.estatus_sku_id)),
+      lineas.length ? grupo('sku-linea', 'Línea', h('select', { id: 'sku-linea', class: CLS.input, value: m.datos.linea_id, onChange: ev => campo('linea_id', ev.target.value) }, lineas.map(l => h('option', { value: l.id }, l.nombre))), null) : null,
       grupo('sku-observaciones', 'Observaciones (opcional)', h('textarea', { id: 'sku-observaciones', rows: '3', class: e.observaciones ? CLS.inputError : CLS.input, maxlength: String(LIMITES.observacionesMax), value: m.datos.observaciones, onInput: ev => campo('observaciones', ev.target.value) }), e.observaciones)),
     ErrorModal(m.error),
     PieModal(m.id ? 'Guardar SKU' : 'Crear SKU', guardarSku, { enviando: m.enviando }));
@@ -1769,15 +1943,16 @@ function ModalSku() {
 function ModalCatalogo() {
   const m = estado.modal;
   const esFamilia = m.entidad === 'familia';
-  const titulo = m.id ? `Editar ${esFamilia ? 'familia' : 'entregable'}` : esFamilia ? 'Nueva familia' : 'Nuevo entregable';
+  const nombreEntidad = { familia: 'familia', linea: 'línea', entregable: 'entregable' }[m.entidad];
+  const titulo = m.id ? `Editar ${nombreEntidad}` : { familia: 'Nueva familia', linea: 'Nueva línea', entregable: 'Nuevo entregable' }[m.entidad];
   return h('form', { novalidate: true, onSubmit: ev => { ev.preventDefault(); guardarCatalogo(); } },
     h('h2', { id: 'titulo-modal', class: 'text-lg font-semibold' }, titulo),
-    !esFamilia && !m.id ? h('p', { class: 'mt-1 text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, 'Aparecerá como columna nueva en la matriz, sin marcar en todos los SKUs.') : null,
+    m.entidad === 'entregable' && !m.id ? h('p', { class: 'mt-1 text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, 'Aparecerá como columna nueva en la matriz, sin marcar en todos los SKUs.') : null,
     h('div', { class: 'mt-4' },
       h('label', { for: 'catalogo-nombre', class: CLS.etiqueta }, 'Nombre'),
       h('input', { id: 'catalogo-nombre', class: m.error ? CLS.inputError : CLS.input, maxlength: String(LIMITES.nombreCatalogoMax), value: m.nombre, onInput: ev => { estado.modal.nombre = ev.target.value; if (estado.modal.error) { estado.modal.error = null; render(); } } }),
       ErrorCampo(m.error, 'catalogo-error')),
-    PieModal(m.id ? `Guardar ${esFamilia ? 'familia' : 'entregable'}` : `Crear ${esFamilia ? 'familia' : 'entregable'}`, guardarCatalogo, { enviando: m.enviando }));
+    PieModal(m.id ? `Guardar ${nombreEntidad}` : `Crear ${nombreEntidad}`, guardarCatalogo, { enviando: m.enviando }));
 }
 /* FIN COMPONENTE: ModalCatalogo */
 
@@ -1798,6 +1973,31 @@ function ModalAprobar() {
     PieModal('Dar acceso', guardarAprobacion, { enviando: m.enviando }));
 }
 /* FIN COMPONENTE: ModalAprobar */
+
+/* COMPONENTE: ModalReporte */
+function ModalReporte() {
+  const m = estado.modal;
+  const periodos = periodosReporte(m.periodo_tipo);
+  const opcion = (tipo, texto) => h('button', { type: 'button', 'aria-pressed': String(m.periodo_tipo === tipo),
+    class: `flex-1 rounded-md px-3 py-2 text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1E4E79] ${m.periodo_tipo === tipo ? 'bg-[#1E4E79] text-white dark:bg-[#2F6DA3]' : 'text-[#1B2430] hover:bg-[#F4F6F8] dark:text-[#E6EAEF] dark:hover:bg-[#243040]'}`,
+    onClick: () => { estado.modal.periodo_tipo = tipo; estado.modal.periodo = periodosReporte(tipo)[0].valor; render(); } }, texto);
+  const sel = (id, etiqueta, valor, opciones, campo) => h('div', null,
+    h('label', { for: id, class: CLS.etiqueta }, etiqueta),
+    h('select', { id, class: CLS.input, value: valor, onChange: ev => { estado.modal[campo] = ev.target.value; render(); } }, opciones.map(([v, t]) => h('option', { value: v }, t))));
+  return h('form', { novalidate: true, onSubmit: ev => { ev.preventDefault(); generarReporte(); } },
+    h('h2', { id: 'titulo-modal', class: 'text-lg font-semibold' }, 'Generar reporte'),
+    h('p', { class: 'mt-1 text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, 'Muestra el avance al día de hoy y la actividad del periodo que elijas. Podrás imprimirlo o guardarlo como PDF en horizontal.'),
+    h('div', { class: 'mt-4 space-y-4' },
+      h('div', null, h('p', { class: CLS.etiqueta }, 'Tipo de reporte'),
+        h('div', { class: 'flex gap-1 rounded-md border border-[#C3CBD4] p-1 dark:border-[#3A4756]', role: 'group', 'aria-label': 'Tipo de reporte' }, opcion('semanal', 'Semanal'), opcion('mensual', 'Mensual'))),
+      sel('reporte-periodo', m.periodo_tipo === 'semanal' ? 'Semana' : 'Mes', m.periodo, periodos.map(p => [p.valor, p.etiqueta]), 'periodo'),
+      h('div', { class: 'grid gap-4 sm:grid-cols-2' },
+        sel('reporte-familia', 'Familia', m.familia_id, [['', 'Todas las familias'], ...estado.catalogos.familias.map(f => [String(f.id), f.nombre])], 'familia_id'),
+        estado.catalogos.lineas.length ? sel('reporte-linea', 'Línea', m.linea_id, [['', 'Todas las líneas'], ...estado.catalogos.lineas.map(l => [String(l.id), l.nombre])], 'linea_id') : null)),
+    ErrorModal(m.error),
+    PieModal('Generar reporte', generarReporte, { enviando: m.enviando, textoEnviando: 'Generando…' }));
+}
+/* FIN COMPONENTE: ModalReporte */
 
 /* COMPONENTE: ModalConfirmacion */
 function ModalConfirmacion() {
@@ -1823,17 +2023,92 @@ function Avisos() {
 }
 /* FIN COMPONENTE: Avisos */
 
+/* COMPONENTE: VistaReporte — vista previa imprimible (colores claros fijos, pensada para hoja horizontal) */
+function VistaReporte() {
+  const { datos: d, config: c } = estado.reporte;
+  const enCurso = c.periodo.hasta.getTime() > Date.now();
+  const filtros = [c.familia_nombre ? `Familia: ${c.familia_nombre}` : null, c.linea_nombre ? `Línea: ${c.linea_nombre}` : null].filter(Boolean).join('   ·   ') || 'Todas las familias y líneas';
+  const th = 'border-b border-[#C9D1DA] px-2 py-1.5 text-left text-[11px] font-semibold text-[#5B6675]';
+  const td = 'border-b border-[#E3E7EC] px-2 py-1.5 align-middle text-xs';
+  const num = `${td} whitespace-nowrap text-right tabular-nums`;
+  const barra = (pct, color = 'bg-[#1F7A4D]') => h('div', { class: 'h-2 w-full min-w-[5rem] overflow-hidden rounded-full bg-[#E3E7EC]' }, h('div', { class: `h-full rounded-full ${color} w-[${pct}%]` }));
+  const cifra = (valor, etiqueta, extra) => h('div', { class: 'px-3 py-2' }, h('p', { class: 'text-2xl font-semibold leading-tight tabular-nums' }, valor), h('p', { class: 'text-[11px] text-[#5B6675]' }, etiqueta), extra || null);
+  const vacio = texto => h('p', { class: 'py-2 text-xs text-[#5B6675]' }, texto);
+  const seccion = (titulo, nota, contenido) => h('section', { class: 'break-inside-avoid rounded-md border border-[#D5DBE2] p-3' },
+    h('div', { class: 'mb-1 flex items-baseline justify-between gap-2' }, h('h2', { class: 'text-sm font-semibold' }, titulo), nota ? h('p', { class: 'text-[11px] text-[#5B6675]' }, nota) : null), contenido);
+  const tabla = (cabeceras, filas) => h('table', { class: 'w-full border-collapse' },
+    h('thead', null, h('tr', null, cabeceras.map(([t, cls]) => h('th', { class: `${th} ${cls || ''}` }, t)))), h('tbody', null, filas));
+  const tablaGrupo = (etiqueta, filas) => filas.length ? tabla([[etiqueta], ['SKUs activos', 'text-right'], ['Completos', 'text-right'], ['Avance', 'w-2/5']],
+    filas.map(g => h('tr', null, h('td', { class: `${td} font-medium` }, g.nombre), h('td', { class: num }, g.total), h('td', { class: num }, g.completos),
+      h('td', { class: td }, h('div', { class: 'flex items-center gap-2' }, barra(g.porcentaje), h('span', { class: 'w-9 text-right font-semibold tabular-nums' }, `${g.porcentaje}%`))))))
+    : vacio('No hay SKUs activos con estos filtros.');
+  const fecha = iso => new Date(iso).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
+
+  const hoja = h('article', { class: 'mx-auto my-6 w-full max-w-[1120px] space-y-3 bg-white p-8 text-[#1B2430] shadow-md print:m-0 print:max-w-none print:p-0 print:shadow-none' },
+    h('header', { class: 'flex items-start justify-between gap-6 border-b-2 border-[#1E4E79] pb-3' },
+      h('div', null,
+        h('p', { class: 'text-xs font-medium text-[#5B6675]' }, 'Línea Italia · Ingeniería de producto'),
+        h('h1', { class: 'text-xl font-semibold tracking-tight' }, `Reporte ${c.tipo} de avance de ingeniería`),
+        h('p', { class: 'text-sm font-medium text-[#1E4E79]' }, c.periodo.titulo + (enCurso ? ' (periodo en curso)' : ''))),
+      h('div', { class: 'text-right text-[11px] leading-relaxed text-[#5B6675]' },
+        h('p', null, `Generado el ${formatearFechaHora(c.generado_en)}`), h('p', null, `Por ${c.generado_por}`), h('p', { class: 'font-medium text-[#1B2430]' }, filtros))),
+    h('div', { class: 'grid grid-cols-[5fr_3fr] gap-3' },
+      h('section', { class: 'break-inside-avoid rounded-md border border-[#D5DBE2]' },
+        h('h2', { class: 'border-b border-[#E3E7EC] px-3 py-1.5 text-xs font-semibold' }, 'Avance al día de hoy (SKUs activos)'),
+        h('div', { class: 'grid grid-cols-5 divide-x divide-[#E3E7EC]' },
+          cifra(d.total, 'SKUs activos'), cifra(d.completos, 'Completos'),
+          cifra(`${d.porcentaje_global}%`, 'Avance global', h('div', { class: 'mt-1' }, barra(d.porcentaje_global))),
+          cifra(d.en_proceso, 'En proceso'), cifra(d.sin_iniciar, 'Sin iniciar'))),
+      h('section', { class: 'break-inside-avoid rounded-md border border-[#D5DBE2]' },
+        h('h2', { class: 'border-b border-[#E3E7EC] px-3 py-1.5 text-xs font-semibold' }, 'Actividad del periodo'),
+        h('div', { class: 'grid grid-cols-3 divide-x divide-[#E3E7EC]' },
+          cifra(d.marcados, 'Entregables marcados'), cifra(d.desmarcados, 'Entregables desmarcados'), cifra(d.completados_periodo.length, 'SKUs completados')))),
+    h('div', { class: 'grid grid-cols-2 gap-3' },
+      seccion('Avance por entregable', 'Marcados = en el periodo', tabla([['Entregable'], ['Avance', 'w-2/5'], ['SKUs', 'text-right'], ['Marcados', 'text-right']],
+        d.por_entregable.map(e => h('tr', null, h('td', { class: `${td} font-medium` }, e.nombre),
+          h('td', { class: td }, h('div', { class: 'flex items-center gap-2' }, barra(e.porcentaje, 'bg-[#1E4E79]'), h('span', { class: 'w-9 text-right font-semibold tabular-nums' }, `${e.porcentaje}%`))),
+          h('td', { class: num }, `${e.completos} de ${d.total}`), h('td', { class: num }, e.marcados_periodo))))),
+      seccion('Actividad por persona', 'En el periodo', d.por_usuario.length
+        ? tabla([['Persona'], ['Marcados', 'text-right'], ['Desmarcados', 'text-right'], ['SKUs trabajados', 'text-right']],
+            d.por_usuario.map(u => h('tr', null, h('td', { class: `${td} font-medium` }, u.nombre), h('td', { class: num }, u.marcados), h('td', { class: num }, u.desmarcados), h('td', { class: num }, u.skus))))
+        : vacio('Nadie marcó ni desmarcó entregables en este periodo.'))),
+    h('div', { class: d.por_linea.length ? 'grid grid-cols-2 gap-3' : '' },
+      seccion('Avance por familia', null, tablaGrupo('Familia', d.por_familia)),
+      d.por_linea.length ? seccion('Avance por línea', null, tablaGrupo('Línea', d.por_linea)) : null),
+    seccion(`SKUs completados en el periodo (${d.completados_periodo.length})`, 'SKUs que llegaron al 100 % dentro del periodo', d.completados_periodo.length
+      ? tabla([['SKU'], ['Descripción'], ['Familia'], ['Línea'], ['Completado', 'text-right']],
+          d.completados_periodo.map(k => h('tr', null, h('td', { class: `${td} font-semibold tabular-nums` }, k.clave), h('td', { class: td }, k.descripcion), h('td', { class: td }, k.familia_nombre), h('td', { class: td }, k.linea_nombre), h('td', { class: `${td} text-right tabular-nums` }, fecha(k.completado_en)))))
+      : vacio('Ningún SKU llegó al 100 % en este periodo.')),
+    seccion(`Entregables desmarcados en el periodo (${d.desmarcados_detalle.length})`, 'Con la causa registrada', d.desmarcados_detalle.length
+      ? tabla([['Fecha'], ['SKU'], ['Entregable'], ['Persona'], ['Causa']],
+          d.desmarcados_detalle.map(r => h('tr', null, h('td', { class: `${td} whitespace-nowrap tabular-nums` }, fecha(r.fecha)), h('td', { class: `${td} font-semibold tabular-nums` }, r.sku_clave), h('td', { class: td }, r.entregable_nombre), h('td', { class: `${td} whitespace-nowrap` }, r.usuario_nombre), h('td', { class: td }, r.comentario))))
+      : vacio('No se desmarcó ningún entregable en este periodo.')),
+    h('p', { class: 'pt-1 text-[10px] text-[#5B6675]' }, 'El avance corresponde al momento de generar el reporte. La actividad (marcados, desmarcados y SKUs completados) corresponde al periodo indicado. Solo cuentan en el avance los SKUs con estatus Activo.'));
+
+  return h('div', { class: 'fixed inset-0 z-[70] overflow-auto bg-[#DDE2E8] print:static print:overflow-visible print:bg-white', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Vista previa del reporte' },
+    h('div', { class: 'sticky top-0 z-10 border-b border-[#C9D1DA] bg-white px-4 py-3 text-[#1B2430] shadow-sm print:hidden' },
+      h('div', { class: 'mx-auto flex max-w-[1120px] flex-wrap items-center gap-3' },
+        h('div', { class: 'min-w-0 flex-1' }, h('p', { class: 'text-sm font-semibold' }, 'Vista previa del reporte'),
+          h('p', { class: 'text-xs text-[#5B6675]' }, 'Para PDF: presiona Imprimir y en Destino elige "Guardar como PDF". La hoja ya sale en horizontal.')),
+        h('button', { type: 'button', id: 'reporte-imprimir', class: CLS.btnPrimario, onClick: imprimirReporte }, icono('reporte'), 'Imprimir o guardar PDF'),
+        h('button', { type: 'button', class: 'inline-flex items-center justify-center gap-2 rounded-md border border-[#C3CBD4] bg-white px-4 py-2 text-sm font-medium text-[#1B2430] hover:bg-[#F4F6F8] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1E4E79]', onClick: cerrarReporte }, 'Cerrar'))),
+    hoja);
+}
+/* FIN COMPONENTE: VistaReporte */
+
 /* COMPONENTE: App (raíz) */
 function App() {
   if (estado.fase === 'auth') return h('div', null, FormularioAuth(), Avisos());
   if (estado.fase !== 'app' || !estado.sesion) return h('div', null, PantallaInicio(), Avisos());
   const vistas = { skus: VistaSkus, tablero: VistaTablero, historial: VistaHistorial, admin: VistaAdministracion };
-  return h('div', { class: 'flex min-h-screen flex-col' },
-    BarraSuperior(),
-    h('main', { class: 'mx-auto w-full max-w-[1400px] flex-1 px-4 py-6 sm:px-6' }, vistas[estado.vista]()),
-    estado.detalle.abierto ? PanelDetalleSku() : null,
-    Modal(),
-    Avisos());
+  const reporte = estado.reporte.abierto && estado.reporte.datos;
+  return h('div', null,
+    h('div', { class: `flex min-h-screen flex-col ${reporte ? 'print:hidden' : ''}` },
+      BarraSuperior(),
+      h('main', { class: 'mx-auto w-full max-w-[1400px] flex-1 px-4 py-6 sm:px-6' }, vistas[estado.vista]()),
+      estado.detalle.abierto ? PanelDetalleSku() : null),
+    reporte ? VistaReporte() : null,
+    h('div', { class: 'print:hidden' }, Modal(), Avisos()));
 }
 /* FIN COMPONENTE: App */
 
@@ -1894,6 +2169,7 @@ if (typeof Chart !== 'undefined') { Chart.defaults.font.family = '"IBM Plex Sans
 document.addEventListener('keydown', ev => {
   if (ev.key !== 'Escape') return;
   if (estado.modal) cerrarModal();
+  else if (estado.reporte.abierto) cerrarReporte();
   else if (estado.detalle.abierto) cerrarDetalle();
 });
 render();
