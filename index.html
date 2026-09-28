@@ -59,6 +59,7 @@
 </script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.1/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js"></script>
 <style media="print">
   /* Reporte: hoja en horizontal, con los colores de las barras incluidos */
   @page { size: landscape; margin: 10mm; }
@@ -88,13 +89,17 @@
    NUNCA pongas aquí la llave "service_role". */
 const CONFIG = {
   SUPABASE_URL: 'https://myrsbijwtovmnpwdhixc.supabase.co',
-  SUPABASE_ANON_KEY: 'sb_publishable_TANKRU3V5wExp5HoTsxRuA_m6tv_eX2'
+  SUPABASE_ANON_KEY: 'sb_publishable_TANKRU3V5wExp5HoTsxRuA_m6tv_eX2',
+  /* Dirección del intermediario de Google Drive (ver intermediario_drive.gs y su guía).
+     Déjala como está si todavía no usas los archivos de corte. */
+  DRIVE_URL: 'https://script.google.com/macros/s/AKfycbyKS2y9XWIg37UQlcIWClqLD-xYpvxN9AIo--eeVHrAmlzBvkv3KTYEXP1N7pwAMlWy/exec'
 };
 const BUCKET_IMAGENES = 'ing-imagenes';
+const driveListo = () => /^https:\/\/script\.google\.com\//.test(CONFIG.DRIVE_URL);
 const LOGO_LINEA_ITALIA = 'data:image/png;base64,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'; // logo completo en negro; en modo oscuro se invierte a blanco
 let SB = null;      // cliente de Supabase
 let canal = null;   // canal de tiempo real
-const cache = { skus: new Map(), familias: {}, lineas: {}, entregables: {}, estatus: {}, perfiles: {} };
+const cache = { skus: new Map(), familias: {}, lineas: {}, entregables: {}, estatus: {}, perfiles: {}, areasCorte: {}, tiposDocumento: {}, maquinas: {} };
 const urlsFirmadas = new Map(); // ruta → { url, vence }
 function configurado() { return /^https:\/\/.+\.supabase\.co\/?$/.test(CONFIG.SUPABASE_URL) && !CONFIG.SUPABASE_URL.includes('TU-PROYECTO') && CONFIG.SUPABASE_ANON_KEY.length > 30; }
 </script>
@@ -228,6 +233,31 @@ async function prepararImagen(archivo) {
   while (completa.length > 340000 && lado > 300) { if (calidad > 0.6) calidad -= 0.1; else lado = Math.round(lado * 0.8); completa = redimensionar(img, lado, calidad); }
   return { completa, miniatura: redimensionar(img, 96, 0.8) };
 }
+/* ---------- Archivos de corte en Google Drive ---------- */
+async function llamarDrive(accion, datos) {
+  if (!driveListo()) throw new ErrorApi('Falta configurar el almacén de archivos. Avisa al jefe de ingeniería (revisar DRIVE_URL en index.html).', { tipo: 'configuracion' });
+  const { data } = await SB.auth.getSession();
+  if (!data.session) throw new ErrorApi('Tu sesión expiró. Vuelve a iniciar sesión.', { tipo: 'sesion' });
+  let r;
+  try {
+    r = await fetch(CONFIG.DRIVE_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ accion, token: data.session.access_token, ...datos }) });
+  } catch (e) { throw new ErrorApi('No se pudo conectar con el almacén de archivos. Revisa tu conexión a internet.', { tipo: 'conexion' }); }
+  if (!r.ok) throw new ErrorApi('El almacén de archivos no respondió. Intenta de nuevo en unos minutos.', { tipo: 'conexion' });
+  const res = await r.json();
+  if (res.error) throw new ErrorApi(res.error, { tipo: /permiso|vigente/i.test(res.error) ? 'permiso' : 'servidor' });
+  return res;
+}
+const aBase64 = bytes => { let s = ''; for (let i = 0; i < bytes.length; i += 8192) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 8192)); return btoa(s); };
+const deBase64 = texto => { const b = atob(texto), a = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) a[i] = b.charCodeAt(i); return a; };
+async function sha256Bytes(bytes) {
+  const hash = await crypto.subtle.digest('SHA-256', bytes);
+  return [...new Uint8Array(hash)].map(b => b.toString(16).padStart(2, '0')).join('');
+}
+async function sha256Archivo(archivo) {
+  const hash = await crypto.subtle.digest('SHA-256', await archivo.arrayBuffer());
+  return [...new Uint8Array(hash)].map(b => b.toString(16).padStart(2, '0')).join('');
+}
 function dataUrlABlob(dataUrl) {
   const [cab, datos] = dataUrl.split(',');
   const bin = atob(datos); const bytes = new Uint8Array(bin.length);
@@ -276,10 +306,115 @@ const DataService = {
   },
   async cerrarSesion() { try { await SB.auth.signOut(); } catch (e) { /* se cierra localmente de todos modos */ } },
   async obtenerMiPerfil(userId) {
-    const { data } = await ejecutar(SB.from('ing_perfiles').select('id,nombre,email,rol_id,activo').eq('id', userId).maybeSingle());
+    const { data } = await ejecutar(SB.from('ing_perfiles').select('*').eq('id', userId).maybeSingle());
     return data;
   },
+  async recargarCatalogosCorte() {
+    try {
+      const [areas, tipos, maquinas] = await Promise.all([
+        leerTodo(() => SB.from('ing_areas_corte').select('id,nombre,activa').is('deleted_at', null).order('id')),
+        leerTodo(() => SB.from('ing_tipos_documento').select('id,nombre,area_id,extensiones,orden,activo').is('deleted_at', null).order('id')),
+        leerTodo(() => SB.from('ing_maquinas').select('id,nombre,area_id,activa').is('deleted_at', null).order('id'))]);
+      cache.areasCorte = porId(areas); cache.tiposDocumento = porId(tipos); cache.maquinas = porId(maquinas);
+    } catch (e) { cache.areasCorte = {}; cache.tiposDocumento = {}; cache.maquinas = {}; } // la actualización de documentos aún no se ejecuta
+  },
+  catalogosCorte() {
+    const areas = listaCatalogo(cache.areasCorte).sort((a, b) => compararNatural(a.nombre, b.nombre));
+    const nombreArea = id => (cache.areasCorte[String(id)] || {}).nombre || '—';
+    const tipos = listaCatalogo(cache.tiposDocumento).map(t => ({ ...t, area_id: Number(t.area_id), area_nombre: nombreArea(t.area_id) })).sort((a, b) => a.orden - b.orden || compararNatural(a.nombre, b.nombre));
+    const maquinas = listaCatalogo(cache.maquinas).map(m => ({ ...m, area_id: Number(m.area_id), area_nombre: nombreArea(m.area_id) })).sort((a, b) => compararNatural(a.nombre, b.nombre));
+    return { areas, tipos, maquinas };
+  },
 
+  /* ---------- Documentos de corte ---------- */
+  async listarDocumentos({ sku_id = null, solo_activos = true } = {}) {
+    const filas = await leerTodo(() => {
+      let q = SB.from('ing_v_documentos').select('*').order('sku_id').order('tipo_orden').order('pieza');
+      if (sku_id) q = q.eq('sku_id', sku_id);
+      if (solo_activos) q = q.eq('activo', true).not('version_id', 'is', null);
+      return q;
+    });
+    return filas.map(d => ({ ...d, id: Number(d.id), sku_id: Number(d.sku_id), tipo_documento_id: Number(d.tipo_documento_id), area_id: Number(d.area_id) }))
+      .sort((a, b) => compararNatural(a.sku_clave, b.sku_clave) || a.tipo_orden - b.tipo_orden || compararNatural(a.pieza, b.pieza));
+  },
+  async listarVersiones(documentoId) {
+    const { data } = await ejecutar(SB.from('ing_v_versiones').select('*').eq('documento_id', documentoId).order('version', { ascending: false }));
+    return data || [];
+  },
+  /* Sube una pieza: comprime, guarda en Drive, registra la versión y libera el archivo que sobre. */
+  async subirDocumento({ sku, tipo, pieza, archivo, cambios, esPrimera }) {
+    exigirPermiso('subir_documentos');
+    const err = validarArchivoDocumento(archivo, tipo) || validarNombrePieza(pieza) || validarCambiosDocumento(cambios, esPrimera);
+    if (err) throw new ErrorApi(err, { tipo: 'validacion' });
+    const bytes = new Uint8Array(await archivo.arrayBuffer());
+    const sha = await sha256Bytes(bytes);
+    const comprimido = pako.gzip(bytes, { level: 9 });
+    const subida = await llamarDrive('subir', { contenido: aBase64(comprimido), nombre: archivo.name, sku: sku.clave, pieza });
+    const { data } = await ejecutar(SB.rpc('ing_registrar_version', {
+      p_sku: sku.id, p_tipo: tipo.id, p_pieza: pieza, p_drive_id: subida.drive_id, p_nombre: archivo.name,
+      p_tamano: archivo.size, p_tamano_guardado: subida.tamano_guardado || comprimido.length, p_sha256: sha,
+      p_cambios: String(cambios || '').trim() || null
+    })).catch(async e => { llamarDrive('borrar', { drive_ids: [subida.drive_id] }).catch(() => {}); throw e; });
+    const fila = (data && data[0]) || {};
+    if (fila.liberar_drive_id) llamarDrive('borrar', { drive_ids: [fila.liberar_drive_id] }).catch(() => {});
+    return fila.version;
+  },
+  async retirarDocumento(documentoId, motivo) {
+    exigirPermiso('subir_documentos');
+    if (String(motivo || '').trim().length < 10) throw new ErrorApi('Escribe el motivo del retiro (mínimo 10 caracteres).', { tipo: 'validacion' });
+    const { data } = await ejecutar(SB.rpc('ing_retirar_documento', { p_documento: documentoId, p_motivo: String(motivo).trim() }));
+    const ids = (data || []).map(x => x.liberar_drive_id).filter(Boolean);
+    if (ids.length) llamarDrive('borrar', { drive_ids: ids }).catch(() => {});
+  },
+  /* Descarga: registra, trae el archivo de Drive, lo descomprime y lo entrega con su nombre. */
+  async descargarDocumento(d) {
+    if (d.archivo_borrado || !d.drive_id) throw new ErrorApi('De esta versión solo queda el registro; su archivo ya se liberó para ahorrar espacio.', { tipo: 'no_encontrado' });
+    await ejecutar(SB.rpc('ing_registrar_descarga', { p_version: d.version_id }));
+    const res = await llamarDrive('descargar', { drive_id: d.drive_id });
+    const bytes = pako.ungzip(deBase64(res.contenido));
+    guardarArchivo(bytes, nombreDescargaDocumento(d));
+  },
+  async documentoPorVersion(versionId) {
+    const { data } = await ejecutar(SB.from('ing_v_documentos').select('*').eq('version_id', versionId).maybeSingle());
+    return data;
+  },
+  async verificarArchivo(archivo) {
+    const sha = await sha256Archivo(archivo);
+    const { data } = await ejecutar(SB.rpc('ing_verificar_archivo', { p_sha256: sha, p_nombre: archivo.name }));
+    return (data && data[0]) || { resultado: 'desconocido' };
+  },
+  async listarDescargas(limite = 100) {
+    const { data } = await ejecutar(SB.from('ing_v_descargas').select('*').order('fecha', { ascending: false }).range(0, limite - 1));
+    return data || [];
+  },
+  async espacioDocumentos() {
+    try {
+      const { data } = await ejecutar(SB.from('ing_v_espacio').select('*').maybeSingle());
+      let cuenta = null;
+      if (driveListo()) { try { const r = await llamarDrive('espacio', {}); cuenta = { archivos: r.archivos, bytes: r.bytes }; } catch (e) { /* sin datos de Drive */ } }
+      return { ...(data || {}), cuenta };
+    } catch (e) { return null; }
+  },
+  async guardarCatalogoCorte(entidad, id, datos) {
+    exigirPermiso('administrar');
+    const tabla = { area: 'ing_areas_corte', tipo: 'ing_tipos_documento', maquina: 'ing_maquinas' }[entidad];
+    const lista = listaCatalogo({ area: cache.areasCorte, tipo: cache.tiposDocumento, maquina: cache.maquinas }[entidad]);
+    const errNombre = validarNombreCatalogo(datos.nombre ?? (lista.find(x => x.id === id) || {}).nombre, lista, id, entidad);
+    if (datos.nombre !== undefined && errNombre) throw new ErrorApi(errNombre, { tipo: 'validacion', campos: { nombre: errNombre } });
+    const cambio = { ...datos };
+    if (cambio.nombre !== undefined) cambio.nombre = cambio.nombre.trim();
+    if (cambio.extensiones !== undefined) {
+      cambio.extensiones = String(cambio.extensiones).toLowerCase().replace(/[.\s]/g, '').replace(/,+/g, ',').replace(/^,|,$/g, '');
+      if (!/^[a-z0-9]+(,[a-z0-9]+)*$/.test(cambio.extensiones)) throw new ErrorApi('Escribe los formatos separados por coma, por ejemplo: dxf o igs,iges', { tipo: 'validacion', campos: { extensiones: 'Escribe los formatos separados por coma, por ejemplo: dxf o igs,iges' } });
+    }
+    if (cambio.area_id !== undefined) cambio.area_id = Number(cambio.area_id);
+    if (entidad === 'tipo' && !id && cambio.orden === undefined) cambio.orden = listaCatalogo(cache.tiposDocumento).reduce((m, t) => Math.max(m, t.orden || 0), 0) + 1;
+    try {
+      if (id) await exigirFilas(SB.from(tabla).update(cambio).eq('id', id).select('id'));
+      else await ejecutar(SB.from(tabla).insert(cambio).select('id').single());
+    } catch (e) { if (e.tipo === 'duplicado') throw new ErrorApi('Ya existe uno con ese nombre.', { tipo: 'validacion', campos: { nombre: 'Ya existe uno con ese nombre.' } }); throw e; }
+    await DataService.recargarCatalogosCorte();
+  },
   /* ---------- Carga general ---------- */
   async recargarTodo() {
     const [fam, ent, est, per, skus] = await Promise.all([
@@ -292,6 +427,7 @@ const DataService = {
     cache.familias = porId(fam); cache.entregables = porId(ent); cache.estatus = porId(est);
     try { cache.lineas = porId(await leerTodo(() => SB.from('ing_lineas').select('id,nombre,activa').is('deleted_at', null).order('id'))); }
     catch (e) { cache.lineas = {}; } // la actualización de líneas aún no se ejecuta en Supabase
+    await DataService.recargarCatalogosCorte();
     cache.perfiles = Object.fromEntries(per.map(p => [p.id, p]));
     cache.skus = new Map(skus.map(f => { const s = normalizarSku(f); return [s.id, s]; }));
   },
@@ -554,13 +690,14 @@ const DataService = {
   /* ---------- Usuarios ---------- */
   async listarUsuarios() {
     exigirPermiso('administrar');
-    const filas = await leerTodo(() => SB.from('ing_perfiles').select('id,nombre,email,rol_id,activo,created_at').is('deleted_at', null).order('created_at'));
+    const filas = await leerTodo(() => SB.from('ing_perfiles').select('*').is('deleted_at', null).order('created_at'));
     const orden = u => (!u.rol_id ? 0 : u.activo ? 1 : 2);
     return filas.map(u => ({ ...u, estado: !u.rol_id ? 'pendiente' : u.activo ? 'activo' : 'sin_acceso' }))
       .sort((a, b) => orden(a) - orden(b) || compararNatural(a.nombre, b.nombre));
   },
   async actualizarUsuario(id, cambio) {
     exigirPermiso('administrar');
+    if (cambio.rol_id !== undefined && Number(cambio.rol_id) !== ROLES.OPERADOR) cambio = { ...cambio, maquina_id: null };
     const [u] = await exigirFilas(SB.from('ing_perfiles').update(cambio).eq('id', id).select('id,nombre,rol_id,activo'));
     programarRecarga(0);
     return u;
@@ -573,7 +710,7 @@ const DataService = {
 /* Única fuente de verdad de la interfaz. estado.sesion = { user_id, nombre, email, rol_id, rol_nombre }. */
 const FILTROS_SKUS_INICIALES = { busqueda: '', familia_id: '', linea_id: '', avance: 'todos', pendiente_entregable_id: '', incluir_descontinuados: false };
 const FILTROS_HISTORIAL_INICIALES = { busqueda: '', user_id: '', marcado: 'todos', entregable_id: '' };
-const DETALLE_VACIO = { abierto: false, sku_id: null, cargando: false, error: null, datos: null, subiendoImagen: false, errorImagen: null };
+const DETALLE_VACIO = { abierto: false, sku_id: null, cargando: false, error: null, datos: null, subiendoImagen: false, errorImagen: null, documentos: null, errorDocumentos: null };
 const AUTH_INICIAL = { pantalla: 'login', nombre: '', email: '', password: '', confirmar: '', error: null, mensaje: null, enviando: false, puedeReenviar: false };
 
 function temaInicial() {
@@ -592,10 +729,11 @@ const estado = {
   detalle: { ...DETALLE_VACIO },
   tablero: { cargando: false, error: null, datos: null },
   historial: { cargando: false, error: null, datos: null, total: 0, usuarios: [], filtros: { ...FILTROS_HISTORIAL_INICIALES }, limite: 50, exportando: false },
-  admin: { pestana: 'skus', cargando: false, error: null, skus: null, usuarios: null, familias: null, lineas: null, entregables: null },
+  admin: { pestana: 'skus', cargando: false, error: null, skus: null, usuarios: null, familias: null, lineas: null, entregables: null, corte: null },
   pendientes: 0,
   confirmacion: null, // 'confirmada' cuando la persona llega desde el enlace del correo
   reporte: { abierto: false, cargando: false, error: null, datos: null, config: null },
+  corte: { cargando: false, error: null, datos: null, filtros: { busqueda: '', tipo_id: '' }, descargas: null, verificacion: null, descargando: null, lote: null, espacio: null },
   modal: null,
   tema: temaInicial(),
   avisos: []
@@ -653,10 +791,17 @@ async function entrarConSesion(usuario) {
       render(); return;
     }
     const primeraVez = !estado.sesion;
-    estado.sesion = { user_id: perfil.id, nombre: perfil.nombre, email: perfil.email, rol_id: Number(perfil.rol_id), rol_nombre: NOMBRES_ROL[perfil.rol_id] };
-    await DataService.recargarTodo();
-    await cargarCatalogos();
-    if (primeraVez) estado.vista = estado.sesion.rol_id === ROLES.INGENIERO ? 'skus' : 'tablero';
+    estado.sesion = { user_id: perfil.id, nombre: perfil.nombre, email: perfil.email, rol_id: Number(perfil.rol_id), rol_nombre: NOMBRES_ROL[perfil.rol_id], maquina_id: perfil.maquina_id ? Number(perfil.maquina_id) : null };
+    if (estado.sesion.rol_id === ROLES.OPERADOR) {
+      await DataService.recargarCatalogosCorte();
+      const maq = cache.maquinas[String(estado.sesion.maquina_id)];
+      estado.sesion.maquina = maq ? { nombre: maq.nombre, area: (cache.areasCorte[String(maq.area_id)] || {}).nombre || '' } : null;
+      estado.vista = 'corte';
+    } else {
+      await DataService.recargarTodo();
+      await cargarCatalogos();
+      if (primeraVez || estado.vista === 'corte' && !puede(estado.sesion.rol_id, 'documentos')) estado.vista = estado.sesion.rol_id === ROLES.INGENIERO ? 'skus' : 'tablero';
+    }
     estado.fase = 'app';
     if (estado.confirmacion === 'confirmada') { estado.confirmacion = null; agregarAviso('exito', `¡Tu correo quedó confirmado! Bienvenido, ${estado.sesion.nombre}.`); }
     suscribirCambios();
@@ -676,7 +821,7 @@ async function cerrarSesion() {
     skus: { cargando: false, error: null, datos: null, entregables: [], filtros: { ...FILTROS_SKUS_INICIALES }, celdaGuardando: null },
     tablero: { cargando: false, error: null, datos: null },
     historial: { cargando: false, error: null, datos: null, total: 0, usuarios: [], filtros: { ...FILTROS_HISTORIAL_INICIALES }, limite: 50, exportando: false },
-    admin: { pestana: 'skus', cargando: false, error: null, skus: null, usuarios: null, familias: null, lineas: null, entregables: null }
+    admin: { pestana: 'skus', cargando: false, error: null, skus: null, usuarios: null, familias: null, lineas: null, entregables: null, corte: null }
   });
   cache.skus = new Map(); cache.perfiles = {};
   render();
@@ -725,7 +870,7 @@ async function reenviarConfirmacion() {
 function suscribirCambios() {
   if (canal) SB.removeChannel(canal);
   canal = SB.channel('ing-cambios');
-  for (const tabla of ['ing_sku_entregables', 'ing_skus', 'ing_familias', 'ing_lineas', 'ing_entregables', 'ing_perfiles']) {
+  for (const tabla of ['ing_sku_entregables', 'ing_skus', 'ing_familias', 'ing_lineas', 'ing_entregables', 'ing_perfiles', 'ing_documentos_corte', 'ing_versiones_documento', 'ing_maquinas', 'ing_tipos_documento', 'ing_areas_corte']) {
     canal.on('postgres_changes', { event: '*', schema: 'public', table: tabla }, () => programarRecarga());
   }
   canal.subscribe();
@@ -733,6 +878,7 @@ function suscribirCambios() {
 function programarRecarga(ms = 700) { conRetraso('recarga', recargarYRefrescar, ms); }
 async function recargarYRefrescar() {
   if (estado.fase !== 'app') return;
+  if (estado.sesion.rol_id === ROLES.OPERADOR) { await DataService.recargarCatalogosCorte(); cargarCorte({ silencioso: true }); return; }
   try { await DataService.recargarTodo(); } catch (e) { return; }
   const yo = cache.perfiles[estado.sesion.user_id];
   if (!yo || !yo.activo || !yo.rol_id) { const { data } = await SB.auth.getSession(); if (data.session) entrarConSesion(data.session.user); return; }
@@ -747,6 +893,7 @@ function refrescarVistas() {
   if (estado.vista === 'skus') cargarSkus({ silencioso: true });
   else if (estado.vista === 'tablero') cargarTablero({ silencioso: true });
   else if (estado.vista === 'historial') cargarHistorial({ silencioso: true });
+  else if (estado.vista === 'corte') cargarCorte({ silencioso: true });
   else if (estado.vista === 'admin' && puede(estado.sesion.rol_id, 'administrar')) recargarAdminSilencioso();
   if (estado.detalle.abierto) refrescarDetalleSi(estado.detalle.sku_id);
 }
@@ -766,6 +913,7 @@ function cargarVista() {
   if (estado.vista === 'skus') cargarSkus();
   else if (estado.vista === 'tablero') cargarTablero();
   else if (estado.vista === 'historial') cargarHistorial();
+  else if (estado.vista === 'corte') cargarCorte();
   else if (estado.vista === 'admin') { if (puede(estado.sesion.rol_id, 'administrar')) cargarAdmin(); else render(); }
 }
 async function cargarCatalogos() {
@@ -840,12 +988,19 @@ async function abrirDetalle(skuId) {
 async function cargarDetalle() {
   const id = estado.detalle.sku_id;
   estado.detalle.cargando = true; estado.detalle.error = null; render();
+  if (puede(estado.sesion.rol_id, 'documentos')) cargarDocumentosDetalle(id);
   try { const d = await DataService.obtenerSku(id); if (estado.detalle.sku_id === id) estado.detalle.datos = d; }
   catch (e) { if (estado.detalle.sku_id === id) estado.detalle.error = e.message; }
   finally { if (estado.detalle.sku_id === id) { estado.detalle.cargando = false; render(); } }
 }
+async function cargarDocumentosDetalle(skuId) {
+  try { const docs = await DataService.listarDocumentos({ sku_id: skuId, solo_activos: false }); if (estado.detalle.sku_id === skuId) { estado.detalle.documentos = docs; estado.detalle.errorDocumentos = null; } }
+  catch (e) { if (estado.detalle.sku_id === skuId) estado.detalle.errorDocumentos = e.message; }
+  render();
+}
 function refrescarDetalleSi(skuId) {
   if (!estado.detalle.abierto || estado.detalle.sku_id !== skuId) return;
+  if (puede(estado.sesion.rol_id, 'documentos')) cargarDocumentosDetalle(skuId);
   DataService.obtenerSku(skuId).then(d => {
     if (estado.detalle.sku_id !== skuId) return;
     if (estado.detalle.datos && estado.detalle.datos.imagen_ruta === d.imagen_ruta && !d.imagen_url) d.imagen_url = estado.detalle.datos.imagen_url;
@@ -951,6 +1106,7 @@ async function recargarAdmin() {
   if (p === 'usuarios') estado.admin.usuarios = await DataService.listarUsuarios();
   if (p === 'familias') estado.admin.familias = await DataService.listarFamilias({ incluir_inactivas: true });
   if (p === 'lineas') estado.admin.lineas = await DataService.listarLineas({ incluir_inactivas: true });
+  if (p === 'corte') { await DataService.recargarCatalogosCorte(); estado.admin.corte = DataService.catalogosCorte(); estado.corte.espacio = await DataService.espacioDocumentos(); }
   if (p === 'entregables') estado.admin.entregables = await DataService.listarEntregables({ incluir_inactivos: true });
 }
 async function recargarAdminSilencioso() { try { await recargarAdmin(); } catch (e) { agregarAviso('error', e.message); } render(); }
@@ -1015,6 +1171,157 @@ async function guardarCatalogo() {
 }
 async function cambiarActivoLinea(l, activa) {
   try { await DataService.actualizarLinea(l.id, { activa }); agregarAviso('exito', activa ? `Línea activada: ${l.nombre}.` : `Línea desactivada: ${l.nombre}.`); }
+  catch (e) { agregarAviso('error', e.message); }
+}
+
+/* ---------- Documentos de corte ---------- */
+async function cargarCorte({ silencioso = false } = {}) {
+  const c = estado.corte;
+  if (!silencioso) { c.cargando = true; c.error = null; render(); }
+  try {
+    const [docs, descargas] = await Promise.all([DataService.listarDocumentos(), puede(estado.sesion.rol_id, 'documentos') ? DataService.listarDescargas(60) : Promise.resolve(null)]);
+    c.datos = docs; c.descargas = descargas; c.error = null;
+  } catch (e) { c.error = e.message; }
+  finally { c.cargando = false; render(); }
+}
+function cambiarFiltroCorte(campo, valor) { estado.corte.filtros[campo] = valor; render(); }
+function documentosFiltrados() {
+  const f = estado.corte.filtros, q = normalizarTexto(f.busqueda);
+  return (estado.corte.datos || []).filter(d => (!q || normalizarTexto(`${d.sku_clave} ${d.sku_descripcion}`).includes(q)) && (!f.tipo_id || d.tipo_documento_id === Number(f.tipo_id)));
+}
+async function descargarDocumento(d) {
+  if (estado.corte.descargando) return;
+  estado.corte.descargando = String(d.version_id); render();
+  try { await DataService.descargarDocumento(d); agregarAviso('exito', `Descargado: ${d.sku_clave} · ${d.pieza} · v${d.version_vigente || d.version}.`); }
+  catch (e) { agregarAviso('error', `No se pudo descargar ${d.pieza}. ${e.message}`); if (e.tipo === 'conflicto') cargarCorte({ silencioso: true }); }
+  finally { estado.corte.descargando = null; render(); }
+}
+/* Descarga todas las piezas de un SKU, una por una, con aviso de avance. */
+async function descargarTodasLasPiezas(skuClave, lista) {
+  if (estado.corte.descargando) return;
+  estado.corte.lote = { clave: skuClave, hecho: 0, total: lista.length, errores: 0 }; estado.corte.descargando = 'lote'; render();
+  for (const d of lista) {
+    try { await DataService.descargarDocumento(d); } catch (e) { estado.corte.lote.errores++; }
+    estado.corte.lote.hecho++; render();
+    await new Promise(r => setTimeout(r, 400)); // el navegador necesita un respiro entre descargas
+  }
+  const l = estado.corte.lote;
+  agregarAviso(l.errores ? 'error' : 'exito', l.errores ? `Se descargaron ${l.hecho - l.errores} de ${l.total} piezas de ${skuClave}; ${l.errores} fallaron.` : `Se descargaron las ${l.total} piezas de ${skuClave}.`);
+  estado.corte.lote = null; estado.corte.descargando = null; render();
+}
+async function verificarArchivo(archivo) {
+  if (!archivo) return;
+  estado.corte.verificacion = { estado: 'calculando', nombre: archivo.name }; render();
+  try { const r = await DataService.verificarArchivo(archivo); estado.corte.verificacion = { estado: 'listo', nombre: archivo.name, ...r }; }
+  catch (e) { estado.corte.verificacion = { estado: 'error', nombre: archivo.name, error: e.message }; }
+  render();
+}
+async function descargarVigenteDesdeVerificacion() {
+  const v = estado.corte.verificacion;
+  try { const d = await DataService.documentoPorVersion(v.version_vigente_id); if (!d) throw new ErrorApi('No se encontró la versión vigente.'); await descargarDocumento(d); }
+  catch (e) { agregarAviso('error', e.message); }
+}
+
+/* ---------- Subir piezas (una o muchas a la vez) ---------- */
+function abrirModalDocumento(sku, doc) {
+  const tipos = DataService.catalogosCorte().tipos.filter(t => t.activo);
+  if (!tipos.length) { agregarAviso('error', 'No hay tipos de documento activos. Revisa Administración → Corte.'); return; }
+  estado.modal = { tipo: 'documento', sku: { id: sku.id, clave: sku.clave }, doc,
+    tipo_id: String(doc ? doc.tipo_documento_id : tipos[0].id), archivos: [], piezas: {}, cambios: '',
+    fase: 'elegir', hecho: 0, total: 0, errores: [], cancelar: false, error: null, enviando: false };
+  render();
+}
+function elegirArchivosDocumento(lista) {
+  const m = estado.modal;
+  const tipo = DataService.catalogosCorte().tipos.find(t => t.id === Number(m.tipo_id));
+  const permitidas = String(tipo.extensiones || '').split(',');
+  const archivos = [...lista];
+  const validos = archivos.filter(f => permitidas.includes(extensionDe(f.name)) && f.size > 0 && f.size <= LIMITE_DOCUMENTO_MB * 1024 * 1024);
+  m.rechazados = archivos.length - validos.length;
+  m.archivos = m.doc ? validos.slice(0, 1) : validos;
+  m.piezas = {};
+  m.archivos.forEach((f, i) => { m.piezas[i] = m.doc ? m.doc.pieza : piezaDesdeArchivo(f.name); });
+  m.error = m.archivos.length ? null : `No se encontró ningún archivo ${permitidas.map(x => '.' + x).join(' o ')} válido en lo que elegiste.`;
+  render();
+}
+function piezasExistentes(tipoId) {
+  const mapa = new Map();
+  for (const d of estado.detalle.documentos || []) if (d.tipo_documento_id === Number(tipoId)) mapa.set(normalizarTexto(d.pieza), d);
+  return mapa;
+}
+function planSubida() {
+  const m = estado.modal;
+  const previas = piezasExistentes(m.tipo_id);
+  const filas = m.archivos.map((f, i) => {
+    const pieza = String(m.piezas[i] || '').trim();
+    const previa = previas.get(normalizarTexto(pieza));
+    return { archivo: f, pieza, previa, esPrimera: !previa, error: validarNombrePieza(pieza) };
+  });
+  const repetidas = new Set();
+  const vistas = new Set();
+  filas.forEach(x => { const k = normalizarTexto(x.pieza); if (vistas.has(k)) repetidas.add(k); vistas.add(k); });
+  filas.forEach(x => { if (!x.error && repetidas.has(normalizarTexto(x.pieza))) x.error = 'Hay dos archivos con el mismo nombre de pieza.'; });
+  return { filas, nuevas: filas.filter(x => x.esPrimera && !x.error).length, versiones: filas.filter(x => !x.esPrimera && !x.error).length, conError: filas.filter(x => x.error).length };
+}
+async function guardarDocumento() {
+  const m = estado.modal;
+  const tipo = DataService.catalogosCorte().tipos.find(t => t.id === Number(m.tipo_id));
+  const plan = planSubida();
+  if (!m.archivos.length) { m.error = 'Elige al menos un archivo.'; render(); return; }
+  if (plan.conError) { m.error = 'Revisa los nombres de pieza marcados en rojo.'; render(); return; }
+  const errCambios = validarCambiosDocumento(m.cambios, plan.versiones === 0);
+  if (errCambios) { m.error = errCambios; render(); return; }
+  m.fase = 'subiendo'; m.enviando = true; m.total = plan.filas.length; m.hecho = 0; m.errores = []; render();
+  for (const f of plan.filas) {
+    if (m.cancelar) break;
+    try { await DataService.subirDocumento({ sku: m.sku, tipo, pieza: f.pieza, archivo: f.archivo, cambios: m.cambios, esPrimera: f.esPrimera }); }
+    catch (e) { m.errores.push(`${f.pieza}: ${e.message}`); }
+    m.hecho++; render();
+  }
+  m.fase = 'terminado'; m.enviando = false; render();
+  cargarDocumentosDetalle(m.sku.id);
+}
+function pedirRetirarDocumento(doc) {
+  estado.modal = { tipo: 'retirarDocumento', doc, motivo: '', error: null, enviando: false };
+  enfocarDespues = 'motivo-retiro'; render();
+}
+async function confirmarRetiroDocumento() {
+  const m = estado.modal;
+  if (String(m.motivo).trim().length < 10) { m.error = 'Escribe el motivo del retiro (mínimo 10 caracteres).'; render(); return; }
+  m.enviando = true; m.error = null; render();
+  try {
+    await DataService.retirarDocumento(m.doc.id, m.motivo);
+    estado.modal = null; agregarAviso('exito', `Pieza retirada de ${m.doc.sku_clave}: ${m.doc.pieza}. Ya no se puede descargar.`);
+    cargarDocumentosDetalle(m.doc.sku_id);
+  } catch (e) { m.error = e.message; }
+  finally { if (estado.modal) estado.modal.enviando = false; render(); }
+}
+async function abrirHistorialDocumento(doc) {
+  estado.modal = { tipo: 'versionesDocumento', doc, versiones: null, error: null, enviando: false }; render();
+  try { estado.modal.versiones = await DataService.listarVersiones(doc.id); } catch (e) { estado.modal.error = e.message; }
+  render();
+}
+function abrirModalCorteCatalogo(entidad, registro) {
+  const { areas } = DataService.catalogosCorte();
+  estado.modal = { tipo: 'corteCatalogo', entidad, id: registro ? registro.id : null,
+    datos: { nombre: registro ? registro.nombre : '', area_id: String(registro ? registro.area_id || '' : (areas.find(a => a.activa) || {}).id || ''), extensiones: registro ? registro.extensiones || '' : 'dxf' },
+    errores: {}, error: null, enviando: false };
+  enfocarDespues = 'corte-nombre'; render();
+}
+async function guardarCorteCatalogo() {
+  const m = estado.modal;
+  const datos = { nombre: m.datos.nombre };
+  if (m.entidad !== 'area') { if (!m.datos.area_id) { m.errores = { area_id: 'Elige el área.' }; render(); return; } datos.area_id = m.datos.area_id; }
+  if (m.entidad === 'tipo') datos.extensiones = m.datos.extensiones;
+  m.enviando = true; m.errores = {}; m.error = null; render();
+  try {
+    await DataService.guardarCatalogoCorte(m.entidad, m.id, datos);
+    estado.modal = null; agregarAviso('exito', 'Guardado.'); recargarAdminSilencioso();
+  } catch (e) { if (e.campos) m.errores = e.campos; else m.error = e.message; }
+  finally { if (estado.modal) estado.modal.enviando = false; render(); }
+}
+async function cambiarActivoCorte(entidad, r, activo) {
+  try { await DataService.guardarCatalogoCorte(entidad, r.id, entidad === 'area' || entidad === 'maquina' ? { activa: activo } : { activo }); agregarAviso('exito', activo ? `Activado: ${r.nombre}.` : `Desactivado: ${r.nombre}.`); recargarAdminSilencioso(); }
   catch (e) { agregarAviso('error', e.message); }
 }
 
@@ -1115,14 +1422,15 @@ async function moverEntregable(e, direccion) {
 
 /* ---------- Usuarios ---------- */
 function abrirModalAprobar(u) {
-  estado.modal = { tipo: 'aprobar', user_id: u.id, nombre: u.nombre, email: u.email, rol_id: String(u.rol_id || ROLES.INGENIERO), error: null, enviando: false };
+  estado.modal = { tipo: 'aprobar', user_id: u.id, nombre: u.nombre, email: u.email, rol_id: String(u.rol_id || ROLES.INGENIERO), maquina_id: String(u.maquina_id || ''), error: null, enviando: false };
   enfocarDespues = 'aprobar-rol'; render();
 }
 async function guardarAprobacion() {
   const m = estado.modal;
   m.enviando = true; m.error = null; render();
   try {
-    await DataService.actualizarUsuario(m.user_id, { rol_id: Number(m.rol_id), activo: true });
+    if (Number(m.rol_id) === ROLES.OPERADOR && !m.maquina_id) { m.error = 'Elige la máquina de esta cuenta.'; m.enviando = false; render(); return; }
+    await DataService.actualizarUsuario(m.user_id, { rol_id: Number(m.rol_id), activo: true, ...(Number(m.rol_id) === ROLES.OPERADOR ? { maquina_id: Number(m.maquina_id) } : {}) });
     estado.modal = null;
     agregarAviso('exito', `Acceso otorgado a ${m.nombre} como ${NOMBRES_ROL[m.rol_id]}.`);
     recargarAdminSilencioso();
@@ -1130,6 +1438,7 @@ async function guardarAprobacion() {
   finally { if (estado.modal) estado.modal.enviando = false; render(); }
 }
 async function cambiarRolUsuario(u, rolId) {
+  if (Number(rolId) === ROLES.OPERADOR) { abrirModalAprobar({ ...u, rol_id: ROLES.OPERADOR }); return; }
   try {
     await DataService.actualizarUsuario(u.id, { rol_id: Number(rolId) });
     agregarAviso('exito', `Rol actualizado: ${u.nombre} ahora es ${NOMBRES_ROL[rolId]}.`);
@@ -1167,12 +1476,12 @@ function cerrarModal() { if (estado.modal && estado.modal.enviando) return; esta
 
 <!-- ===== 5. REGLAS DE NEGOCIO Y VALIDACIONES ===== -->
 <script>
-const ROLES = { INGENIERO: 1, JEFE: 2, CONSULTA: 3 };
+const ROLES = { INGENIERO: 1, JEFE: 2, CONSULTA: 3, OPERADOR: 4 };
 const ESTATUS_SKU = { ACTIVO: 1, DESCONTINUADO: 2 };
-const NOMBRES_ROL = { 1: 'Ingeniero', 2: 'Jefe de ingeniería', 3: 'Consulta' };
+const NOMBRES_ROL = { 1: 'Ingeniero', 2: 'Jefe de ingeniería', 3: 'Consulta', 4: 'Operador' };
 
 /* Quién puede hacer qué. ver: los tres roles; marcar/desmarcar: ingeniero y jefe; administrar: solo jefe. */
-const PERMISOS = { ver: [ROLES.INGENIERO, ROLES.JEFE, ROLES.CONSULTA], marcar: [ROLES.INGENIERO, ROLES.JEFE], administrar: [ROLES.JEFE] };
+const PERMISOS = { ver: [ROLES.INGENIERO, ROLES.JEFE, ROLES.CONSULTA], marcar: [ROLES.INGENIERO, ROLES.JEFE], administrar: [ROLES.JEFE], documentos: [ROLES.INGENIERO, ROLES.JEFE, ROLES.CONSULTA], subir_documentos: [ROLES.INGENIERO, ROLES.JEFE] };
 function puede(rolId, accion) { return (PERMISOS[accion] || []).includes(rolId); }
 
 const LIMITES = { imagenMaxMb: 10, causaMin: 10, causaMax: 255, claveMax: 30, descripcionMax: 150, observacionesMax: 1000, nombreCatalogoMax: 60 };
@@ -1218,10 +1527,10 @@ function validarSku(d, skusExistentes, idActual) {
 }
 function validarNombreCatalogo(nombre, existentes, idActual, entidad) {
   const n = String(nombre || '').trim();
-  const art = { familia: 'la familia', linea: 'la línea', entregable: 'el entregable' }[entidad];
+  const art = { familia: 'la familia', linea: 'la línea', entregable: 'el entregable', area: 'el área', tipo: 'el tipo de documento', maquina: 'la máquina' }[entidad];
   if (!n) return `Escribe el nombre de ${art}.`;
   if (n.length > LIMITES.nombreCatalogoMax) return `El nombre no puede pasar de ${LIMITES.nombreCatalogoMax} caracteres.`;
-  if (existentes.some(x => x.id !== idActual && normalizarTexto(x.nombre) === normalizarTexto(n))) return `Ya existe ${{ familia: 'una familia', linea: 'una línea', entregable: 'un entregable' }[entidad]} con ese nombre.`;
+  if (existentes.some(x => x.id !== idActual && normalizarTexto(x.nombre) === normalizarTexto(n))) return `Ya existe ${{ familia: 'una familia', linea: 'una línea', entregable: 'un entregable', area: 'un área', tipo: 'un tipo de documento', maquina: 'una máquina' }[entidad]} con ese nombre.`;
   return null;
 }
 /* Formularios de acceso. Contraseñas de mínimo 8 caracteres (configura lo mismo en Supabase → Authentication). */
@@ -1264,6 +1573,45 @@ function periodosReporte(tipo) {
   return lista;
 }
 
+/* Documentos de corte: formato permitido por tipo, cambios obligatorios desde la versión 2 y nombre de descarga con versión. */
+const LIMITE_DOCUMENTO_MB = 20;
+function extensionDe(nombre) { const m = /\.([A-Za-z0-9]+)$/.exec(nombre || ''); return m ? m[1].toLowerCase() : ''; }
+function validarArchivoDocumento(archivo, tipo) {
+  if (!archivo) return 'Elige el archivo.';
+  const permitidas = String(tipo.extensiones || '').split(',').filter(Boolean);
+  if (!permitidas.includes(extensionDe(archivo.name))) return `Este tipo de documento solo acepta archivos ${permitidas.map(x => '.' + x).join(' o ')}.`;
+  if (archivo.size <= 0) return 'El archivo está vacío.';
+  if (archivo.size > LIMITE_DOCUMENTO_MB * 1024 * 1024) return `El archivo no puede pesar más de ${LIMITE_DOCUMENTO_MB} MB.`;
+  return null;
+}
+function validarCambiosDocumento(texto, esPrimera) {
+  const t = String(texto || '').trim();
+  if (esPrimera) return t.length > 500 ? 'Máximo 500 caracteres.' : null;
+  if (t.length < 10) return 'Describe qué cambió respecto a la versión anterior (mínimo 10 caracteres).';
+  if (t.length > 500) return 'Máximo 500 caracteres.';
+  return null;
+}
+const LIMITE_PIEZA = 120;
+function validarNombrePieza(pieza) {
+  const t = String(pieza || '').trim();
+  if (!t) return 'Escribe el nombre de la pieza.';
+  if (t.length > LIMITE_PIEZA) return `El nombre de la pieza no puede pasar de ${LIMITE_PIEZA} caracteres.`;
+  return null;
+}
+/* El nombre del archivo, sin extensión, se usa como nombre de la pieza. */
+function piezaDesdeArchivo(nombre) { return String(nombre || '').replace(/\.[^.]+$/, '').replace(/_/g, ' ').replace(/\s+/g, ' ').trim().slice(0, LIMITE_PIEZA); }
+function nombreDescargaDocumento(d) {
+  const limpio = x => normalizarTexto(x).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  const fecha = String(d.subida_en || d.created_at || '').slice(0, 10);
+  return `${d.sku_clave}_${limpio(d.pieza)}_v${d.version_vigente || d.version}_${fecha}.${extensionDe(d.nombre_original) || 'dat'}`;
+}
+function guardarArchivo(bytes, nombre) {
+  const url = URL.createObjectURL(new Blob([bytes], { type: 'application/octet-stream' }));
+  const a = document.createElement('a'); a.href = url; a.download = nombre; document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+function formatoTamano(bytes) { return bytes >= 1048576 ? `${(bytes / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`; }
+
 /* Avance: completados ÷ entregables activos, redondeado a entero. Un SKU está completo solo al 100 %. */
 function calcularPorcentaje(completados, total) { return total ? Math.round((completados * 100) / total) : 0; }
 function estadoAvance(completados, total) {
@@ -1302,6 +1650,7 @@ const ICONOS = {
   alerta: 'M12 9v4M12 17h.01M10.3 3.9L2.4 17.5A2 2 0 0 0 4.1 20.5h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z',
   candado: 'M7 11V8a5 5 0 0 1 10 0v3M5 11h14v10H5z', mas: 'M12 5v14M5 12h14', arriba: 'M12 19V5M6 11l6-6 6 6', abajo: 'M12 5v14M6 13l6 6 6-6',
   reporte: 'M7 3h7l5 5v13H7zM14 3v5h5M10 17v-3M13 17v-5M16 17v-2',
+  descarga: 'M12 4v11M7 10l5 5 5-5M5 20h14', escudo: 'M12 3l7 3v5c0 5-3.5 8.5-7 10-3.5-1.5-7-5-7-10V6z', subir: 'M12 20V9M7 14l5-5 5 5M5 4h14',
   sol: 'M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10zM12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4', luna: 'M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z',
   editar: 'M4 20h4L19 9l-4-4L4 16v4zM13.5 6.5l4 4', imagen: 'M4 5h16v14H4zM4 16l4-4 4 4 3-3 5 5M15 9.5h.01', deshacer: 'M9 14L4 9l5-5M4 9h10a6 6 0 0 1 0 12h-3', caja: 'M3 7l9-4 9 4v10l-9 4-9-4V7zM3 7l9 4 9-4M12 11v10'
 };
@@ -1477,9 +1826,11 @@ function FormularioAuth() {
 /* COMPONENTE: BarraSuperior */
 function BarraSuperior() {
   const s = estado.sesion;
-  const secciones = [
+  const esOperador = s.rol_id === ROLES.OPERADOR;
+  const secciones = esOperador ? [{ vista: 'corte', texto: 'Archivos de corte' }] : [
     { vista: 'skus', texto: 'Avance por SKU' }, { vista: 'tablero', texto: 'Tablero' }, { vista: 'historial', texto: 'Historial' }
   ];
+  if (!esOperador && puede(s.rol_id, 'documentos') && DataService.catalogosCorte().tipos.length) secciones.push({ vista: 'corte', texto: 'Archivos de corte' });
   if (puede(s.rol_id, 'administrar')) secciones.push({ vista: 'admin', texto: estado.pendientes ? `Administración (${estado.pendientes})` : 'Administración' });
   return h('header', { class: 'border-b border-[#D5DBE2] dark:border-[#2E3A48] bg-white dark:bg-[#18202A]' },
     h('div', { class: 'mx-auto flex max-w-[1400px] flex-wrap items-center gap-x-8 gap-y-2 px-4 sm:px-6' },
@@ -1498,7 +1849,7 @@ function BarraSuperior() {
       h('div', { class: 'ml-auto flex items-center gap-4 py-3' },
         h('div', { class: 'text-right' },
           h('p', { class: 'text-sm font-medium leading-tight' }, s.nombre),
-          h('p', { class: 'text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, s.rol_nombre)),
+          h('p', { class: 'text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, esOperador ? (s.maquina ? `${s.maquina.nombre} · ${s.maquina.area}` : 'Operador sin máquina asignada') : s.rol_nombre)),
         BotonTema(),
         h('button', { type: 'button', class: CLS.btnChico, onClick: cerrarSesion }, 'Cerrar sesión'))));
 }
@@ -1634,6 +1985,7 @@ function PanelDetalleSku() {
     const s = d.datos;
     cuerpo = h('div', { class: 'space-y-6 p-6' },
       ImagenReferencia(s, editable),
+      puede(estado.sesion.rol_id, 'documentos') && DataService.catalogosCorte().tipos.length ? DocumentosCorteSku(s) : null,
       h('dl', { class: 'grid grid-cols-2 gap-x-4 gap-y-3 text-sm' },
         h('div', null, h('dt', { class: 'text-[#5B6675] dark:text-[#9AA7B6]' }, 'Familia'), h('dd', { class: 'font-medium' }, s.familia_nombre)),
         estado.catalogos.lineas.length ? h('div', null, h('dt', { class: 'text-[#5B6675] dark:text-[#9AA7B6]' }, 'Línea'), h('dd', { class: 'font-medium' }, s.linea_nombre)) : null,
@@ -1841,12 +2193,12 @@ function VistaAdministracion() {
   if (!puede(estado.sesion.rol_id, 'administrar')) return h('section', null, EncabezadoVista('Administración', null, null), EstadoSinPermiso());
   const a = estado.admin;
   const pendientes = estado.pendientes;
-  const pestanas = [['skus', 'SKUs'], ['usuarios', pendientes ? `Usuarios (${pendientes} por aprobar)` : 'Usuarios'], ['familias', 'Familias'], ['lineas', 'Líneas'], ['entregables', 'Entregables']];
-  const datos = { skus: a.skus, usuarios: a.usuarios, familias: a.familias, lineas: a.lineas, entregables: a.entregables }[a.pestana];
+  const pestanas = [['skus', 'SKUs'], ['usuarios', pendientes ? `Usuarios (${pendientes} por aprobar)` : 'Usuarios'], ['familias', 'Familias'], ['lineas', 'Líneas'], ['entregables', 'Entregables'], ['corte', 'Corte']];
+  const datos = { skus: a.skus, usuarios: a.usuarios, familias: a.familias, lineas: a.lineas, entregables: a.entregables, corte: a.corte ? [a.corte] : null }[a.pestana];
   let contenido;
   if (a.error) contenido = EstadoError(a.error, cargarAdmin);
   else if (!datos || (a.cargando && !datos.length)) contenido = EstadoCargando('Cargando…', 6);
-  else contenido = { skus: AdminSkus, usuarios: AdminUsuarios, familias: AdminFamilias, lineas: AdminLineas, entregables: AdminEntregables }[a.pestana]();
+  else contenido = { skus: AdminSkus, usuarios: AdminUsuarios, familias: AdminFamilias, lineas: AdminLineas, entregables: AdminEntregables, corte: AdminCorte }[a.pestana]();
   return h('section', null,
     EncabezadoVista('Administración', 'Alta de SKUs, acceso de las personas y catálogos del aplicativo.', null),
     h('div', { class: 'mb-4 flex gap-1 border-b border-[#D5DBE2] dark:border-[#2E3A48]', role: 'tablist' }, pestanas.map(([id, t]) => h('button', {
@@ -1895,7 +2247,8 @@ function AdminSkus() {
 /* COMPONENTE: AdminUsuarios */
 function AdminUsuarios() {
   const lista = estado.admin.usuarios;
-  const roles = [ROLES.INGENIERO, ROLES.JEFE, ROLES.CONSULTA];
+  const roles = [ROLES.INGENIERO, ROLES.JEFE, ROLES.CONSULTA, ...(DataService.catalogosCorte().maquinas.length ? [ROLES.OPERADOR] : [])];
+  const maquinaDe = id => (DataService.catalogosCorte().maquinas.find(x => x.id === Number(id)) || {}).nombre;
   return h('div', null,
     BarraAdmin('Cada persona crea su cuenta desde la pantalla de inicio con "Crear cuenta". Aquí apruebas su acceso, eliges su rol o se lo quitas.', null),
     TablaAdmin([['Nombre'], ['Correo'], ['Rol'], ['Acceso'], [h('span', { class: 'sr-only' }, 'Acciones')]],
@@ -1907,7 +2260,8 @@ function AdminUsuarios() {
           h('td', { class: CLS.td }, u.estado === 'pendiente' ? h('span', { class: 'text-[#5B6675] dark:text-[#9AA7B6]' }, 'Sin asignar') : [
             h('label', { for: `rol-${u.id}`, class: 'sr-only' }, `Rol de ${u.nombre}`),
             h('select', { id: `rol-${u.id}`, class: `${CLS.input} min-w-[11rem] py-1.5`, value: u.rol_id, disabled: esUnoMismo, onChange: ev => cambiarRolUsuario(u, ev.target.value) },
-              roles.map(r => h('option', { value: r }, NOMBRES_ROL[r])))]),
+              roles.map(r => h('option', { value: r }, NOMBRES_ROL[r]))),
+            Number(u.rol_id) === ROLES.OPERADOR ? h('p', { class: 'mt-1 text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, `Máquina: ${maquinaDe(u.maquina_id) || 'sin asignar'} `, h('button', { type: 'button', class: `${CLS.enlace} text-xs`, onClick: () => abrirModalAprobar(u) }, 'cambiar')) : null]),
           h('td', { class: `${CLS.td} whitespace-nowrap` },
             u.estado === 'pendiente' ? h('span', { class: 'inline-flex items-center gap-1 font-medium text-[#B26A00] dark:text-[#E0A650]' }, icono('alerta', 'w-3.5 h-3.5'), 'Por aprobar')
               : u.estado === 'activo' ? h('span', { class: 'inline-flex items-center gap-1 text-[#1F7A4D] dark:text-[#5CC48E]' }, icono('check', 'w-3.5 h-3.5'), 'Con acceso')
@@ -1980,7 +2334,7 @@ function AdminEntregables() {
 function Modal() {
   const m = estado.modal;
   if (!m) return null;
-  const contenido = { desmarcar: ModalDesmarcar, sku: ModalSku, catalogo: ModalCatalogo, aprobar: ModalAprobar, reporte: ModalReporte, importarImagenes: ModalImportarImagenes, confirmar: ModalConfirmacion }[m.tipo]();
+  const contenido = { desmarcar: ModalDesmarcar, sku: ModalSku, catalogo: ModalCatalogo, aprobar: ModalAprobar, reporte: ModalReporte, importarImagenes: ModalImportarImagenes, documento: ModalDocumento, retirarDocumento: ModalRetirarDocumento, versionesDocumento: ModalVersionesDocumento, corteCatalogo: ModalCorteCatalogo, confirmar: ModalConfirmacion }[m.tipo]();
   return h('div', { class: 'fixed inset-0 z-50 flex items-center justify-center p-4' },
     h('button', { type: 'button', class: 'absolute inset-0 h-full w-full cursor-default bg-[#1B2430]/40 dark:bg-[#000000]/40', 'aria-label': 'Cerrar diálogo', tabindex: '-1', onClick: cerrarModal }),
     h('div', { class: 'relative max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg bg-white dark:bg-[#18202A] p-6 shadow-xl', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'titulo-modal' }, contenido));
@@ -2056,15 +2410,20 @@ function ModalCatalogo() {
 /* COMPONENTE: ModalAprobar */
 function ModalAprobar() {
   const m = estado.modal;
-  const descripciones = { 1: 'Marca y desmarca entregables de cualquier SKU y sube imágenes.', 2: 'Todo lo del ingeniero, más alta de SKUs, catálogos y aprobación de usuarios.', 3: 'Ve avance, tablero e historial sin modificar nada.' };
+  const descripciones = { 1: 'Marca y desmarca entregables de cualquier SKU y sube imágenes.', 2: 'Todo lo del ingeniero, más alta de SKUs, catálogos y aprobación de usuarios.', 4: 'Cuenta de una máquina de corte: solo descarga y verifica los documentos vigentes de su área.', 3: 'Ve avance, tablero e historial sin modificar nada.' };
   return h('form', { novalidate: true, onSubmit: ev => { ev.preventDefault(); guardarAprobacion(); } },
     h('h2', { id: 'titulo-modal', class: 'text-lg font-semibold' }, `Aprobar a ${m.nombre}`),
     h('p', { class: 'mt-1 text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, `Confirma que ${m.email} es de alguien de tu equipo antes de darle acceso.`),
     h('div', { class: 'mt-4' },
       h('label', { for: 'aprobar-rol', class: CLS.etiqueta }, 'Rol'),
       h('select', { id: 'aprobar-rol', class: CLS.input, value: m.rol_id, onChange: ev => { estado.modal.rol_id = ev.target.value; render(); } },
-        [ROLES.INGENIERO, ROLES.JEFE, ROLES.CONSULTA].map(r => h('option', { value: r }, NOMBRES_ROL[r]))),
+        [ROLES.INGENIERO, ROLES.JEFE, ROLES.CONSULTA, ...(DataService.catalogosCorte().maquinas.length ? [ROLES.OPERADOR] : [])].map(r => h('option', { value: r }, NOMBRES_ROL[r]))),
       h('p', { class: 'mt-1 text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, descripciones[m.rol_id])),
+    Number(m.rol_id) === ROLES.OPERADOR ? h('div', { class: 'mt-4' },
+      h('label', { for: 'aprobar-maquina', class: CLS.etiqueta }, 'Máquina'),
+      h('select', { id: 'aprobar-maquina', class: CLS.input, value: m.maquina_id, onChange: ev => { estado.modal.maquina_id = ev.target.value; render(); } },
+        h('option', { value: '' }, 'Elige la máquina'), DataService.catalogosCorte().maquinas.filter(x => x.activa).map(x => h('option', { value: x.id }, `${x.nombre} (${x.area_nombre})`))),
+      h('p', { class: 'mt-1 text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, 'Esta cuenta solo verá los documentos del área de su máquina.')) : null,
     ErrorModal(m.error),
     PieModal('Dar acceso', guardarAprobacion, { enviando: m.enviando }));
 }
@@ -2138,6 +2497,332 @@ function ModalImportarImagenes() {
       h('button', { type: 'button', class: CLS.btnPrimario, disabled: !plan.coinciden.length, onClick: iniciarImportacion }, plan.coinciden.length ? `Subir ${plan.coinciden.length} imágenes` : 'Subir imágenes')));
 }
 /* FIN COMPONENTE: ModalImportarImagenes */
+
+/* COMPONENTE: VerificadorArchivo — ¿el archivo de la USB es el vigente? (compara el contenido, no el nombre) */
+function VerificadorArchivo() {
+  const v = estado.corte.verificacion;
+  const esOperador = estado.sesion.rol_id === ROLES.OPERADOR;
+  let resultado = null;
+  if (v && v.estado === 'calculando') resultado = h('p', { class: 'mt-3 flex items-center gap-2 text-sm', role: 'status' }, Spinner(), `Revisando ${v.nombre}…`);
+  else if (v && v.estado === 'error') resultado = h('p', { class: 'mt-3 text-sm text-[#B42318] dark:text-[#F28B82]', role: 'alert' }, v.error);
+  else if (v && v.estado === 'listo') {
+    const estilos = {
+      vigente: ['border-[#1F7A4D] bg-[#E6F2EB] dark:border-[#5CC48E] dark:bg-[#173526]', 'text-[#1F7A4D] dark:text-[#5CC48E]', 'check', 'VIGENTE: puedes usarlo'],
+      obsoleto: ['border-[#B42318] bg-[#FDF3F2] dark:border-[#F28B82] dark:bg-[#3A1D1B]', 'text-[#B42318] dark:text-[#F28B82]', 'alerta', 'OBSOLETO: no lo uses'],
+      retirado: ['border-[#B42318] bg-[#FDF3F2] dark:border-[#F28B82] dark:bg-[#3A1D1B]', 'text-[#B42318] dark:text-[#F28B82]', 'alerta', 'RETIRADO: ya no se usa en este SKU'],
+      desconocido: ['border-[#B26A00] bg-[#FFF4DB] dark:border-[#E0A650] dark:bg-[#3A2F14]', 'text-[#B26A00] dark:text-[#E0A650]', 'alerta', 'NO RECONOCIDO: no lo uses']
+    }[v.resultado] || [];
+    if (esOperador && v.es_de_mi_area === false && v.resultado !== 'desconocido') estilos.splice(0, 4, 'border-[#B42318] bg-[#FDF3F2] dark:border-[#F28B82] dark:bg-[#3A1D1B]', 'text-[#B42318] dark:text-[#F28B82]', 'alerta', 'OTRA ÁREA: no lo uses en esta máquina');
+    const detalle = v.resultado === 'desconocido'
+      ? 'Este archivo no se subió al aplicativo o fue modificado después. Descarga el vigente o consulta a ingeniería.'
+      : v.resultado === 'vigente' ? `${v.sku_clave} · ${v.pieza} · ${v.tipo} · versión ${v.version}.`
+      : v.resultado === 'retirado' ? `${v.sku_clave} · ${v.pieza}. Ingeniería retiró esta pieza del SKU; consulta antes de cortar.`
+      : `${v.sku_clave} · ${v.pieza} · este archivo es la versión ${v.version}; la vigente es la versión ${v.version_vigente}.`;
+    resultado = h('div', { class: `mt-3 rounded-md border-2 p-4 ${estilos[0]}`, role: 'alert' },
+      h('p', { class: `flex items-center gap-2 text-lg font-semibold ${estilos[1]}` }, icono(estilos[2], 'w-6 h-6'), estilos[3]),
+      h('p', { class: 'mt-1 text-sm' }, detalle),
+      v.sku_descripcion ? h('p', { class: 'text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, v.sku_descripcion) : null,
+      v.es_de_mi_area === false ? h('p', { class: 'mt-2 text-sm font-semibold text-[#B42318] dark:text-[#F28B82]' }, `Atención: este archivo es del área ${v.area}, no de tu máquina.`) : null,
+      v.resultado === 'obsoleto' && v.version_vigente_id ? h('button', { type: 'button', class: `${CLS.btnPrimario} mt-3`, onClick: descargarVigenteDesdeVerificacion }, icono('descarga'), `Descargar la versión ${v.version_vigente}`) : null,
+      h('p', { class: 'mt-2 text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, `Archivo revisado: ${v.nombre}`));
+  }
+  return h('section', { class: `${CLS.panel} p-5` },
+    h('div', { class: 'flex flex-wrap items-center justify-between gap-3' },
+      h('div', null, h('h2', { class: 'flex items-center gap-2 text-base font-semibold' }, icono('escudo', 'w-5 h-5'), 'Verificar archivo'),
+        h('p', { class: 'text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, esOperador ? 'Antes de cortar, elige el archivo de tu USB para confirmar que es el vigente.' : 'Elige un archivo (por ejemplo, el de una pieza rechazada) para saber si es el vigente. Funciona aunque lo hayan renombrado.')),
+      h('input', { id: 'verificar-archivo', type: 'file', class: 'sr-only', tabindex: '-1', 'aria-hidden': 'true', onChange: ev => { const f = ev.target.files && ev.target.files[0]; ev.target.value = ''; verificarArchivo(f); } }),
+      h('button', { type: 'button', class: esOperador ? `${CLS.btnPrimario} px-6 py-3 text-base` : CLS.btnSecundario, onClick: () => document.getElementById('verificar-archivo').click() }, icono('escudo'), 'Elegir archivo para verificar')),
+    resultado);
+}
+/* FIN COMPONENTE: VerificadorArchivo */
+
+/* COMPONENTE: VistaCorteOperador — pantalla sencilla para la computadora de piso */
+function VistaCorteOperador() {
+  const c = estado.corte, s = estado.sesion;
+  if (!s.maquina) return h('section', null, EstadoVacio({ titulo: 'Esta cuenta no tiene máquina asignada', texto: 'Pide al jefe de ingeniería que asigne una máquina a esta cuenta en Administración → Usuarios.', accion: null }));
+  const lista = documentosFiltrados();
+  let contenido;
+  if (c.error) contenido = EstadoError(c.error, () => cargarCorte());
+  else if (!c.datos) contenido = EstadoCargando('Cargando documentos…', 5);
+  else if (!c.datos.length) contenido = EstadoVacio({ titulo: 'Todavía no hay documentos para tu área', texto: 'Cuando ingeniería suba los documentos de corte, aparecerán aquí.', accion: null });
+  else if (!lista.length) contenido = EstadoVacio({ titulo: 'Ningún SKU coincide con la búsqueda', texto: 'Revisa la clave del SKU.', accion: null });
+  else contenido = h('div', { class: `${CLS.panel} overflow-x-auto` }, h('table', { class: 'min-w-full border-separate border-spacing-0' },
+    h('thead', null, h('tr', null, [['SKU'], ['Pieza'], ['Documento'], ['Versión vigente'], ['Subida'], [h('span', { class: 'sr-only' }, 'Descargar'), 'text-right']].map(([t, x]) => h('th', { scope: 'col', class: `${CLS.th} ${x || ''}` }, t)))),
+    h('tbody', null, lista.map(d => h('tr', null,
+      h('th', { scope: 'row', class: `${CLS.td} text-left` }, h('div', { class: 'flex items-center gap-3' }, MiniaturaSku({ miniatura: d.sku_miniatura, clave: d.sku_clave }, 'h-12 w-12'), h('span', { class: 'text-base font-semibold tabular-nums' }, d.sku_clave))),
+      h('td', { class: CLS.td }, h('p', { class: 'text-base font-medium' }, d.pieza), h('p', { class: 'text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, d.sku_descripcion)),
+      h('td', { class: `${CLS.td} whitespace-nowrap` }, d.tipo_nombre),
+      h('td', { class: `${CLS.td} whitespace-nowrap` }, h('span', { class: 'inline-flex items-center gap-1 rounded-md bg-[#E6F2EB] px-2 py-0.5 text-sm font-semibold text-[#1F7A4D] dark:bg-[#173526] dark:text-[#5CC48E]' }, icono('check', 'w-3.5 h-3.5'), `v${d.version_vigente}`)),
+      h('td', { class: `${CLS.td} whitespace-nowrap text-[#5B6675] dark:text-[#9AA7B6]` }, formatearFechaHora(d.subida_en)),
+      h('td', { class: `${CLS.td} text-right` }, h('button', { type: 'button', class: `${CLS.btnPrimario} py-2.5`, disabled: !!c.descargando, onClick: () => descargarDocumento(d) },
+        c.descargando === String(d.version_id) ? [Spinner('w-4 h-4 border-white border-t-transparent'), 'Descargando…'] : [icono('descarga'), 'Descargar'])))))));
+  return h('section', { class: 'space-y-5' },
+    EncabezadoVista(`Archivos de corte · ${s.maquina.area}`, `Máquina ${s.maquina.nombre}. Aquí solo aparecen las versiones vigentes; descárgalas, cópialas a la USB y verifícalas antes de cortar.`, null),
+    VerificadorArchivo(),
+    h('div', { class: 'max-w-md' },
+      h('label', { for: 'corte-busqueda', class: 'mb-1 block text-sm font-medium' }, 'Buscar SKU'),
+      h('div', { class: 'relative' }, h('span', { class: 'pointer-events-none absolute inset-y-0 left-3 flex items-center text-[#7A8594]' }, icono('buscar')),
+        h('input', { id: 'corte-busqueda', type: 'search', class: `${CLS.input} py-3 pl-9 text-base`, placeholder: 'Clave o descripción del SKU', value: c.filtros.busqueda, onInput: ev => cambiarFiltroCorte('busqueda', ev.target.value) }))),
+    contenido);
+}
+/* FIN COMPONENTE: VistaCorteOperador */
+
+/* COMPONENTE: VistaCorte — ingeniería y calidad */
+function VistaCorte() {
+  const c = estado.corte, lista = documentosFiltrados();
+  const tipos = DataService.catalogosCorte().tipos;
+  let contenido;
+  if (c.error) contenido = EstadoError(c.error, () => cargarCorte());
+  else if (!c.datos) contenido = EstadoCargando('Cargando documentos…', 6);
+  else if (!c.datos.length) contenido = EstadoVacio({ titulo: 'Todavía no hay documentos de corte', texto: 'Se suben desde el detalle de cada SKU (clic en su clave, sección Documentos de corte).', accion: null });
+  else if (!lista.length) contenido = EstadoVacio({ titulo: 'Ningún documento coincide con los filtros', texto: 'Prueba con otra búsqueda o tipo.', accion: null });
+  else contenido = h('div', { class: `${CLS.panel} overflow-x-auto` }, h('table', { class: 'min-w-full border-separate border-spacing-0' },
+    h('thead', null, h('tr', null, [['SKU'], ['Pieza'], ['Documento'], ['Área'], ['Vigente'], ['Subida por'], ['Fecha'], [h('span', { class: 'sr-only' }, 'Acciones')]].map(([t]) => h('th', { scope: 'col', class: CLS.th }, t)))),
+    h('tbody', null, lista.map(d => h('tr', null,
+      h('th', { scope: 'row', class: `${CLS.td} text-left font-semibold tabular-nums` }, h('button', { type: 'button', class: CLS.enlace, onClick: () => abrirDetalle(d.sku_id) }, d.sku_clave)),
+      h('td', { class: CLS.td }, d.pieza),
+      h('td', { class: `${CLS.td} whitespace-nowrap` }, d.tipo_nombre),
+      h('td', { class: `${CLS.td} whitespace-nowrap text-[#5B6675] dark:text-[#9AA7B6]` }, d.area_nombre),
+      h('td', { class: `${CLS.td} whitespace-nowrap font-semibold tabular-nums` }, `v${d.version_vigente}`),
+      h('td', { class: `${CLS.td} whitespace-nowrap` }, d.subida_por_nombre || '—'),
+      h('td', { class: `${CLS.td} whitespace-nowrap text-[#5B6675] dark:text-[#9AA7B6]` }, formatearFechaHora(d.subida_en)),
+      h('td', { class: `${CLS.td} whitespace-nowrap text-right` }, h('button', { type: 'button', class: CLS.btnChico, disabled: !!c.descargando, onClick: () => descargarDocumento(d) }, icono('descarga', 'w-3.5 h-3.5'), 'Descargar')))))));
+  const descargas = c.descargas && c.descargas.length ? h('section', { class: `${CLS.panel} overflow-x-auto` },
+    h('div', { class: 'px-5 pt-4' }, h('h2', { class: 'text-base font-semibold' }, 'Últimas descargas'), h('p', { class: 'text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, 'Qué máquina descargó qué pieza y versión, y cuándo. "Obsoleta" indica que ya existe una versión más nueva.')),
+    h('table', { class: 'mt-2 min-w-full border-separate border-spacing-0' },
+      h('thead', null, h('tr', null, ['Fecha', 'Máquina o persona', 'SKU', 'Pieza', 'Versión'].map(t => h('th', { scope: 'col', class: CLS.th }, t)))),
+      h('tbody', null, c.descargas.map(x => h('tr', null,
+        h('td', { class: `${CLS.td} whitespace-nowrap tabular-nums text-[#5B6675] dark:text-[#9AA7B6]` }, formatearFechaHora(x.fecha)),
+        h('td', { class: `${CLS.td} whitespace-nowrap` }, x.maquina_nombre || x.usuario_nombre || '—'),
+        h('td', { class: `${CLS.td} whitespace-nowrap font-semibold tabular-nums` }, x.sku_clave),
+        h('td', { class: CLS.td }, x.pieza),
+        h('td', { class: `${CLS.td} whitespace-nowrap` }, `v${x.version}`, x.vigente ? null : h('span', { class: 'ml-2 text-xs font-medium text-[#B42318] dark:text-[#F28B82]' }, 'Obsoleta'))))))) : null;
+  return h('section', { class: 'space-y-5' },
+    EncabezadoVista('Archivos de corte', 'Piezas vigentes de todos los SKUs. Para subir o cambiar archivos, abre el SKU.', null),
+    driveListo() ? null : AvisoDriveSinConfigurar(),
+    VerificadorArchivo(),
+    h('div', { class: 'flex flex-wrap items-end gap-3' },
+      h('div', { class: 'w-full sm:w-72' }, h('label', { for: 'corte-busqueda', class: 'mb-1 block text-xs font-medium text-[#5B6675] dark:text-[#9AA7B6]' }, 'Buscar'),
+        h('input', { id: 'corte-busqueda', type: 'search', class: CLS.input, placeholder: 'SKU o descripción', value: c.filtros.busqueda, onInput: ev => cambiarFiltroCorte('busqueda', ev.target.value) })),
+      h('div', { class: 'min-w-[12rem]' }, h('label', { for: 'corte-tipo', class: 'mb-1 block text-xs font-medium text-[#5B6675] dark:text-[#9AA7B6]' }, 'Tipo de documento'),
+        h('select', { id: 'corte-tipo', class: CLS.input, value: c.filtros.tipo_id, onChange: ev => cambiarFiltroCorte('tipo_id', ev.target.value) }, h('option', { value: '' }, 'Todos'), tipos.map(t => h('option', { value: t.id }, t.nombre)))),
+      c.datos ? h('p', { class: 'pb-2 text-sm text-[#5B6675] dark:text-[#9AA7B6] sm:ml-auto' }, `${lista.length} piezas vigentes`) : null),
+    contenido, descargas);
+}
+/* FIN COMPONENTE: VistaCorte */
+
+/* COMPONENTE: DocumentosCorteSku — piezas de corte en el detalle del SKU */
+function DocumentosCorteSku(s) {
+  const d = estado.detalle;
+  const editable = puede(estado.sesion.rol_id, 'subir_documentos');
+  const docs = d.documentos || [];
+  const activos = docs.filter(x => x.activo && x.version_id);
+  const retirados = docs.filter(x => !x.activo);
+  const porTipo = new Map();
+  for (const x of activos) { if (!porTipo.has(x.tipo_nombre)) porTipo.set(x.tipo_nombre, []); porTipo.get(x.tipo_nombre).push(x); }
+  const grupos = [...porTipo.entries()].sort((a, b) => a[1][0].tipo_orden - b[1][0].tipo_orden);
+  return h('section', null,
+    h('div', { class: 'mb-2 flex flex-wrap items-center justify-between gap-2' },
+      h('h3', { class: 'text-sm font-semibold' }, 'Archivos de corte', activos.length ? h('span', { class: 'ml-2 text-xs font-normal text-[#5B6675] dark:text-[#9AA7B6]' }, `${activos.length} ${activos.length === 1 ? 'pieza' : 'piezas'}`) : null),
+      h('div', { class: 'flex gap-2' },
+        activos.length ? h('button', { type: 'button', class: CLS.btnChico, disabled: !!estado.corte.descargando, onClick: () => descargarTodasLasPiezas(s.clave, activos) }, icono('descarga', 'w-3.5 h-3.5'), 'Descargar todas') : null,
+        editable ? h('button', { type: 'button', class: CLS.btnChico, onClick: () => abrirModalDocumento(s, null) }, icono('mas', 'w-3.5 h-3.5'), 'Subir piezas') : null)),
+    estado.corte.lote ? h('p', { class: 'mb-2 text-xs text-[#5B6675] dark:text-[#9AA7B6]', role: 'status' }, `Descargando ${estado.corte.lote.hecho} de ${estado.corte.lote.total}…`) : null,
+    d.errorDocumentos ? h('p', { class: 'text-sm text-[#B42318] dark:text-[#F28B82]' }, d.errorDocumentos)
+      : !d.documentos ? h('p', { class: 'flex items-center gap-2 text-sm text-[#5B6675]', role: 'status' }, Spinner(), 'Cargando piezas…')
+      : !activos.length ? h('p', { class: 'rounded-md border border-dashed border-[#C3CBD4] px-3 py-3 text-sm text-[#5B6675] dark:border-[#3A4756] dark:text-[#9AA7B6]' }, editable ? 'Este SKU no tiene archivos de corte. Usa "Subir piezas" para agregar sus DXF o IGES; puedes elegir muchos a la vez.' : 'Este SKU no tiene archivos de corte.')
+      : h('div', { class: 'space-y-3' }, grupos.map(([tipoNombre, piezas]) => h('div', { class: 'rounded-md border border-[#D5DBE2] dark:border-[#2E3A48]' },
+          h('p', { class: 'border-b border-[#E3E7EC] bg-[#F7F9FA] px-3 py-1.5 text-xs font-semibold dark:border-[#26313D] dark:bg-[#1F2833]' }, tipoNombre, h('span', { class: 'ml-2 font-normal text-[#5B6675] dark:text-[#9AA7B6]' }, `${piezas.length} ${piezas.length === 1 ? 'pieza' : 'piezas'}`)),
+          h('ul', { class: 'divide-y divide-[#E3E7EC] dark:divide-[#26313D]' }, piezas.map(x => h('li', { class: 'px-3 py-2' },
+            h('p', { class: 'text-sm font-medium' }, x.pieza, h('span', { class: 'ml-2 whitespace-nowrap rounded bg-[#E6F2EB] px-1.5 py-0.5 text-xs font-semibold text-[#1F7A4D] dark:bg-[#173526] dark:text-[#5CC48E]' }, `v${x.version_vigente}`)),
+            h('p', { class: 'mt-0.5 text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, `${formatoTamano(x.tamano)} · ${x.subida_por_nombre || '—'}, ${formatearFechaHora(x.subida_en)}`),
+            x.cambios ? h('p', { class: 'text-xs' }, `Cambios: ${x.cambios}`) : null,
+            h('div', { class: 'mt-1.5 flex flex-wrap gap-2' },
+              h('button', { type: 'button', class: CLS.btnChico, disabled: !!estado.corte.descargando, onClick: () => descargarDocumento(x) }, icono('descarga', 'w-3.5 h-3.5'), 'Descargar'),
+              h('button', { type: 'button', class: CLS.btnChico, onClick: () => abrirHistorialDocumento(x) }, `Versiones (${x.version_vigente})`),
+              editable ? h('button', { type: 'button', class: CLS.btnChico, onClick: () => abrirModalDocumento(s, x) }, icono('subir', 'w-3.5 h-3.5'), 'Nueva versión') : null,
+              editable ? h('button', { type: 'button', class: `${CLS.btnChico} text-[#B42318] dark:text-[#F28B82]`, onClick: () => pedirRetirarDocumento(x) }, 'Retirar') : null))))))),
+    retirados.length ? h('p', { class: 'mt-2 text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, 'Piezas retiradas: ', retirados.map((x, i) => [i ? '; ' : '', h('button', { type: 'button', class: `${CLS.enlace} text-xs`, onClick: () => abrirHistorialDocumento(x) }, x.pieza), x.motivo_retiro ? ` (${x.motivo_retiro})` : ''])) : null);
+}
+/* FIN COMPONENTE: DocumentosCorteSku */
+
+/* COMPONENTE: ModalDocumento — subir una o muchas piezas a la vez */
+function ModalDocumento() {
+  const m = estado.modal;
+  const tipos = DataService.catalogosCorte().tipos.filter(t => t.activo || String(t.id) === m.tipo_id);
+  const tipo = tipos.find(t => t.id === Number(m.tipo_id)) || tipos[0];
+  const ext = tipo ? tipo.extensiones.split(',').map(x => '.' + x).join(',') : '';
+  const titulo = h('h2', { id: 'titulo-modal', class: 'text-lg font-semibold' }, m.doc ? `Nueva versión de ${m.doc.pieza}` : `Subir piezas a ${m.sku.clave}`);
+
+  if (m.fase === 'subiendo' || m.fase === 'terminado') {
+    const pct = calcularPorcentaje(m.hecho, m.total);
+    return h('div', null, titulo,
+      h('p', { class: 'mt-2 text-sm', role: 'status' }, m.fase === 'subiendo' ? `Subiendo ${m.hecho} de ${m.total} piezas…` : `Listo: se subieron ${m.hecho - m.errores.length} de ${m.total} piezas.`),
+      h('div', { class: 'mt-2 h-2 w-full overflow-hidden rounded-full bg-[#E3E7EC] dark:bg-[#26313D]', role: 'progressbar', 'aria-valuemin': '0', 'aria-valuemax': String(m.total), 'aria-valuenow': String(m.hecho) },
+        h('div', { class: `h-full rounded-full bg-[#1F7A4D] dark:bg-[#2E9A63] w-[${pct}%]` })),
+      m.fase === 'subiendo' ? h('p', { class: 'mt-2 text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, 'No cierres ni recargues la página hasta que termine.') : null,
+      m.errores.length ? h('div', { class: 'mt-3 max-h-32 overflow-y-auto rounded-md border border-[#E7B4AE] bg-[#FDF3F2] p-2 text-xs text-[#8F1C13] dark:border-[#6B2E29] dark:bg-[#3A1D1B] dark:text-[#F5B3AC]' },
+        h('p', { class: 'font-medium' }, `${m.errores.length} no se pudieron subir:`), m.errores.slice(0, 40).map(e => h('p', null, e))) : null,
+      h('div', { class: 'mt-6 flex justify-end gap-2' },
+        m.fase === 'subiendo'
+          ? h('button', { type: 'button', class: CLS.btnSecundario, disabled: m.cancelar, onClick: () => { estado.modal.cancelar = true; render(); } }, m.cancelar ? 'Deteniendo…' : 'Detener')
+          : h('button', { type: 'button', class: CLS.btnPrimario, onClick: cerrarModal }, 'Cerrar')));
+  }
+
+  const plan = planSubida();
+  const listaArchivos = m.archivos.length ? h('div', { class: 'max-h-56 space-y-2 overflow-y-auto rounded-md border border-[#D5DBE2] p-2 dark:border-[#2E3A48]' },
+    plan.filas.map((f, i) => h('div', { class: 'flex flex-wrap items-center gap-2' },
+      h('div', { class: 'min-w-0 flex-1' },
+        h('label', { for: `pieza-${i}`, class: 'sr-only' }, `Nombre de la pieza ${i + 1}`),
+        h('input', { id: `pieza-${i}`, class: `${f.error ? CLS.inputError : CLS.input} py-1.5 text-sm`, maxlength: String(LIMITE_PIEZA), value: m.piezas[i] || '', disabled: !!m.doc,
+          onInput: ev => { estado.modal.piezas[i] = ev.target.value; conRetraso('pieza', render, 250); } }),
+        h('p', { class: 'mt-0.5 text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, `${f.archivo.name} · ${formatoTamano(f.archivo.size)}`)),
+      h('span', { class: `whitespace-nowrap text-xs font-medium ${f.error ? 'text-[#B42318] dark:text-[#F28B82]' : f.esPrimera ? 'text-[#1F7A4D] dark:text-[#5CC48E]' : 'text-[#B26A00] dark:text-[#E0A650]'}` },
+        f.error ? f.error : f.esPrimera ? 'Pieza nueva' : `Nueva versión (v${f.previa.version_vigente + 1})`)))) : null;
+
+  return h('div', null, titulo,
+    h('p', { class: 'mt-1 text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, m.doc
+      ? `La versión v${m.doc.version_vigente} quedará obsoleta y los operadores ya no podrán descargarla.`
+      : 'Elige todos los archivos de un tipo a la vez. Cada archivo es una pieza y toma su nombre; si la pieza ya existe, se registra como versión nueva.'),
+    h('div', { class: 'mt-4 space-y-4' },
+      m.doc ? null : h('div', null, h('label', { for: 'doc-tipo', class: CLS.etiqueta }, 'Tipo de documento'),
+        h('select', { id: 'doc-tipo', class: CLS.input, value: m.tipo_id, onChange: ev => { estado.modal.tipo_id = ev.target.value; estado.modal.archivos = []; estado.modal.piezas = {}; estado.modal.error = null; render(); } },
+          tipos.map(t => h('option', { value: t.id }, `${t.nombre} (${t.area_nombre})`)))),
+      h('div', null, h('p', { class: CLS.etiqueta }, m.doc ? 'Archivo' : 'Archivos'),
+        h('input', { id: 'doc-archivo', type: 'file', accept: ext, multiple: !m.doc, class: 'sr-only', tabindex: '-1', 'aria-hidden': 'true', onChange: ev => { elegirArchivosDocumento(ev.target.files); ev.target.value = ''; } }),
+        h('div', { class: 'flex flex-wrap items-center gap-2' },
+          h('button', { type: 'button', class: CLS.btnSecundario, onClick: () => document.getElementById('doc-archivo').click() }, m.archivos.length ? 'Cambiar selección' : (m.doc ? 'Elegir archivo' : 'Elegir archivos')),
+          h('span', { class: 'text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, m.archivos.length ? `${m.archivos.length} ${m.archivos.length === 1 ? 'archivo' : 'archivos'}` : `Formato ${ext}, hasta ${LIMITE_DOCUMENTO_MB} MB cada uno`)),
+        m.rechazados ? h('p', { class: 'mt-1 text-xs text-[#B26A00] dark:text-[#E0A650]' }, `Se descartaron ${m.rechazados} archivos por formato o tamaño.`) : null),
+      listaArchivos,
+      m.archivos.length ? h('p', { class: 'text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, `${plan.nuevas} piezas nuevas · ${plan.versiones} versiones nuevas${plan.conError ? ` · ${plan.conError} con problema` : ''}`) : null,
+      h('div', null, h('label', { for: 'doc-cambios', class: CLS.etiqueta }, plan.versiones ? 'Qué cambió (obligatorio)' : 'Notas (opcional)'),
+        h('textarea', { id: 'doc-cambios', rows: '2', maxlength: '500', class: CLS.input, placeholder: plan.versiones ? 'Por ejemplo: se corrigió la cota del costado izquierdo.' : 'Por ejemplo: versión inicial liberada para producción.', value: m.cambios, onInput: ev => { estado.modal.cambios = ev.target.value; } }),
+        plan.versiones && plan.nuevas ? h('p', { class: 'mt-1 text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, 'La nota se guarda en todas las piezas de esta subida.') : null)),
+    ErrorModal(m.error),
+    h('div', { class: 'mt-6 flex flex-wrap justify-end gap-2' },
+      h('button', { type: 'button', id: 'confirmar-cancelar', class: CLS.btnSecundario, onClick: cerrarModal }, 'Cancelar'),
+      h('button', { type: 'button', class: CLS.btnPrimario, disabled: !m.archivos.length || !!plan.conError, onClick: guardarDocumento },
+        m.archivos.length > 1 ? `Subir ${m.archivos.length} piezas` : 'Subir')));
+}
+/* FIN COMPONENTE: ModalDocumento */
+
+/* COMPONENTE: ModalRetirarDocumento */
+function ModalRetirarDocumento() {
+  const m = estado.modal;
+  return h('form', { novalidate: true, onSubmit: ev => { ev.preventDefault(); confirmarRetiroDocumento(); } },
+    h('h2', { id: 'titulo-modal', class: 'text-lg font-semibold' }, `Retirar ${m.doc.pieza} de ${m.doc.sku_clave}`),
+    h('p', { class: 'mt-1 text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, `Úsalo cuando el SKU ya no lleve esta pieza (${m.doc.tipo_nombre}). Desaparece del SKU, las máquinas ya no pueden descargarla y se libera su espacio; su historial se conserva.`),
+    h('div', { class: 'mt-4' }, h('label', { for: 'motivo-retiro', class: CLS.etiqueta }, 'Motivo (obligatorio)'),
+      h('textarea', { id: 'motivo-retiro', rows: '3', maxlength: '255', class: CLS.input, disabled: m.enviando, placeholder: 'Por ejemplo: el SKU ya no lleva piezas de lámina.', value: m.motivo, onInput: ev => { estado.modal.motivo = ev.target.value; } })),
+    ErrorModal(m.error),
+    PieModal('Retirar documento', confirmarRetiroDocumento, { peligro: true, enviando: m.enviando, textoEnviando: 'Retirando…' }));
+}
+/* FIN COMPONENTE: ModalRetirarDocumento */
+
+/* COMPONENTE: ModalVersionesDocumento */
+function ModalVersionesDocumento() {
+  const m = estado.modal;
+  return h('div', null,
+    h('h2', { id: 'titulo-modal', class: 'text-lg font-semibold' }, `Versiones de ${m.doc.pieza}`),
+    h('p', { class: 'mt-1 text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, m.doc.activo ? `${m.doc.sku_clave} · ${m.doc.tipo_nombre}. Solo la vigente la pueden descargar las máquinas.` : `${m.doc.sku_clave} · ${m.doc.tipo_nombre}. Pieza retirada: ${m.doc.motivo_retiro || 'sin motivo'}.`),
+    m.error ? ErrorModal(m.error) : !m.versiones ? h('p', { class: 'mt-4 flex items-center gap-2 text-sm', role: 'status' }, Spinner(), 'Cargando…')
+      : h('ol', { class: 'mt-4 max-h-80 space-y-3 overflow-y-auto' }, m.versiones.map(v => h('li', { class: 'rounded-md border border-[#D5DBE2] p-3 text-sm dark:border-[#2E3A48]' },
+          h('div', { class: 'flex items-center gap-2' }, h('span', { class: 'font-semibold' }, `Versión ${v.version}`),
+            v.vigente ? h('span', { class: 'rounded bg-[#E6F2EB] px-1.5 text-xs font-semibold text-[#1F7A4D] dark:bg-[#173526] dark:text-[#5CC48E]' }, 'Vigente') : h('span', { class: 'rounded bg-[#FDF3F2] px-1.5 text-xs font-semibold text-[#B42318] dark:bg-[#3A1D1B] dark:text-[#F28B82]' }, 'Obsoleta'),
+            h('span', { class: 'ml-auto' }, v.archivo_borrado ? h('span', { class: 'text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, 'Solo registro') : h('button', { type: 'button', class: CLS.btnChico, disabled: !!estado.corte.descargando, onClick: () => descargarDocumento({ ...v, version_id: v.id, sku_clave: m.doc.sku_clave, pieza: m.doc.pieza }), 'aria-label': `Descargar versión ${v.version}` }, icono('descarga', 'w-3.5 h-3.5')))),
+          h('p', { class: 'text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, `${v.subida_por_nombre || '—'}, ${formatearFechaHora(v.created_at)} · ${v.nombre_original} · ${Number(v.descargas) === 1 ? '1 descarga' : `${v.descargas} descargas`}`),
+          v.cambios ? h('p', { class: 'mt-1 text-xs' }, `Cambios: ${v.cambios}`) : null))),
+    h('div', { class: 'mt-6 flex justify-end' }, h('button', { type: 'button', id: 'confirmar-cancelar', class: CLS.btnSecundario, onClick: cerrarModal }, 'Cerrar')));
+}
+/* FIN COMPONENTE: ModalVersionesDocumento */
+
+/* COMPONENTE: AdminCorte — áreas, tipos de documento y máquinas */
+function AdminCorte() {
+  const { areas, tipos, maquinas } = estado.admin.corte;
+  if (!areas.length) return EstadoVacio({ titulo: 'Falta activar los archivos de corte', texto: 'Ejecuta en Supabase el archivo actualizacion_documentos_corte.sql.', accion: null });
+  const estadoTxt = on => on ? 'Activo' : h('span', { class: 'text-[#5B6675] dark:text-[#9AA7B6]' }, 'Inactivo');
+  const acciones = (entidad, r, activo) => h('td', { class: `${CLS.td} whitespace-nowrap text-right` }, h('div', { class: 'flex justify-end gap-2' },
+    h('button', { type: 'button', class: CLS.btnChico, onClick: () => abrirModalCorteCatalogo(entidad, r) }, icono('editar', 'w-3.5 h-3.5'), 'Editar'),
+    h('button', { type: 'button', class: CLS.btnChico, onClick: () => cambiarActivoCorte(entidad, r, !activo) }, activo ? 'Desactivar' : 'Activar')));
+  const bloque = (titulo, texto, boton, tabla) => h('div', { class: 'space-y-2' }, h('div', { class: 'flex flex-wrap items-end justify-between gap-2' },
+    h('div', null, h('h2', { class: 'text-base font-semibold' }, titulo), h('p', { class: 'text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, texto)), boton), tabla);
+  return h('div', { class: 'space-y-8' },
+    EspacioDrive(),
+    bloque('Máquinas', 'Cada máquina tiene su cuenta de Operador; solo ve los documentos de su área. Asigna la cuenta en Usuarios.',
+      h('button', { type: 'button', class: CLS.btnPrimario, onClick: () => abrirModalCorteCatalogo('maquina', null) }, icono('mas'), 'Nueva máquina'),
+      maquinas.length ? TablaAdmin([['Máquina'], ['Área'], ['Estado'], ['']], maquinas.map(r => h('tr', null,
+        h('th', { scope: 'row', class: `${CLS.td} text-left font-medium` }, r.nombre), h('td', { class: CLS.td }, r.area_nombre), h('td', { class: CLS.td }, estadoTxt(r.activa)), acciones('maquina', r, r.activa))))
+        : h('p', { class: 'rounded-md border border-dashed border-[#C3CBD4] p-3 text-sm text-[#5B6675] dark:border-[#3A4756]' }, 'Aún no hay máquinas. Da de alta cada máquina de corte con su área.')),
+    bloque('Tipos de documento', 'Qué documentos de corte puede tener un SKU, qué formatos aceptan y qué área los descarga.',
+      h('button', { type: 'button', class: CLS.btnSecundario, onClick: () => abrirModalCorteCatalogo('tipo', null) }, icono('mas'), 'Nuevo tipo'),
+      TablaAdmin([['Tipo de documento'], ['Área'], ['Formatos'], ['Estado'], ['']], tipos.map(r => h('tr', null,
+        h('th', { scope: 'row', class: `${CLS.td} text-left font-medium` }, r.nombre), h('td', { class: CLS.td }, r.area_nombre),
+        h('td', { class: `${CLS.td} tabular-nums` }, r.extensiones.split(',').map(x => '.' + x).join(', ')), h('td', { class: CLS.td }, estadoTxt(r.activo)), acciones('tipo', r, r.activo))))),
+    bloque('Áreas de corte', 'Agrupan máquinas y tipos de documento.',
+      h('button', { type: 'button', class: CLS.btnSecundario, onClick: () => abrirModalCorteCatalogo('area', null) }, icono('mas'), 'Nueva área'),
+      TablaAdmin([['Área'], ['Estado'], ['']], areas.map(r => h('tr', null,
+        h('th', { scope: 'row', class: `${CLS.td} text-left font-medium` }, r.nombre), h('td', { class: CLS.td }, estadoTxt(r.activa)), acciones('area', r, r.activa))))));
+}
+/* FIN COMPONENTE: AdminCorte */
+
+/* COMPONENTE: AvisoDriveSinConfigurar */
+function AvisoDriveSinConfigurar() {
+  if (driveListo()) return null;
+  return h('div', { class: 'rounded-md border border-[#E9D29B] bg-[#FFF4DB] p-4 text-sm text-[#5C4410] dark:border-[#5C4A1F] dark:bg-[#3A2F14] dark:text-[#F0D9A0]', role: 'status' },
+    h('p', { class: 'flex items-center gap-2 font-medium' }, icono('alerta', 'w-4 h-4'), 'Falta conectar el almacén de archivos'),
+    h('p', { class: 'mt-1' }, 'Los archivos de corte se guardan en Google Drive. Sigue la guía GUIA_ARCHIVOS_DE_CORTE.md y pega la dirección del intermediario en el index.html (DRIVE_URL). Mientras tanto no se pueden subir ni descargar archivos.'));
+}
+/* FIN COMPONENTE: AvisoDriveSinConfigurar */
+
+/* COMPONENTE: EspacioDrive — cuánto ocupan los archivos de corte */
+function EspacioDrive() {
+  const e = estado.corte.espacio;
+  if (!e) return null;
+  const guardado = Number(e.bytes_guardados || 0), original = Number(e.bytes_originales || 0);
+  const ahorro = original ? Math.round(100 - guardado * 100 / original) : 0;
+  const enDrive = e.cuenta && e.cuenta.bytes ? Number(e.cuenta.bytes) : guardado;
+  const LIMITE = 15 * 1024 * 1024 * 1024; // 15 GB de una cuenta gratuita de Google
+  const pct = Math.round(enDrive * 100 / LIMITE);
+  const nivel = pct >= 95 ? 'critico' : pct >= 80 ? 'aviso' : 'normal';
+  const color = nivel === 'critico' ? 'bg-[#B42318] dark:bg-[#C8372B]' : nivel === 'aviso' ? 'bg-[#C98A1B] dark:bg-[#D9A03A]' : 'bg-[#1E4E79] dark:bg-[#2F6DA3]';
+  return h('div', { class: `${CLS.panel} p-5` },
+    h('div', { class: 'flex flex-wrap items-baseline justify-between gap-2' },
+      h('h2', { class: 'text-base font-semibold' }, 'Espacio de los archivos de corte'),
+      h('p', { class: 'text-sm tabular-nums' }, h('span', { class: 'font-semibold' }, formatoTamano(enDrive || 1)), ` en ${(e.cuenta && e.cuenta.archivos) || e.archivos || 0} archivos`)),
+    h('div', { class: 'mt-2 h-2 w-full overflow-hidden rounded-full bg-[#E3E7EC] dark:bg-[#26313D]', role: 'progressbar', 'aria-valuemin': '0', 'aria-valuemax': '100', 'aria-valuenow': String(pct), 'aria-label': 'Espacio usado' },
+      h('div', { class: `h-full rounded-full ${color} w-[${Math.min(100, Math.max(pct, 1))}%]` })),
+    h('p', { class: `mt-2 text-sm ${nivel === 'normal' ? 'text-[#5B6675] dark:text-[#9AA7B6]' : 'font-medium text-[#B26A00] dark:text-[#E0A650]'}` },
+      nivel !== 'normal' ? icono('alerta', 'mr-1 inline w-4 h-4 align-[-2px]') : null,
+      `${pct}% de los 15 GB gratuitos de la cuenta de Google Drive.` + (nivel === 'normal' ? ' Hay espacio de sobra.' : ' Conviene ampliar el espacio de esa cuenta con Google One.')),
+    h('p', { class: 'mt-1 text-xs text-[#5B6675] dark:text-[#9AA7B6]' },
+      `Los archivos se comprimen al subirlos: ocupan ${formatoTamano(guardado || 1)} en lugar de ${formatoTamano(original || 1)}, un ${ahorro}% menos. ` +
+      `${e.versiones_solo_registro || 0} versiones antiguas conservan solo su registro, sin archivo, y la verificación las sigue reconociendo.`));
+}
+/* FIN COMPONENTE: EspacioDrive */
+
+/* COMPONENTE: ModalCorteCatalogo */
+function ModalCorteCatalogo() {
+  const m = estado.modal, e = m.errores || {};
+  const titulos = { area: ['Nueva área', 'Editar área'], tipo: ['Nuevo tipo de documento', 'Editar tipo de documento'], maquina: ['Nueva máquina', 'Editar máquina'] }[m.entidad];
+  const areas = DataService.catalogosCorte().areas.filter(a => a.activa || String(a.id) === m.datos.area_id);
+  const campo = (k, v) => { estado.modal.datos[k] = v; };
+  return h('form', { novalidate: true, onSubmit: ev => { ev.preventDefault(); guardarCorteCatalogo(); } },
+    h('h2', { id: 'titulo-modal', class: 'text-lg font-semibold' }, titulos[m.id ? 1 : 0]),
+    h('div', { class: 'mt-4 space-y-4' },
+      h('div', null, h('label', { for: 'corte-nombre', class: CLS.etiqueta }, 'Nombre'),
+        h('input', { id: 'corte-nombre', class: e.nombre ? CLS.inputError : CLS.input, maxlength: m.entidad === 'maquina' ? '80' : '60', placeholder: { area: 'Por ejemplo: Melamina', tipo: 'Por ejemplo: DXF de melamina', maquina: 'Por ejemplo: CNC Melamina 1' }[m.entidad], value: m.datos.nombre, onInput: ev => campo('nombre', ev.target.value) }),
+        ErrorCampo(e.nombre, 'corte-nombre-error')),
+      m.entidad === 'area' ? null : h('div', null, h('label', { for: 'corte-area', class: CLS.etiqueta }, m.entidad === 'tipo' ? 'Área que lo descarga' : 'Área de la máquina'),
+        h('select', { id: 'corte-area', class: e.area_id ? CLS.inputError : CLS.input, value: m.datos.area_id, onChange: ev => campo('area_id', ev.target.value) }, h('option', { value: '' }, 'Elige el área'), areas.map(a => h('option', { value: a.id }, a.nombre))),
+        ErrorCampo(e.area_id, 'corte-area-error')),
+      m.entidad === 'tipo' ? h('div', null, h('label', { for: 'corte-ext', class: CLS.etiqueta }, 'Formatos permitidos'),
+        h('input', { id: 'corte-ext', class: e.extensiones ? CLS.inputError : CLS.input, placeholder: 'dxf   o   igs,iges', value: m.datos.extensiones, onInput: ev => campo('extensiones', ev.target.value) }),
+        e.extensiones ? ErrorCampo(e.extensiones, 'corte-ext-error') : h('p', { class: 'mt-1 text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, 'Extensiones sin punto, separadas por coma.')) : null),
+    ErrorModal(m.error),
+    PieModal('Guardar', guardarCorteCatalogo, { enviando: m.enviando }));
+}
+/* FIN COMPONENTE: ModalCorteCatalogo */
 
 /* COMPONENTE: ModalConfirmacion */
 function ModalConfirmacion() {
@@ -2273,7 +2958,7 @@ function VistaReporte() {
 function App() {
   if (estado.fase === 'auth') return h('div', null, FormularioAuth(), Avisos());
   if (estado.fase !== 'app' || !estado.sesion) return h('div', null, PantallaInicio(), Avisos());
-  const vistas = { skus: VistaSkus, tablero: VistaTablero, historial: VistaHistorial, admin: VistaAdministracion };
+  const vistas = { skus: VistaSkus, tablero: VistaTablero, historial: VistaHistorial, admin: VistaAdministracion, corte: estado.sesion.rol_id === ROLES.OPERADOR ? VistaCorteOperador : VistaCorte };
   const reporte = estado.reporte.abierto && estado.reporte.datos;
   return h('div', null,
     h('div', { class: `flex min-h-screen flex-col ${reporte ? 'print:hidden' : ''}` },
