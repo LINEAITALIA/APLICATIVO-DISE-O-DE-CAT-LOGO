@@ -337,6 +337,14 @@ const DataService = {
     return filas.map(d => ({ ...d, id: Number(d.id), sku_id: Number(d.sku_id), tipo_documento_id: Number(d.tipo_documento_id), area_id: Number(d.area_id) }))
       .sort((a, b) => compararNatural(a.sku_clave, b.sku_clave) || a.tipo_orden - b.tipo_orden || compararNatural(a.pieza, b.pieza));
   },
+  async listarCobertura(skuId) {
+    try { const { data } = await ejecutar(SB.from('ing_v_cobertura_corte').select('*').eq('sku_id', skuId).order('tipo_orden')); return data || []; }
+    catch (e) { return []; } // la actualización de "No aplica" aún no se ejecuta en Supabase
+  },
+  async marcarNoAplica(skuId, tipoId, noAplica, nota) {
+    exigirPermiso('subir_documentos');
+    await ejecutar(SB.rpc('ing_marcar_no_aplica', { p_sku: skuId, p_tipo: tipoId, p_no_aplica: !!noAplica, p_nota: String(nota || '').trim() || null }));
+  },
   async listarVersiones(documentoId) {
     const { data } = await ejecutar(SB.from('ing_v_versiones').select('*').eq('documento_id', documentoId).order('version', { ascending: false }));
     return data || [];
@@ -454,7 +462,7 @@ const DataService = {
     return r;
   },
   async crearSku(datos) {
-    exigirPermiso('administrar');
+    exigirPermiso('altas');
     const limpio = limpiarDatosSku(datos);
     const errores = validarSku(limpio, vivosSkus(), null);
     if (errores) throw new ErrorApi('Revisa los campos marcados.', { tipo: 'validacion', campos: errores });
@@ -468,7 +476,7 @@ const DataService = {
     }
   },
   async actualizarSku(id, datos) {
-    exigirPermiso('administrar');
+    exigirPermiso('altas');
     const sku = skuVivo(id);
     const limpio = limpiarDatosSku(datos);
     const errores = validarSku(limpio, vivosSkus(), sku.id);
@@ -569,14 +577,14 @@ const DataService = {
       .sort((a, b) => compararNatural(a.nombre, b.nombre));
   },
   async crearFamilia({ nombre }) {
-    exigirPermiso('administrar');
+    exigirPermiso('altas');
     const err = validarNombreCatalogo(nombre, listaCatalogo(cache.familias), null, 'familia');
     if (err) throw new ErrorApi(err, { tipo: 'validacion', campos: { nombre: err } });
     try { const { data } = await ejecutar(SB.from('ing_familias').insert({ nombre: nombre.trim() }).select('id,nombre,activa').single()); programarRecarga(0); return data; }
     catch (e) { if (e.tipo === 'duplicado') throw new ErrorApi('Ya existe una familia con ese nombre.', { tipo: 'validacion', campos: { nombre: 'Ya existe una familia con ese nombre.' } }); throw e; }
   },
   async actualizarFamilia(id, datos) {
-    exigirPermiso('administrar');
+    exigirPermiso(datos.activa === undefined ? 'altas' : 'administrar');
     const cambio = {};
     if (datos.nombre !== undefined) {
       const err = validarNombreCatalogo(datos.nombre, listaCatalogo(cache.familias), id, 'familia');
@@ -594,14 +602,14 @@ const DataService = {
       .sort((a, b) => compararNatural(a.nombre, b.nombre));
   },
   async crearLinea({ nombre }) {
-    exigirPermiso('administrar');
+    exigirPermiso('altas');
     const err = validarNombreCatalogo(nombre, listaCatalogo(cache.lineas), null, 'linea');
     if (err) throw new ErrorApi(err, { tipo: 'validacion', campos: { nombre: err } });
     try { const { data } = await ejecutar(SB.from('ing_lineas').insert({ nombre: nombre.trim() }).select('id,nombre,activa').single()); programarRecarga(0); return data; }
     catch (e) { if (e.tipo === 'duplicado') throw new ErrorApi('Ya existe una línea con ese nombre.', { tipo: 'validacion', campos: { nombre: 'Ya existe una línea con ese nombre.' } }); throw e; }
   },
   async actualizarLinea(id, datos) {
-    exigirPermiso('administrar');
+    exigirPermiso(datos.activa === undefined ? 'altas' : 'administrar');
     const cambio = {};
     if (datos.nombre !== undefined) {
       const err = validarNombreCatalogo(datos.nombre, listaCatalogo(cache.lineas), id, 'linea');
@@ -710,7 +718,7 @@ const DataService = {
 /* Única fuente de verdad de la interfaz. estado.sesion = { user_id, nombre, email, rol_id, rol_nombre }. */
 const FILTROS_SKUS_INICIALES = { busqueda: '', familia_id: '', linea_id: '', avance: 'todos', pendiente_entregable_id: '', incluir_descontinuados: false };
 const FILTROS_HISTORIAL_INICIALES = { busqueda: '', user_id: '', marcado: 'todos', entregable_id: '' };
-const DETALLE_VACIO = { abierto: false, sku_id: null, cargando: false, error: null, datos: null, subiendoImagen: false, errorImagen: null, documentos: null, errorDocumentos: null };
+const DETALLE_VACIO = { abierto: false, sku_id: null, cargando: false, error: null, datos: null, subiendoImagen: false, errorImagen: null, documentos: null, errorDocumentos: null, cobertura: null };
 const AUTH_INICIAL = { pantalla: 'login', nombre: '', email: '', password: '', confirmar: '', error: null, mensaje: null, enviando: false, puedeReenviar: false };
 
 function temaInicial() {
@@ -994,8 +1002,30 @@ async function cargarDetalle() {
   finally { if (estado.detalle.sku_id === id) { estado.detalle.cargando = false; render(); } }
 }
 async function cargarDocumentosDetalle(skuId) {
-  try { const docs = await DataService.listarDocumentos({ sku_id: skuId, solo_activos: false }); if (estado.detalle.sku_id === skuId) { estado.detalle.documentos = docs; estado.detalle.errorDocumentos = null; } }
-  catch (e) { if (estado.detalle.sku_id === skuId) estado.detalle.errorDocumentos = e.message; }
+  try {
+    const [docs, cobertura] = await Promise.all([DataService.listarDocumentos({ sku_id: skuId, solo_activos: false }), DataService.listarCobertura(skuId)]);
+    if (estado.detalle.sku_id === skuId) { estado.detalle.documentos = docs; estado.detalle.cobertura = cobertura; estado.detalle.errorDocumentos = null; }
+  } catch (e) { if (estado.detalle.sku_id === skuId) estado.detalle.errorDocumentos = e.message; }
+  render();
+}
+function abrirModalNoAplica(sku, tipo, marcado) {
+  if (marcado) { cambiarNoAplica(sku.id, tipo.tipo_documento_id, false, ''); return; }
+  estado.modal = { tipo: 'noAplica', sku: { id: sku.id, clave: sku.clave }, tipoDoc: tipo, nota: '', error: null, enviando: false };
+  enfocarDespues = 'na-nota'; render();
+}
+async function cambiarNoAplica(skuId, tipoId, valor, nota) {
+  try {
+    await DataService.marcarNoAplica(skuId, tipoId, valor, nota);
+    agregarAviso('exito', valor ? 'Marcado como "No aplica".' : 'Se quitó el "No aplica"; el tipo queda pendiente.');
+    cargarDocumentosDetalle(skuId);
+    return true;
+  } catch (e) { agregarAviso('error', e.message); return false; }
+}
+async function confirmarNoAplica() {
+  const m = estado.modal;
+  m.enviando = true; m.error = null; render();
+  const ok = await cambiarNoAplica(m.sku.id, m.tipoDoc.tipo_documento_id, true, m.nota);
+  if (ok) estado.modal = null; else if (estado.modal) estado.modal.enviando = false;
   render();
 }
 function refrescarDetalleSi(skuId) {
@@ -1149,8 +1179,9 @@ function pedirEliminarSku(sku) {
     }
   });
 }
-function abrirModalCatalogo(entidad, registro) {
-  estado.modal = { tipo: 'catalogo', entidad, id: registro ? registro.id : null, nombre: registro ? registro.nombre : '', error: null, enviando: false };
+function abrirModalCatalogo(entidad, registro, opciones) {
+  const volver = opciones && opciones.volverASku ? estado.modal : null;
+  estado.modal = { tipo: 'catalogo', entidad, id: registro ? registro.id : null, nombre: registro ? registro.nombre : '', volver, error: null, enviando: false };
   enfocarDespues = 'catalogo-nombre'; render();
 }
 async function guardarCatalogo() {
@@ -1163,8 +1194,13 @@ async function guardarCatalogo() {
     if (m.entidad === 'familia') r = m.id ? await DataService.actualizarFamilia(m.id, { nombre: m.nombre }) : await DataService.crearFamilia({ nombre: m.nombre });
     else if (m.entidad === 'linea') r = m.id ? await DataService.actualizarLinea(m.id, { nombre: m.nombre }) : await DataService.crearLinea({ nombre: m.nombre });
     else r = m.id ? await DataService.actualizarEntregable(m.id, { nombre: m.nombre }) : await DataService.crearEntregable({ nombre: m.nombre });
-    estado.modal = null;
     const etiqueta = { familia: 'Familia', linea: 'Línea', entregable: 'Entregable' }[m.entidad];
+    await cargarCatalogos();
+    if (m.volver) { // se abrió desde el alta de un SKU: se regresa y se deja elegida
+      const campo = m.entidad === 'familia' ? 'familia_id' : 'linea_id';
+      estado.modal = { ...m.volver, datos: { ...m.volver.datos, [campo]: String(r.id) }, errores: { ...m.volver.errores } };
+      delete estado.modal.errores[campo];
+    } else estado.modal = null;
     agregarAviso('exito', m.id ? `${etiqueta} guardado: ${r.nombre}.` : `${etiqueta} creado: ${r.nombre}.`);
   } catch (e) { m.error = e.campos ? e.campos.nombre : e.message; }
   finally { if (estado.modal) estado.modal.enviando = false; render(); }
@@ -1481,7 +1517,14 @@ const ESTATUS_SKU = { ACTIVO: 1, DESCONTINUADO: 2 };
 const NOMBRES_ROL = { 1: 'Ingeniero', 2: 'Jefe de ingeniería', 3: 'Consulta', 4: 'Operador' };
 
 /* Quién puede hacer qué. ver: los tres roles; marcar/desmarcar: ingeniero y jefe; administrar: solo jefe. */
-const PERMISOS = { ver: [ROLES.INGENIERO, ROLES.JEFE, ROLES.CONSULTA], marcar: [ROLES.INGENIERO, ROLES.JEFE], administrar: [ROLES.JEFE], documentos: [ROLES.INGENIERO, ROLES.JEFE, ROLES.CONSULTA], subir_documentos: [ROLES.INGENIERO, ROLES.JEFE] };
+const PERMISOS = {
+  ver: [ROLES.INGENIERO, ROLES.JEFE, ROLES.CONSULTA],
+  marcar: [ROLES.INGENIERO, ROLES.JEFE],
+  administrar: [ROLES.JEFE],                                   // usuarios, máquinas, eliminar SKUs, desactivar catálogos
+  altas: [ROLES.INGENIERO, ROLES.JEFE],                        // dar de alta y editar SKUs, familias y líneas
+  documentos: [ROLES.INGENIERO, ROLES.JEFE, ROLES.CONSULTA],
+  subir_documentos: [ROLES.INGENIERO, ROLES.JEFE]
+};
 function puede(rolId, accion) { return (PERMISOS[accion] || []).includes(rolId); }
 
 const LIMITES = { imagenMaxMb: 10, causaMin: 10, causaMax: 255, claveMax: 30, descripcionMax: 150, observacionesMax: 1000, nombreCatalogoMax: 60 };
@@ -1866,7 +1909,7 @@ function EncabezadoVista(titulo, descripcion, acciones) {
 /* COMPONENTE: VistaSkus */
 function VistaSkus() {
   const s = estado.skus;
-  const esJefe = puede(estado.sesion.rol_id, 'administrar');
+  const puedeAltas = puede(estado.sesion.rol_id, 'altas');
   const descripcion = puede(estado.sesion.rol_id, 'marcar')
     ? 'Haz clic en una casilla para marcar el entregable como correcto. Para desmarcarlo tendrás que escribir la causa.'
     : 'Vista de consulta: puedes ver el avance y el detalle de cada SKU, pero no marcar casillas.';
@@ -1875,10 +1918,10 @@ function VistaSkus() {
   else if (!s.datos || (s.cargando && !s.datos.length)) contenido = EstadoCargando('Cargando SKUs…', 8);
   else if (!s.datos.length) contenido = hayFiltrosSkus()
     ? EstadoVacio({ titulo: 'Ningún SKU coincide con los filtros', texto: 'Prueba con otra búsqueda o quita algún filtro.', accion: h('button', { type: 'button', class: CLS.btnSecundario, onClick: limpiarFiltrosSkus }, 'Limpiar filtros') })
-    : EstadoVacio({ titulo: 'Todavía no hay SKUs dados de alta', texto: esJefe ? 'Da de alta el primer SKU para empezar a registrar su avance.' : 'El jefe de ingeniería da de alta los SKUs desde Administración.', accion: esJefe ? h('button', { type: 'button', class: CLS.btnPrimario, onClick: () => abrirModalSku(null) }, icono('mas'), 'Nuevo SKU') : null });
+    : EstadoVacio({ titulo: 'Todavía no hay SKUs dados de alta', texto: puedeAltas ? 'Da de alta el primer SKU para empezar a registrar su avance.' : 'Ingeniería da de alta los SKUs.', accion: puedeAltas ? h('button', { type: 'button', class: CLS.btnPrimario, onClick: () => abrirModalSku(null) }, icono('mas'), 'Nuevo SKU') : null });
   else contenido = MatrizSkus();
   return h('section', null,
-    EncabezadoVista('Avance por SKU', descripcion, esJefe ? h('button', { type: 'button', class: CLS.btnPrimario, onClick: () => abrirModalSku(null) }, icono('mas'), 'Nuevo SKU') : null),
+    EncabezadoVista('Avance por SKU', descripcion, puedeAltas ? h('button', { type: 'button', class: CLS.btnPrimario, onClick: () => abrirModalSku(null) }, icono('mas'), 'Nuevo SKU') : null),
     FiltrosSkus(),
     contenido);
 }
@@ -1977,7 +2020,7 @@ function AvanceSku(sku) {
 function PanelDetalleSku() {
   const d = estado.detalle;
   const editable = puede(estado.sesion.rol_id, 'marcar');
-  const esJefe = puede(estado.sesion.rol_id, 'administrar');
+  const puedeAltas = puede(estado.sesion.rol_id, 'altas');
   let cuerpo;
   if (d.error) cuerpo = h('div', { class: 'p-6' }, EstadoError(d.error, cargarDetalle));
   else if (!d.datos) cuerpo = h('div', { class: 'p-6' }, EstadoCargando('Cargando detalle del SKU…', 5));
@@ -2018,7 +2061,7 @@ function PanelDetalleSku() {
         h('div', { class: 'min-w-0 flex-1' },
           h('h2', { id: 'titulo-detalle', class: 'text-xl font-semibold tabular-nums' }, titulo),
           d.datos ? h('p', { class: 'text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, d.datos.descripcion) : null),
-        esJefe && d.datos ? h('button', { type: 'button', class: CLS.btnChico, onClick: () => abrirModalSku(d.datos) }, icono('editar', 'w-3.5 h-3.5'), 'Editar SKU') : null,
+        puedeAltas && d.datos ? h('button', { type: 'button', class: CLS.btnChico, onClick: () => abrirModalSku(d.datos) }, icono('editar', 'w-3.5 h-3.5'), 'Editar SKU') : null,
         h('button', { type: 'button', id: 'cerrar-detalle', class: 'rounded-md p-1.5 text-[#5B6675] dark:text-[#9AA7B6] hover:bg-[#F4F6F8] dark:hover:bg-[#243040] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1E4E79] dark:focus-visible:ring-[#7FB2E5]', 'aria-label': 'Cerrar detalle', onClick: cerrarDetalle }, icono('x', 'w-5 h-5'))),
       h('div', { class: 'flex-1 overflow-y-auto', 'data-scroll-id': 'detalle' }, cuerpo)));
 }
@@ -2334,7 +2377,7 @@ function AdminEntregables() {
 function Modal() {
   const m = estado.modal;
   if (!m) return null;
-  const contenido = { desmarcar: ModalDesmarcar, sku: ModalSku, catalogo: ModalCatalogo, aprobar: ModalAprobar, reporte: ModalReporte, importarImagenes: ModalImportarImagenes, documento: ModalDocumento, retirarDocumento: ModalRetirarDocumento, versionesDocumento: ModalVersionesDocumento, corteCatalogo: ModalCorteCatalogo, confirmar: ModalConfirmacion }[m.tipo]();
+  const contenido = { desmarcar: ModalDesmarcar, sku: ModalSku, catalogo: ModalCatalogo, aprobar: ModalAprobar, reporte: ModalReporte, importarImagenes: ModalImportarImagenes, documento: ModalDocumento, retirarDocumento: ModalRetirarDocumento, versionesDocumento: ModalVersionesDocumento, corteCatalogo: ModalCorteCatalogo, noAplica: ModalNoAplica, confirmar: ModalConfirmacion }[m.tipo]();
   return h('div', { class: 'fixed inset-0 z-50 flex items-center justify-center p-4' },
     h('button', { type: 'button', class: 'absolute inset-0 h-full w-full cursor-default bg-[#1B2430]/40 dark:bg-[#000000]/40', 'aria-label': 'Cerrar diálogo', tabindex: '-1', onClick: cerrarModal }),
     h('div', { class: 'relative max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg bg-white dark:bg-[#18202A] p-6 shadow-xl', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'titulo-modal' }, contenido));
@@ -2378,11 +2421,15 @@ function ModalSku() {
       grupo('sku-clave', 'SKU', h('input', { id: 'sku-clave', class: `${e.clave ? CLS.inputError : CLS.input} uppercase tabular-nums`, maxlength: String(LIMITES.claveMax), placeholder: 'Por ejemplo SIL-12A', 'aria-invalid': e.clave ? 'true' : null, value: m.datos.clave, onInput: ev => campo('clave', ev.target.value) }), e.clave),
       grupo('sku-descripcion', 'Descripción', h('input', { id: 'sku-descripcion', class: e.descripcion ? CLS.inputError : CLS.input, maxlength: String(LIMITES.descripcionMax), 'aria-invalid': e.descripcion ? 'true' : null, value: m.datos.descripcion, onInput: ev => campo('descripcion', ev.target.value) }), e.descripcion),
       h('div', { class: 'grid gap-4 sm:grid-cols-2' },
-        grupo('sku-familia', 'Familia', h('select', { id: 'sku-familia', class: e.familia_id ? CLS.inputError : CLS.input, value: m.datos.familia_id, onChange: ev => campo('familia_id', ev.target.value) },
-          h('option', { value: '' }, 'Elige una familia'), familias.map(f => h('option', { value: f.id }, f.nombre))), e.familia_id),
+        grupo('sku-familia', 'Familia', h('div', { class: 'flex gap-2' },
+          h('select', { id: 'sku-familia', class: e.familia_id ? CLS.inputError : CLS.input, value: m.datos.familia_id, onChange: ev => campo('familia_id', ev.target.value) },
+            h('option', { value: '' }, 'Elige una familia'), familias.map(f => h('option', { value: f.id }, f.nombre))),
+          puede(estado.sesion.rol_id, 'altas') ? h('button', { type: 'button', class: CLS.btnChico, title: 'Crear una familia nueva', onClick: () => abrirModalCatalogo('familia', null, { volverASku: true }) }, icono('mas', 'w-3.5 h-3.5')) : null), e.familia_id),
         grupo('sku-estatus', 'Estatus', h('select', { id: 'sku-estatus', class: e.estatus_sku_id ? CLS.inputError : CLS.input, value: m.datos.estatus_sku_id, onChange: ev => campo('estatus_sku_id', ev.target.value) },
           estado.catalogos.estatus.map(s => h('option', { value: s.id }, s.nombre))), e.estatus_sku_id)),
-      lineas.length ? grupo('sku-linea', 'Línea', h('select', { id: 'sku-linea', class: CLS.input, value: m.datos.linea_id, onChange: ev => campo('linea_id', ev.target.value) }, lineas.map(l => h('option', { value: l.id }, l.nombre))), null) : null,
+      lineas.length ? grupo('sku-linea', 'Línea', h('div', { class: 'flex gap-2' },
+        h('select', { id: 'sku-linea', class: CLS.input, value: m.datos.linea_id, onChange: ev => campo('linea_id', ev.target.value) }, lineas.map(l => h('option', { value: l.id }, l.nombre))),
+        puede(estado.sesion.rol_id, 'altas') ? h('button', { type: 'button', class: CLS.btnChico, title: 'Crear una línea nueva', onClick: () => abrirModalCatalogo('linea', null, { volverASku: true }) }, icono('mas', 'w-3.5 h-3.5')) : null), null) : null,
       grupo('sku-observaciones', 'Observaciones (opcional)', h('textarea', { id: 'sku-observaciones', rows: '3', class: e.observaciones ? CLS.inputError : CLS.input, maxlength: String(LIMITES.observacionesMax), value: m.datos.observaciones, onInput: ev => campo('observaciones', ev.target.value) }), e.observaciones)),
     ErrorModal(m.error),
     PieModal(m.id ? 'Guardar SKU' : 'Crear SKU', guardarSku, { enviando: m.enviando }));
@@ -2628,6 +2675,7 @@ function DocumentosCorteSku(s) {
         activos.length ? h('button', { type: 'button', class: CLS.btnChico, disabled: !!estado.corte.descargando, onClick: () => descargarTodasLasPiezas(s.clave, activos) }, icono('descarga', 'w-3.5 h-3.5'), 'Descargar todas') : null,
         editable ? h('button', { type: 'button', class: CLS.btnChico, onClick: () => abrirModalDocumento(s, null) }, icono('mas', 'w-3.5 h-3.5'), 'Subir piezas') : null)),
     estado.corte.lote ? h('p', { class: 'mb-2 text-xs text-[#5B6675] dark:text-[#9AA7B6]', role: 'status' }, `Descargando ${estado.corte.lote.hecho} de ${estado.corte.lote.total}…`) : null,
+    CoberturaCorte(s, editable),
     d.errorDocumentos ? h('p', { class: 'text-sm text-[#B42318] dark:text-[#F28B82]' }, d.errorDocumentos)
       : !d.documentos ? h('p', { class: 'flex items-center gap-2 text-sm text-[#5B6675]', role: 'status' }, Spinner(), 'Cargando piezas…')
       : !activos.length ? h('p', { class: 'rounded-md border border-dashed border-[#C3CBD4] px-3 py-3 text-sm text-[#5B6675] dark:border-[#3A4756] dark:text-[#9AA7B6]' }, editable ? 'Este SKU no tiene archivos de corte. Usa "Subir piezas" para agregar sus DXF o IGES; puedes elegir muchos a la vez.' : 'Este SKU no tiene archivos de corte.')
@@ -2645,6 +2693,31 @@ function DocumentosCorteSku(s) {
     retirados.length ? h('p', { class: 'mt-2 text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, 'Piezas retiradas: ', retirados.map((x, i) => [i ? '; ' : '', h('button', { type: 'button', class: `${CLS.enlace} text-xs`, onClick: () => abrirHistorialDocumento(x) }, x.pieza), x.motivo_retiro ? ` (${x.motivo_retiro})` : ''])) : null);
 }
 /* FIN COMPONENTE: DocumentosCorteSku */
+
+/* COMPONENTE: CoberturaCorte — en qué va cada tipo: con piezas, no aplica o pendiente */
+function CoberturaCorte(sku, editable) {
+  const lista = estado.detalle.cobertura;
+  if (!lista || !lista.length) return null;
+  const estilo = {
+    con_piezas: ['bg-[#E6F2EB] text-[#1F7A4D] dark:bg-[#173526] dark:text-[#5CC48E]', 'check'],
+    no_aplica: ['bg-[#EEF1F4] text-[#5B6675] dark:bg-[#243040] dark:text-[#9AA7B6]', 'x'],
+    pendiente: ['bg-[#FFF4DB] text-[#B26A00] dark:bg-[#3A2F14] dark:text-[#E0A650]', 'alerta']
+  };
+  const texto = { con_piezas: p => `${p} ${p === 1 ? 'pieza' : 'piezas'}`, no_aplica: () => 'No aplica', pendiente: () => 'Pendiente' };
+  return h('ul', { class: 'mb-3 flex flex-wrap gap-2' }, lista.map(t => {
+    const [clases, ic] = estilo[t.estado];
+    const marcado = t.estado === 'no_aplica';
+    const boton = editable && t.estado !== 'con_piezas';
+    return h('li', null, h(boton ? 'button' : 'span', {
+      type: boton ? 'button' : null,
+      class: `flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium ${clases} ${boton ? 'hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1E4E79]' : ''}`,
+      title: boton ? (marcado ? 'Quitar "No aplica": el tipo vuelve a quedar pendiente' : 'Marcar que este SKU no lleva este tipo de archivo') : null,
+      onClick: boton ? () => abrirModalNoAplica(sku, t, marcado) : null
+    }, icono(ic, 'w-3.5 h-3.5'), t.tipo_nombre, h('span', { class: 'font-normal' }, texto[t.estado](t.piezas)),
+       marcado && t.nota_no_aplica ? h('span', { class: 'font-normal italic' }, `· ${t.nota_no_aplica}`) : null));
+  }));
+}
+/* FIN COMPONENTE: CoberturaCorte */
 
 /* COMPONENTE: ModalDocumento — subir una o muchas piezas a la vez */
 function ModalDocumento() {
@@ -2823,6 +2896,19 @@ function ModalCorteCatalogo() {
     PieModal('Guardar', guardarCorteCatalogo, { enviando: m.enviando }));
 }
 /* FIN COMPONENTE: ModalCorteCatalogo */
+
+/* COMPONENTE: ModalNoAplica */
+function ModalNoAplica() {
+  const m = estado.modal;
+  return h('form', { novalidate: true, onSubmit: ev => { ev.preventDefault(); confirmarNoAplica(); } },
+    h('h2', { id: 'titulo-modal', class: 'text-lg font-semibold' }, `${m.tipoDoc.tipo_nombre} no aplica en ${m.sku.clave}`),
+    h('p', { class: 'mt-1 text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, 'Úsalo cuando el SKU no lleve ese tipo de corte, por ejemplo un SKU solo de melamina que no lleva tubular. Así se distingue de un archivo que todavía está pendiente. Si más adelante subes una pieza de este tipo, la marca se quita sola.'),
+    h('div', { class: 'mt-4' }, h('label', { for: 'na-nota', class: CLS.etiqueta }, 'Nota (opcional)'),
+      h('input', { id: 'na-nota', class: CLS.input, maxlength: '255', placeholder: 'Por ejemplo: este modelo no lleva piezas de tubular.', value: m.nota, disabled: m.enviando, onInput: ev => { estado.modal.nota = ev.target.value; } })),
+    ErrorModal(m.error),
+    PieModal('Marcar "No aplica"', confirmarNoAplica, { enviando: m.enviando }));
+}
+/* FIN COMPONENTE: ModalNoAplica */
 
 /* COMPONENTE: ModalConfirmacion */
 function ModalConfirmacion() {
