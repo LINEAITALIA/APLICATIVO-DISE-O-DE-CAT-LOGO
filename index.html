@@ -60,6 +60,8 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.1/dist/umd/supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="visor.js" defer></script>
 <style media="print">
   /* Reporte: hoja en horizontal, con los colores de las barras incluidos */
   @page { size: landscape; margin: 10mm; }
@@ -99,7 +101,7 @@ const driveListo = () => /^https:\/\/script\.google\.com\//.test(CONFIG.DRIVE_UR
 const LOGO_LINEA_ITALIA = 'data:image/png;base64,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'; // logo completo en negro; en modo oscuro se invierte a blanco
 let SB = null;      // cliente de Supabase
 let canal = null;   // canal de tiempo real
-const cache = { skus: new Map(), familias: {}, lineas: {}, entregables: {}, estatus: {}, perfiles: {}, areasCorte: {}, tiposDocumento: {}, maquinas: {} };
+const cache = { skus: new Map(), familias: {}, lineas: {}, entregables: {}, estatus: {}, perfiles: {}, areasCorte: {}, tiposDocumento: {}, maquinas: {}, entregablesNA: new Map() };
 const urlsFirmadas = new Map(); // ruta → { url, vence }
 function configurado() { return /^https:\/\/.+\.supabase\.co\/?$/.test(CONFIG.SUPABASE_URL) && !CONFIG.SUPABASE_URL.includes('TU-PROYECTO') && CONFIG.SUPABASE_ANON_KEY.length > 30; }
 </script>
@@ -161,13 +163,17 @@ function normalizarSku(f) {
   return { ...f, id: Number(f.id), familia_id: Number(f.familia_id), linea_id: f.linea_id != null ? Number(f.linea_id) : null, estatus_sku_id: Number(f.estatus_sku_id), casillas };
 }
 function avanceDeSku(sku, ents) {
+  const na = cache.entregablesNA.get(Number(sku.id)) || new Set(); // casillas invalidadas por "No aplica"
   const casillas = ents.map(e => {
     const c = sku.casillas[String(e.id)];
-    const hecho = !!(c && c.completado);
-    return { entregable_id: e.id, nombre: e.nombre, completado: hecho, completado_por: hecho ? c.por : null, completado_por_nombre: hecho ? nombreCorto(c.por) : null, completado_en: hecho ? c.en : null };
+    const noAplica = na.has(e.id);
+    const hecho = !noAplica && !!(c && c.completado);
+    return { entregable_id: e.id, nombre: e.nombre, completado: hecho, no_aplica: noAplica,
+      completado_por: hecho ? c.por : null, completado_por_nombre: hecho ? nombreCorto(c.por) : null, completado_en: hecho ? c.en : null };
   });
-  const completados = casillas.filter(c => c.completado).length;
-  return { casillas, completados, total: ents.length, porcentaje: calcularPorcentaje(completados, ents.length), estado_avance: estadoAvance(completados, ents.length) };
+  const cuentan = casillas.filter(c => !c.no_aplica);
+  const completados = cuentan.filter(c => c.completado).length;
+  return { casillas, completados, total: cuentan.length, porcentaje: calcularPorcentaje(completados, cuentan.length), estado_avance: estadoAvance(completados, cuentan.length) };
 }
 function skuConAvance(sku, ents) {
   const fam = cache.familias[String(sku.familia_id)];
@@ -341,9 +347,31 @@ const DataService = {
     try { const { data } = await ejecutar(SB.from('ing_v_cobertura_corte').select('*').eq('sku_id', skuId).order('tipo_orden')); return data || []; }
     catch (e) { return []; } // la actualización de "No aplica" aún no se ejecuta en Supabase
   },
+  async configurarPiezas(skuId, tipoId, esperadas) {
+    exigirPermiso('subir_documentos');
+    await ejecutar(SB.rpc('ing_configurar_piezas', { p_sku: skuId, p_tipo: tipoId, p_esperadas: Number(esperadas) || 0 }));
+  },
+  async piezasEsperadas() { // para la pantalla del operador: Map "sku-tipo" → número esperado
+    try {
+      const filas = await leerTodo(() => SB.from('ing_sku_tipo_piezas').select('sku_id,tipo_documento_id,esperadas').order('id'));
+      return new Map(filas.map(f => [`${f.sku_id}-${f.tipo_documento_id}`, Number(f.esperadas)]));
+    } catch (e) { return new Map(); } // la entrega 4 aún no se instala en Supabase
+  },
   async marcarNoAplica(skuId, tipoId, noAplica, nota) {
     exigirPermiso('subir_documentos');
     await ejecutar(SB.rpc('ing_marcar_no_aplica', { p_sku: skuId, p_tipo: tipoId, p_no_aplica: !!noAplica, p_nota: String(nota || '').trim() || null }));
+  },
+  async organizarDrive(avance) {
+    exigirPermiso('subir_documentos');
+    const filas = await leerTodo(() => SB.from('ing_v_versiones').select('id,sku_id,sku_clave,pieza,tipo_nombre,version,drive_id,nombre_original,created_at').not('drive_id', 'is', null).order('id'));
+    const archivos = filas.map(v => ({ drive_id: v.drive_id, carpetas: carpetasDrive(v.sku_id, v.sku_clave, v.tipo_nombre), nombre: nombreDrive(v.pieza, v.version, v.nombre_original, v.created_at) }));
+    let movidos = 0, fallidos = 0;
+    for (let i = 0; i < archivos.length; i += 25) { // de 25 en 25 para no rebasar el tiempo de Google
+      const r = await llamarDrive('organizar', { archivos: archivos.slice(i, i + 25) });
+      movidos += r.movidos || 0; fallidos += r.fallidos || 0;
+      if (avance) avance(Math.min(i + 25, archivos.length), archivos.length);
+    }
+    return { total: archivos.length, movidos, fallidos };
   },
   async listarVersiones(documentoId) {
     const { data } = await ejecutar(SB.from('ing_v_versiones').select('*').eq('documento_id', documentoId).order('version', { ascending: false }));
@@ -357,7 +385,7 @@ const DataService = {
     const bytes = new Uint8Array(await archivo.arrayBuffer());
     const sha = await sha256Bytes(bytes);
     const comprimido = pako.gzip(bytes, { level: 9 });
-    const subida = await llamarDrive('subir', { contenido: aBase64(comprimido), nombre: archivo.name, sku: sku.clave, pieza });
+    const subida = await llamarDrive('subir', { contenido: aBase64(comprimido), nombre: archivo.name, nombre_drive: `${pieza} (subiendo).${extensionDe(archivo.name)}`, carpetas: carpetasDrive(sku.id, sku.clave, tipo.nombre), sku: sku.clave, pieza });
     const { data } = await ejecutar(SB.rpc('ing_registrar_version', {
       p_sku: sku.id, p_tipo: tipo.id, p_pieza: pieza, p_drive_id: subida.drive_id, p_nombre: archivo.name,
       p_tamano: archivo.size, p_tamano_guardado: subida.tamano_guardado || comprimido.length, p_sha256: sha,
@@ -365,6 +393,8 @@ const DataService = {
     })).catch(async e => { llamarDrive('borrar', { drive_ids: [subida.drive_id] }).catch(() => {}); throw e; });
     const fila = (data && data[0]) || {};
     if (fila.liberar_drive_id) llamarDrive('borrar', { drive_ids: [fila.liberar_drive_id] }).catch(() => {});
+    // Ya con el número de versión, el archivo toma su nombre definitivo en Drive
+    if (fila.version) llamarDrive('renombrar', { drive_id: subida.drive_id, nombre: nombreDrive(pieza, fila.version, archivo.name) }).catch(() => {});
     return fila.version;
   },
   async retirarDocumento(documentoId, motivo) {
@@ -375,12 +405,14 @@ const DataService = {
     if (ids.length) llamarDrive('borrar', { drive_ids: ids }).catch(() => {});
   },
   /* Descarga: registra, trae el archivo de Drive, lo descomprime y lo entrega con su nombre. */
-  async descargarDocumento(d) {
+  async bytesDocumento(d, { registrar = true } = {}) {
     if (d.archivo_borrado || !d.drive_id) throw new ErrorApi('De esta versión solo queda el registro; su archivo ya se liberó para ahorrar espacio.', { tipo: 'no_encontrado' });
-    await ejecutar(SB.rpc('ing_registrar_descarga', { p_version: d.version_id }));
+    if (registrar) await ejecutar(SB.rpc('ing_registrar_descarga', { p_version: d.version_id })); // ver la pieza no cuenta como descarga
     const res = await llamarDrive('descargar', { drive_id: d.drive_id });
-    const bytes = pako.ungzip(deBase64(res.contenido));
-    guardarArchivo(bytes, nombreDescargaDocumento(d));
+    return pako.ungzip(deBase64(res.contenido));
+  },
+  async descargarDocumento(d) {
+    guardarArchivo(await DataService.bytesDocumento(d), nombreDescargaDocumento(d));
   },
   async documentoPorVersion(versionId) {
     const { data } = await ejecutar(SB.from('ing_v_documentos').select('*').eq('version_id', versionId).maybeSingle());
@@ -437,6 +469,12 @@ const DataService = {
     catch (e) { cache.lineas = {}; } // la actualización de líneas aún no se ejecuta en Supabase
     await DataService.recargarCatalogosCorte();
     cache.perfiles = Object.fromEntries(per.map(p => [p.id, p]));
+    try { // casillas que no aplican por SKU (los DXF o el IGES marcados como "No aplica")
+      const na = await leerTodo(() => SB.from('ing_v_entregables_na').select('*').order('sku_id'));
+      const m = new Map();
+      for (const x of na) { const k = Number(x.sku_id); if (!m.has(k)) m.set(k, new Set()); m.get(k).add(Number(x.entregable_id)); }
+      cache.entregablesNA = m;
+    } catch (e) { cache.entregablesNA = new Map(); } // la actualización de "No aplica" aún no se ejecuta
     cache.skus = new Map(skus.map(f => { const s = normalizarSku(f); return [s.id, s]; }));
   },
 
@@ -449,7 +487,7 @@ const DataService = {
     if (filtros.familia_id) lista = lista.filter(s => s.familia_id === Number(filtros.familia_id));
     if (filtros.linea_id) lista = lista.filter(s => s.linea_id === Number(filtros.linea_id));
     if (filtros.avance && filtros.avance !== 'todos') lista = lista.filter(s => s.estado_avance === filtros.avance);
-    if (filtros.pendiente_entregable_id) { const id = Number(filtros.pendiente_entregable_id); lista = lista.filter(s => s.casillas.some(c => c.entregable_id === id && !c.completado)); }
+    if (filtros.pendiente_entregable_id) { const id = Number(filtros.pendiente_entregable_id); lista = lista.filter(s => s.casillas.some(c => c.entregable_id === id && !c.completado && !c.no_aplica)); }
     lista.sort((a, b) => compararNatural(a.clave, b.clave));
     return { skus: lista, entregables: ents.map(e => ({ id: e.id, nombre: e.nombre })) };
   },
@@ -554,8 +592,9 @@ const DataService = {
       total: activos.length, completos, en_proceso: cuenta('en_proceso'), sin_iniciar: cuenta('sin_iniciar'),
       porcentaje_global: calcularPorcentaje(completos, activos.length),
       por_entregable: ents.map(e => {
-        const listos = activos.filter(s => s.casillas.some(c => c.entregable_id === e.id && c.completado)).length;
-        return { id: e.id, nombre: e.nombre, completos: listos, porcentaje: calcularPorcentaje(listos, activos.length) };
+        const aplica = activos.filter(s => !s.casillas.some(c => c.entregable_id === e.id && c.no_aplica));
+        const listos = aplica.filter(s => s.casillas.some(c => c.entregable_id === e.id && c.completado)).length;
+        return { id: e.id, nombre: e.nombre, completos: listos, total: aplica.length, porcentaje: calcularPorcentaje(listos, aplica.length) };
       }),
       por_familia, por_linea
     };
@@ -648,8 +687,9 @@ const DataService = {
       marcados: movs.filter(r => r.marcado).length, desmarcados: movs.filter(r => !r.marcado).length,
       completados_periodo: completadosPeriodo,
       por_entregable: ents.map(e => {
-        const listos = activos.filter(s => s.casillas.some(c => c.entregable_id === e.id && c.completado)).length;
-        return { id: e.id, nombre: e.nombre, completos: listos, porcentaje: calcularPorcentaje(listos, activos.length), marcados_periodo: movs.filter(r => r.marcado && r.entregable_id === e.id).length };
+        const aplica = activos.filter(s => !s.casillas.some(c => c.entregable_id === e.id && c.no_aplica));
+        const listos = aplica.filter(s => s.casillas.some(c => c.entregable_id === e.id && c.completado)).length;
+        return { id: e.id, nombre: e.nombre, completos: listos, total: aplica.length, porcentaje: calcularPorcentaje(listos, aplica.length), marcados_periodo: movs.filter(r => r.marcado && r.entregable_id === e.id).length };
       }),
       por_familia: avancePorGrupo(activos, listaCatalogo(cache.familias), 'familia_id'),
       por_linea: avancePorGrupo(activos, listaCatalogo(cache.lineas), 'linea_id'),
@@ -878,7 +918,7 @@ async function reenviarConfirmacion() {
 function suscribirCambios() {
   if (canal) SB.removeChannel(canal);
   canal = SB.channel('ing-cambios');
-  for (const tabla of ['ing_sku_entregables', 'ing_skus', 'ing_familias', 'ing_lineas', 'ing_entregables', 'ing_perfiles', 'ing_documentos_corte', 'ing_versiones_documento', 'ing_maquinas', 'ing_tipos_documento', 'ing_areas_corte']) {
+  for (const tabla of ['ing_sku_entregables', 'ing_skus', 'ing_familias', 'ing_lineas', 'ing_entregables', 'ing_perfiles', 'ing_documentos_corte', 'ing_versiones_documento', 'ing_maquinas', 'ing_tipos_documento', 'ing_areas_corte', 'ing_sku_tipo_na', 'ing_sku_tipo_piezas']) {
     canal.on('postgres_changes', { event: '*', schema: 'public', table: tabla }, () => programarRecarga());
   }
   canal.subscribe();
@@ -951,7 +991,7 @@ function reemplazarSkuEnLista(sku) {
   if (estado.admin.skus) estado.admin.skus = estado.admin.skus.map(s => s.id === sku.id ? sku : s);
 }
 async function alternarCasilla(sku, casilla) {
-  if (!puede(estado.sesion.rol_id, 'marcar') || estado.skus.celdaGuardando) return;
+  if (!puede(estado.sesion.rol_id, 'marcar') || estado.skus.celdaGuardando || casilla.no_aplica) return;
   if (casilla.completado) { abrirModalDesmarcar(sku, casilla); return; }
   estado.skus.celdaGuardando = `${sku.id}-${casilla.entregable_id}`; render();
   try {
@@ -1008,24 +1048,33 @@ async function cargarDocumentosDetalle(skuId) {
   } catch (e) { if (estado.detalle.sku_id === skuId) estado.detalle.errorDocumentos = e.message; }
   render();
 }
-function abrirModalNoAplica(sku, tipo, marcado) {
-  if (marcado) { cambiarNoAplica(sku.id, tipo.tipo_documento_id, false, ''); return; }
-  estado.modal = { tipo: 'noAplica', sku: { id: sku.id, clave: sku.clave }, tipoDoc: tipo, nota: '', error: null, enviando: false };
-  enfocarDespues = 'na-nota'; render();
+function abrirModalNoAplica(sku, tipo) {
+  estado.modal = { tipo: 'noAplica', sku: { id: sku.id, clave: sku.clave }, tipoDoc: tipo,
+    noAplica: tipo.estado === 'no_aplica', nota: tipo.nota_no_aplica || '', esperadas: tipo.esperadas ? String(tipo.esperadas) : '', error: null, enviando: false };
+  enfocarDespues = tipo.estado === 'no_aplica' ? 'na-check' : 'na-esperadas'; render();
 }
 async function cambiarNoAplica(skuId, tipoId, valor, nota) {
   try {
     await DataService.marcarNoAplica(skuId, tipoId, valor, nota);
     agregarAviso('exito', valor ? 'Marcado como "No aplica".' : 'Se quitó el "No aplica"; el tipo queda pendiente.');
     cargarDocumentosDetalle(skuId);
+    programarRecarga(0); // por si con esto se invalida o se vuelve a habilitar una casilla
     return true;
   } catch (e) { agregarAviso('error', e.message); return false; }
 }
 async function confirmarNoAplica() {
-  const m = estado.modal;
+  const m = estado.modal, t = m.tipoDoc;
+  const n = String(m.esperadas).trim() === '' ? 0 : Number(m.esperadas);
+  if (!m.noAplica && (!Number.isInteger(n) || n < 0 || n > 500)) { m.error = 'Escribe un número entero de 0 a 500.'; render(); return; }
   m.enviando = true; m.error = null; render();
-  const ok = await cambiarNoAplica(m.sku.id, m.tipoDoc.tipo_documento_id, true, m.nota);
-  if (ok) estado.modal = null; else if (estado.modal) estado.modal.enviando = false;
+  try {
+    const eraNA = t.estado === 'no_aplica';
+    if (m.noAplica !== eraNA || (m.noAplica && m.nota !== (t.nota_no_aplica || ''))) await DataService.marcarNoAplica(m.sku.id, t.tipo_documento_id, m.noAplica, m.nota);
+    if (!m.noAplica && n !== (t.esperadas || 0)) await DataService.configurarPiezas(m.sku.id, t.tipo_documento_id, n);
+    estado.modal = null;
+    agregarAviso('exito', m.noAplica ? `${t.tipo_nombre}: marcado como "No aplica".` : n ? `${t.tipo_nombre}: ${n} ${n === 1 ? 'pieza esperada' : 'piezas esperadas'}.` : `${t.tipo_nombre}: guardado.`);
+    cargarDocumentosDetalle(m.sku.id); programarRecarga(0);
+  } catch (e) { if (estado.modal) { estado.modal.error = e.message; estado.modal.enviando = false; } }
   render();
 }
 function refrescarDetalleSi(skuId) {
@@ -1215,8 +1264,8 @@ async function cargarCorte({ silencioso = false } = {}) {
   const c = estado.corte;
   if (!silencioso) { c.cargando = true; c.error = null; render(); }
   try {
-    const [docs, descargas] = await Promise.all([DataService.listarDocumentos(), puede(estado.sesion.rol_id, 'documentos') ? DataService.listarDescargas(60) : Promise.resolve(null)]);
-    c.datos = docs; c.descargas = descargas; c.error = null;
+    const [docs, descargas, esperadas] = await Promise.all([DataService.listarDocumentos(), puede(estado.sesion.rol_id, 'documentos') ? DataService.listarDescargas(60) : Promise.resolve(null), DataService.piezasEsperadas()]);
+    c.datos = docs; c.descargas = descargas; c.esperadas = esperadas; c.error = null;
   } catch (e) { c.error = e.message; }
   finally { c.cargando = false; render(); }
 }
@@ -1234,16 +1283,43 @@ async function descargarDocumento(d) {
 }
 /* Descarga todas las piezas de un SKU, una por una, con aviso de avance. */
 async function descargarTodasLasPiezas(skuClave, lista) {
-  if (estado.corte.descargando) return;
+  if (estado.corte.descargando || !lista.length) return;
+  if (typeof JSZip === 'undefined') { agregarAviso('error', 'No se pudo preparar el ZIP: revisa tu conexión y recarga la página.'); return; }
   estado.corte.lote = { clave: skuClave, hecho: 0, total: lista.length, errores: 0 }; estado.corte.descargando = 'lote'; render();
-  for (const d of lista) {
-    try { await DataService.descargarDocumento(d); } catch (e) { estado.corte.lote.errores++; }
-    estado.corte.lote.hecho++; render();
-    await new Promise(r => setTimeout(r, 400)); // el navegador necesita un respiro entre descargas
-  }
+  const zip = new JSZip();
+  const usados = new Set();
+  const cola = [...lista];
+  const trabajador = async () => {
+    while (cola.length) {
+      const d = cola.shift();
+      try {
+        const bytes = await DataService.bytesDocumento(d);
+        // Dentro del ZIP: una carpeta por tipo de archivo, con el nombre de la pieza y su versión
+        let ruta = `${d.tipo_nombre}/${nombreDescargaDocumento(d)}`;
+        for (let n = 2; usados.has(ruta.toLowerCase()); n++) ruta = ruta.replace(/(\.[^.]+)$/, `_${n}$1`);
+        usados.add(ruta.toLowerCase());
+        zip.file(ruta, bytes);
+      } catch (e) { estado.corte.lote.errores++; }
+      estado.corte.lote.hecho++; render();
+    }
+  };
+  await Promise.all([trabajador(), trabajador(), trabajador()]); // 3 a la vez
   const l = estado.corte.lote;
-  agregarAviso(l.errores ? 'error' : 'exito', l.errores ? `Se descargaron ${l.hecho - l.errores} de ${l.total} piezas de ${skuClave}; ${l.errores} fallaron.` : `Se descargaron las ${l.total} piezas de ${skuClave}.`);
+  if (l.hecho > l.errores) {
+    const contenido = await zip.generateAsync({ type: 'uint8array', compression: 'DEFLATE' });
+    guardarArchivo(contenido, `${skuClave}_archivos-de-corte_${new Date().toISOString().slice(0, 10)}.zip`);
+  }
+  agregarAviso(l.errores ? 'error' : 'exito', l.errores ? `Se descargaron ${l.hecho - l.errores} de ${l.total} piezas de ${skuClave}; ${l.errores} fallaron.` : `Se descargaron las ${l.total} piezas de ${skuClave} en un archivo ZIP.`);
   estado.corte.lote = null; estado.corte.descargando = null; render();
+}
+function visorDisponible(d) { return !!(window.VisorCorte && d && window.VisorCorte.puedeVer(nombreDescargaDocumento(d)) && d.drive_id && !d.archivo_borrado); }
+function verPieza(d) {
+  if (!window.VisorCorte) { agregarAviso('error', 'El visor no está disponible. Revisa que visor.js esté subido junto al index.html y recarga con Ctrl + F5.'); return; }
+  window.VisorCorte.abrir({
+    nombre: nombreDescargaDocumento(d),
+    subtitulo: `${d.sku_clave} · ${d.pieza || ''} · ${d.tipo_nombre} · versión ${d.version_vigente || d.version}`,
+    obtenerBytes: () => DataService.bytesDocumento(d, { registrar: false })
+  });
 }
 async function verificarArchivo(archivo) {
   if (!archivo) return;
@@ -1336,6 +1412,15 @@ async function abrirHistorialDocumento(doc) {
   estado.modal = { tipo: 'versionesDocumento', doc, versiones: null, error: null, enviando: false }; render();
   try { estado.modal.versiones = await DataService.listarVersiones(doc.id); } catch (e) { estado.modal.error = e.message; }
   render();
+}
+async function organizarArchivosDrive() {
+  if (estado.corte.organizando) return;
+  estado.corte.organizando = { hecho: 0, total: 0 }; render();
+  try {
+    const r = await DataService.organizarDrive((hecho, total) => { estado.corte.organizando = { hecho, total }; render(); });
+    agregarAviso(r.fallidos ? 'error' : 'exito', r.total ? `Se acomodaron ${r.movidos} de ${r.total} archivos en carpetas${r.fallidos ? `; ${r.fallidos} no se pudieron mover` : ''}.` : 'No hay archivos que acomodar.');
+  } catch (e) { agregarAviso('error', e.message); }
+  finally { estado.corte.organizando = null; render(); }
 }
 function abrirModalCorteCatalogo(entidad, registro) {
   const { areas } = DataService.catalogosCorte();
@@ -1653,6 +1738,16 @@ function guardarArchivo(bytes, nombre) {
   const a = document.createElement('a'); a.href = url; a.download = nombre; document.body.append(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
+/* Carpetas en Drive: Familia / SKU / Tipo de archivo; nombre: PIEZA vN (fecha).ext */
+function carpetasDrive(skuId, skuClave, tipoNombre) {
+  const sku = cache.skus.get(Number(skuId));
+  const fam = sku ? cache.familias[String(sku.familia_id)] : null;
+  return [fam ? fam.nombre : 'Sin familia', skuClave, tipoNombre];
+}
+function nombreDrive(pieza, version, nombreOriginal, fecha) {
+  const ext = extensionDe(nombreOriginal) || 'dat';
+  return `${pieza} v${version} (${String(fecha || new Date().toISOString()).slice(0, 10)}).${ext}`;
+}
 function formatoTamano(bytes) { return bytes >= 1048576 ? `${(bytes / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`; }
 
 /* Avance: completados ÷ entregables activos, redondeado a entero. Un SKU está completo solo al 100 %. */
@@ -1693,6 +1788,8 @@ const ICONOS = {
   alerta: 'M12 9v4M12 17h.01M10.3 3.9L2.4 17.5A2 2 0 0 0 4.1 20.5h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z',
   candado: 'M7 11V8a5 5 0 0 1 10 0v3M5 11h14v10H5z', mas: 'M12 5v14M5 12h14', arriba: 'M12 19V5M6 11l6-6 6 6', abajo: 'M12 5v14M6 13l6 6 6-6',
   reporte: 'M7 3h7l5 5v13H7zM14 3v5h5M10 17v-3M13 17v-5M16 17v-2',
+  chevron: 'M9 6l6 6-6 6',
+  ojo: 'M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12zM12 15a3 3 0 100-6 3 3 0 000 6z',
   descarga: 'M12 4v11M7 10l5 5 5-5M5 20h14', escudo: 'M12 3l7 3v5c0 5-3.5 8.5-7 10-3.5-1.5-7-5-7-10V6z', subir: 'M12 20V9M7 14l5-5 5 5M5 4h14',
   sol: 'M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10zM12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4', luna: 'M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z',
   editar: 'M4 20h4L19 9l-4-4L4 16v4zM13.5 6.5l4 4', imagen: 'M4 5h16v14H4zM4 16l4-4 4 4 3-3 5 5M15 9.5h.01', deshacer: 'M9 14L4 9l5-5M4 9h10a6 6 0 0 1 0 12h-3', caja: 'M3 7l9-4 9 4v10l-9 4-9-4V7zM3 7l9 4 9-4M12 11v10'
@@ -1984,6 +2081,10 @@ function FilaSku(sku) {
 
 /* COMPONENTE: CeldaEntregable */
 function CeldaEntregable(sku, c) {
+  if (c.no_aplica) return h('td', { class: 'border-b border-l border-[#E3E7EC] dark:border-[#26313D] p-0' },
+    h('div', { class: 'flex h-11 w-full items-center justify-center bg-[#EEF1F4] text-[11px] font-semibold text-[#9AA5B1] dark:bg-[#1C232C] dark:text-[#5F6C7B]',
+      title: 'No aplica: este SKU no lleva este archivo. No cuenta en el avance. Para habilitarla, quita el "No aplica" en el detalle del SKU.',
+      role: 'img', 'aria-label': `${c.nombre} de ${sku.clave}: no aplica, no cuenta en el avance` }, 'N/A'));
   const editable = puede(estado.sesion.rol_id, 'marcar');
   const guardando = estado.skus.celdaGuardando === `${sku.id}-${c.entregable_id}`;
   const detalle = c.completado ? `Correcto. Marcado por ${c.completado_por_nombre}, ${formatearFechaHora(c.completado_en)}` : 'Pendiente';
@@ -2037,7 +2138,13 @@ function PanelDetalleSku() {
         s.observaciones ? h('div', { class: 'col-span-2' }, h('dt', { class: 'text-[#5B6675] dark:text-[#9AA7B6]' }, 'Observaciones'), h('dd', { class: 'whitespace-pre-line' }, s.observaciones)) : null),
       h('section', null,
         h('h3', { class: 'mb-2 text-sm font-semibold' }, 'Entregables'),
-        h('ul', { class: 'divide-y divide-[#E3E7EC] dark:divide-[#26313D] rounded-md border border-[#D5DBE2] dark:border-[#2E3A48]' }, s.casillas.map(c =>
+        h('ul', { class: 'divide-y divide-[#E3E7EC] dark:divide-[#26313D] rounded-md border border-[#D5DBE2] dark:border-[#2E3A48]' }, s.casillas.map(c => c.no_aplica
+          ? h('li', { class: 'flex items-center gap-3 bg-[#F4F6F8] px-3 py-2.5 dark:bg-[#1C232C]' },
+              h('span', { class: 'w-5 text-center text-[11px] font-semibold text-[#9AA5B1] dark:text-[#5F6C7B]' }, 'N/A'),
+              h('div', { class: 'min-w-0 flex-1' },
+                h('p', { class: 'text-sm font-medium text-[#7A8594] dark:text-[#7F8B99]' }, c.nombre),
+                h('p', { class: 'text-xs text-[#7A8594] dark:text-[#7F8B99]' }, 'No aplica: no cuenta en el avance. Se habilita al quitar el "No aplica" en Archivos de corte.')))
+          :
           h('li', { class: 'flex items-center gap-3 px-3 py-2.5' },
             h('span', { class: c.completado ? 'text-[#1F7A4D] dark:text-[#5CC48E]' : 'text-[#9AA5B1] dark:text-[#5F6C7B]' }, c.completado ? icono('check', 'w-5 h-5') : h('span', { class: 'block h-4 w-4 rounded-sm border-2 border-current', 'aria-hidden': 'true' })),
             h('div', { class: 'min-w-0 flex-1' },
@@ -2583,34 +2690,87 @@ function VerificadorArchivo() {
 }
 /* FIN COMPONENTE: VerificadorArchivo */
 
-/* COMPONENTE: VistaCorteOperador — pantalla sencilla para la computadora de piso */
+/* COMPONENTE: VistaCorteOperador — pantalla sencilla para la computadora de piso: un SKU por tarjeta, se despliega al elegirlo */
+function alternarSkuOperador(skuId) {
+  const a = estado.corte.abiertos || (estado.corte.abiertos = new Set());
+  if (a.has(skuId)) a.delete(skuId); else a.add(skuId);
+  render();
+}
 function VistaCorteOperador() {
   const c = estado.corte, s = estado.sesion;
   if (!s.maquina) return h('section', null, EstadoVacio({ titulo: 'Esta cuenta no tiene máquina asignada', texto: 'Pide al jefe de ingeniería que asigne una máquina a esta cuenta en Administración → Usuarios.', accion: null }));
   const lista = documentosFiltrados();
+  // Agrupar las piezas por SKU, y dentro de cada SKU por tipo de archivo
+  const porSku = new Map();
+  for (const d of lista) {
+    if (!porSku.has(d.sku_id)) porSku.set(d.sku_id, { sku_id: d.sku_id, clave: d.sku_clave, descripcion: d.sku_descripcion, miniatura: d.sku_miniatura, piezas: [] });
+    porSku.get(d.sku_id).piezas.push(d);
+  }
+  const skus = [...porSku.values()].sort((a, b) => compararNatural(a.clave, b.clave));
+  const abiertos = c.abiertos || new Set();
+  const unoSolo = skus.length === 1; // si la búsqueda deja un solo SKU, se muestra abierto
   let contenido;
   if (c.error) contenido = EstadoError(c.error, () => cargarCorte());
   else if (!c.datos) contenido = EstadoCargando('Cargando documentos…', 5);
-  else if (!c.datos.length) contenido = EstadoVacio({ titulo: 'Todavía no hay documentos para tu área', texto: 'Cuando ingeniería suba los documentos de corte, aparecerán aquí.', accion: null });
-  else if (!lista.length) contenido = EstadoVacio({ titulo: 'Ningún SKU coincide con la búsqueda', texto: 'Revisa la clave del SKU.', accion: null });
-  else contenido = h('div', { class: `${CLS.panel} overflow-x-auto` }, h('table', { class: 'min-w-full border-separate border-spacing-0' },
-    h('thead', null, h('tr', null, [['SKU'], ['Pieza'], ['Documento'], ['Versión vigente'], ['Subida'], [h('span', { class: 'sr-only' }, 'Descargar'), 'text-right']].map(([t, x]) => h('th', { scope: 'col', class: `${CLS.th} ${x || ''}` }, t)))),
-    h('tbody', null, lista.map(d => h('tr', null,
-      h('th', { scope: 'row', class: `${CLS.td} text-left` }, h('div', { class: 'flex items-center gap-3' }, MiniaturaSku({ miniatura: d.sku_miniatura, clave: d.sku_clave }, 'h-12 w-12'), h('span', { class: 'text-base font-semibold tabular-nums' }, d.sku_clave))),
-      h('td', { class: CLS.td }, h('p', { class: 'text-base font-medium' }, d.pieza), h('p', { class: 'text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, d.sku_descripcion)),
-      h('td', { class: `${CLS.td} whitespace-nowrap` }, d.tipo_nombre),
-      h('td', { class: `${CLS.td} whitespace-nowrap` }, h('span', { class: 'inline-flex items-center gap-1 rounded-md bg-[#E6F2EB] px-2 py-0.5 text-sm font-semibold text-[#1F7A4D] dark:bg-[#173526] dark:text-[#5CC48E]' }, icono('check', 'w-3.5 h-3.5'), `v${d.version_vigente}`)),
-      h('td', { class: `${CLS.td} whitespace-nowrap text-[#5B6675] dark:text-[#9AA7B6]` }, formatearFechaHora(d.subida_en)),
-      h('td', { class: `${CLS.td} text-right` }, h('button', { type: 'button', class: `${CLS.btnPrimario} py-2.5`, disabled: !!c.descargando, onClick: () => descargarDocumento(d) },
-        c.descargando === String(d.version_id) ? [Spinner('w-4 h-4 border-white border-t-transparent'), 'Descargando…'] : [icono('descarga'), 'Descargar'])))))));
+  else if (!c.datos.length) contenido = EstadoVacio({ titulo: 'Todavía no hay documentos para tu área', texto: 'Cuando ingeniería suba los archivos de corte, aparecerán aquí.', accion: null });
+  else if (!skus.length) contenido = EstadoVacio({ titulo: 'Ningún SKU coincide con la búsqueda', texto: 'Revisa la clave del SKU.', accion: null });
+  else contenido = h('div', { class: 'space-y-3' }, skus.map(k => {
+    const abierto = unoSolo || abiertos.has(k.sku_id);
+    const tipos = new Map();
+    for (const d of k.piezas) { if (!tipos.has(d.tipo_nombre)) tipos.set(d.tipo_nombre, []); tipos.get(d.tipo_nombre).push(d); }
+    const lote = c.lote && c.lote.clave === k.clave ? c.lote : null;
+    return h('article', { class: `${CLS.panel} overflow-hidden` },
+      h('div', { class: 'flex flex-wrap items-center gap-3 p-3 sm:flex-nowrap' },
+        h('button', { type: 'button', class: 'flex min-w-0 flex-1 items-center gap-3 rounded-md text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1E4E79]',
+          'aria-expanded': String(abierto), 'aria-controls': `piezas-${k.sku_id}`, onClick: () => alternarSkuOperador(k.sku_id) },
+          h('span', { class: `shrink-0 text-[#5B6675] transition-transform dark:text-[#9AA7B6] ${abierto ? 'rotate-90' : ''}`, 'aria-hidden': 'true' }, icono('chevron', 'w-5 h-5')),
+          MiniaturaSku({ miniatura: k.miniatura, clave: k.clave }, 'h-14 w-14'),
+          h('span', { class: 'min-w-0' },
+            h('span', { class: 'block text-lg font-semibold tabular-nums' }, k.clave),
+            h('span', { class: 'block truncate text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, k.descripcion),
+            ResumenSkuOperador(k, tipos, c.esperadas || new Map()))),
+        h('button', { type: 'button', class: `${CLS.btnPrimario} w-full py-3 sm:w-auto`, disabled: !!c.descargando, onClick: () => descargarTodasLasPiezas(k.clave, k.piezas) },
+          lote ? [Spinner('w-4 h-4 border-white border-t-transparent'), `Preparando ${lote.hecho} de ${lote.total}…`] : [icono('descarga'), `Descargar todo (${k.piezas.length})`])),
+      abierto ? h('div', { id: `piezas-${k.sku_id}`, class: 'border-t border-[#E3E7EC] dark:border-[#26313D]' },
+        [...tipos.entries()].map(([tipo, piezas]) => h('div', null,
+          ConteoTipoOperador(tipo, piezas, (c.esperadas || new Map()).get(`${k.sku_id}-${piezas[0].tipo_documento_id}`)),
+          h('ul', { class: 'divide-y divide-[#E3E7EC] dark:divide-[#26313D]' }, piezas.sort((a, b) => compararNatural(a.pieza, b.pieza)).map(d => h('li', { class: 'flex flex-wrap items-center gap-3 px-4 py-2.5' },
+            h('div', { class: 'min-w-0 flex-1' },
+              h('p', { class: 'text-base font-medium' }, d.pieza),
+              h('p', { class: 'text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, `Subida ${formatearFechaHora(d.subida_en)}`)),
+            h('span', { class: 'inline-flex items-center gap-1 rounded-md bg-[#E6F2EB] px-2 py-0.5 text-sm font-semibold text-[#1F7A4D] dark:bg-[#173526] dark:text-[#5CC48E]' }, icono('check', 'w-3.5 h-3.5'), `v${d.version_vigente}`),
+            visorDisponible(d) ? h('button', { type: 'button', class: CLS.btnSecundario, onClick: () => verPieza(d), 'aria-label': `Ver pieza ${d.pieza}` }, icono('ojo'), 'Ver pieza') : null,
+            h('button', { type: 'button', class: CLS.btnSecundario, disabled: !!c.descargando, onClick: () => descargarDocumento(d), 'aria-label': `Descargar ${d.pieza}` },
+              c.descargando === String(d.version_id) ? [Spinner('w-4 h-4'), 'Descargando…'] : [icono('descarga'), 'Descargar']))))))) : null);
+  }));
   return h('section', { class: 'space-y-5' },
-    EncabezadoVista(`Archivos de corte · ${s.maquina.area}`, `Máquina ${s.maquina.nombre}. Aquí solo aparecen las versiones vigentes; descárgalas, cópialas a la USB y verifícalas antes de cortar.`, null),
+    EncabezadoVista(`Archivos de corte · ${s.maquina.area}`, `Máquina ${s.maquina.nombre}. Solo aparecen las versiones vigentes. Elige un SKU para ver sus piezas, descárgalas, cópialas a la USB y verifícalas antes de cortar.`, null),
     VerificadorArchivo(),
-    h('div', { class: 'max-w-md' },
-      h('label', { for: 'corte-busqueda', class: 'mb-1 block text-sm font-medium' }, 'Buscar SKU'),
-      h('div', { class: 'relative' }, h('span', { class: 'pointer-events-none absolute inset-y-0 left-3 flex items-center text-[#7A8594]' }, icono('buscar')),
-        h('input', { id: 'corte-busqueda', type: 'search', class: `${CLS.input} py-3 pl-9 text-base`, placeholder: 'Clave o descripción del SKU', value: c.filtros.busqueda, onInput: ev => cambiarFiltroCorte('busqueda', ev.target.value) }))),
+    h('div', { class: 'flex flex-wrap items-end gap-3' },
+      h('div', { class: 'w-full max-w-md' },
+        h('label', { for: 'corte-busqueda', class: 'mb-1 block text-sm font-medium' }, 'Buscar SKU'),
+        h('div', { class: 'relative' }, h('span', { class: 'pointer-events-none absolute inset-y-0 left-3 flex items-center text-[#7A8594]' }, icono('buscar')),
+          h('input', { id: 'corte-busqueda', type: 'search', class: `${CLS.input} py-3 pl-9 text-base`, placeholder: 'Clave o descripción del SKU', value: c.filtros.busqueda, onInput: ev => cambiarFiltroCorte('busqueda', ev.target.value) }))),
+      c.datos && skus.length ? h('p', { class: 'pb-3 text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, `${skus.length} ${skus.length === 1 ? 'SKU' : 'SKUs'} · ${lista.length} piezas`) : null),
     contenido);
+}
+function ConteoTipoOperador(tipo, piezas, esperadas) {
+  const n = piezas.length;
+  if (!esperadas) return h('p', { class: 'bg-[#F7F9FA] px-4 py-1.5 text-xs font-semibold text-[#5B6675] dark:bg-[#1F2833] dark:text-[#9AA7B6]' }, `${tipo} · ${n} ${n === 1 ? 'pieza' : 'piezas'}`);
+  const ok = n === esperadas;
+  return h('p', { class: `flex flex-wrap items-center gap-2 px-4 py-2 text-sm font-semibold ${ok ? 'bg-[#E6F2EB] text-[#1F7A4D] dark:bg-[#173526] dark:text-[#5CC48E]' : 'bg-[#FDF3F2] text-[#B42318] dark:bg-[#3A1D1B] dark:text-[#F28B82]'}`, role: ok ? null : 'alert' },
+    icono(ok ? 'check' : 'alerta', 'w-4 h-4'), `${tipo}: ${n} de ${esperadas} piezas`,
+    ok ? h('span', { class: 'font-normal' }, '· completas') : h('span', { class: 'font-normal' }, n < esperadas ? `· faltan ${esperadas - n}. No cortes hasta que ingeniería las suba.` : `· hay ${n - esperadas} de más. Consulta a ingeniería.`));
+}
+function ResumenSkuOperador(k, tipos, esperadasMap) {
+  let esperadas = 0, cargadas = 0, faltan = false;
+  for (const [, piezas] of tipos) {
+    const e = esperadasMap.get(`${k.sku_id}-${piezas[0].tipo_documento_id}`);
+    if (e) { esperadas += e; cargadas += piezas.length; if (piezas.length !== e) faltan = true; }
+  }
+  const base = `${k.piezas.length} ${k.piezas.length === 1 ? 'pieza por cortar' : 'piezas por cortar'} · ${[...tipos.keys()].join(', ')}`;
+  return h('span', { class: `mt-0.5 flex flex-wrap items-center gap-1 text-xs font-medium ${faltan ? 'text-[#B42318] dark:text-[#F28B82]' : 'text-[#1E4E79] dark:text-[#7FB2E5]'}` },
+    faltan ? icono('alerta', 'w-3.5 h-3.5') : null, faltan ? `${cargadas} de ${esperadas} piezas: incompleto · ${[...tipos.keys()].join(', ')}` : base);
 }
 /* FIN COMPONENTE: VistaCorteOperador */
 
@@ -2633,7 +2793,9 @@ function VistaCorte() {
       h('td', { class: `${CLS.td} whitespace-nowrap font-semibold tabular-nums` }, `v${d.version_vigente}`),
       h('td', { class: `${CLS.td} whitespace-nowrap` }, d.subida_por_nombre || '—'),
       h('td', { class: `${CLS.td} whitespace-nowrap text-[#5B6675] dark:text-[#9AA7B6]` }, formatearFechaHora(d.subida_en)),
-      h('td', { class: `${CLS.td} whitespace-nowrap text-right` }, h('button', { type: 'button', class: CLS.btnChico, disabled: !!c.descargando, onClick: () => descargarDocumento(d) }, icono('descarga', 'w-3.5 h-3.5'), 'Descargar')))))));
+      h('td', { class: `${CLS.td} whitespace-nowrap text-right` }, h('div', { class: 'flex justify-end gap-2' },
+        visorDisponible(d) ? h('button', { type: 'button', class: CLS.btnChico, onClick: () => verPieza(d), 'aria-label': `Ver pieza ${d.pieza}` }, icono('ojo', 'w-3.5 h-3.5'), 'Ver') : null,
+        h('button', { type: 'button', class: CLS.btnChico, disabled: !!c.descargando, onClick: () => descargarDocumento(d) }, icono('descarga', 'w-3.5 h-3.5'), 'Descargar'))))))));
   const descargas = c.descargas && c.descargas.length ? h('section', { class: `${CLS.panel} overflow-x-auto` },
     h('div', { class: 'px-5 pt-4' }, h('h2', { class: 'text-base font-semibold' }, 'Últimas descargas'), h('p', { class: 'text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, 'Qué máquina descargó qué pieza y versión, y cuándo. "Obsoleta" indica que ya existe una versión más nueva.')),
     h('table', { class: 'mt-2 min-w-full border-separate border-spacing-0' },
@@ -2686,6 +2848,7 @@ function DocumentosCorteSku(s) {
             h('p', { class: 'mt-0.5 text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, `${formatoTamano(x.tamano)} · ${x.subida_por_nombre || '—'}, ${formatearFechaHora(x.subida_en)}`),
             x.cambios ? h('p', { class: 'text-xs' }, `Cambios: ${x.cambios}`) : null,
             h('div', { class: 'mt-1.5 flex flex-wrap gap-2' },
+              visorDisponible(x) ? h('button', { type: 'button', class: CLS.btnChico, onClick: () => verPieza({ ...x, sku_clave: x.sku_clave || s.clave }) }, icono('ojo', 'w-3.5 h-3.5'), 'Ver pieza') : null,
               h('button', { type: 'button', class: CLS.btnChico, disabled: !!estado.corte.descargando, onClick: () => descargarDocumento(x) }, icono('descarga', 'w-3.5 h-3.5'), 'Descargar'),
               h('button', { type: 'button', class: CLS.btnChico, onClick: () => abrirHistorialDocumento(x) }, `Versiones (${x.version_vigente})`),
               editable ? h('button', { type: 'button', class: CLS.btnChico, onClick: () => abrirModalDocumento(s, x) }, icono('subir', 'w-3.5 h-3.5'), 'Nueva versión') : null,
@@ -2694,28 +2857,43 @@ function DocumentosCorteSku(s) {
 }
 /* FIN COMPONENTE: DocumentosCorteSku */
 
-/* COMPONENTE: CoberturaCorte — en qué va cada tipo: con piezas, no aplica o pendiente */
+/* COMPONENTE: CoberturaCorte — cada tipo: piezas subidas contra esperadas, no aplica o pendiente. Clic para configurar. */
+function estadoTipoCorte(t) {
+  if (t.estado === 'no_aplica') return 'no_aplica';
+  if (t.esperadas) return t.piezas === t.esperadas ? 'completo' : t.piezas > t.esperadas ? 'de_mas' : (t.piezas ? 'incompleto' : 'pendiente');
+  return t.piezas ? 'completo' : 'pendiente';
+}
 function CoberturaCorte(sku, editable) {
   const lista = estado.detalle.cobertura;
   if (!lista || !lista.length) return null;
   const estilo = {
-    con_piezas: ['bg-[#E6F2EB] text-[#1F7A4D] dark:bg-[#173526] dark:text-[#5CC48E]', 'check'],
-    no_aplica: ['bg-[#EEF1F4] text-[#5B6675] dark:bg-[#243040] dark:text-[#9AA7B6]', 'x'],
-    pendiente: ['bg-[#FFF4DB] text-[#B26A00] dark:bg-[#3A2F14] dark:text-[#E0A650]', 'alerta']
+    completo:   ['bg-[#E6F2EB] text-[#1F7A4D] dark:bg-[#173526] dark:text-[#5CC48E]', 'check'],
+    no_aplica:  ['bg-[#EEF1F4] text-[#5B6675] dark:bg-[#243040] dark:text-[#9AA7B6]', 'x'],
+    pendiente:  ['bg-[#FFF4DB] text-[#B26A00] dark:bg-[#3A2F14] dark:text-[#E0A650]', 'alerta'],
+    incompleto: ['bg-[#FFF4DB] text-[#B26A00] dark:bg-[#3A2F14] dark:text-[#E0A650]', 'alerta'],
+    de_mas:     ['bg-[#FDF3F2] text-[#B42318] dark:bg-[#3A1D1B] dark:text-[#F28B82]', 'alerta']
   };
-  const texto = { con_piezas: p => `${p} ${p === 1 ? 'pieza' : 'piezas'}`, no_aplica: () => 'No aplica', pendiente: () => 'Pendiente' };
-  return h('ul', { class: 'mb-3 flex flex-wrap gap-2' }, lista.map(t => {
-    const [clases, ic] = estilo[t.estado];
-    const marcado = t.estado === 'no_aplica';
-    const boton = editable && t.estado !== 'con_piezas';
-    return h('li', null, h(boton ? 'button' : 'span', {
-      type: boton ? 'button' : null,
-      class: `flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium ${clases} ${boton ? 'hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1E4E79]' : ''}`,
-      title: boton ? (marcado ? 'Quitar "No aplica": el tipo vuelve a quedar pendiente' : 'Marcar que este SKU no lleva este tipo de archivo') : null,
-      onClick: boton ? () => abrirModalNoAplica(sku, t, marcado) : null
-    }, icono(ic, 'w-3.5 h-3.5'), t.tipo_nombre, h('span', { class: 'font-normal' }, texto[t.estado](t.piezas)),
-       marcado && t.nota_no_aplica ? h('span', { class: 'font-normal italic' }, `· ${t.nota_no_aplica}`) : null));
-  }));
+  const texto = t => {
+    const e = estadoTipoCorte(t), pz = n => `${n} ${n === 1 ? 'pieza' : 'piezas'}`;
+    if (e === 'no_aplica') return 'No aplica';
+    if (t.esperadas) return e === 'de_mas' ? `${t.piezas} de ${t.esperadas}: sobran ${t.piezas - t.esperadas}` : `${t.piezas} de ${pz(t.esperadas)}`;
+    return t.piezas ? pz(t.piezas) : 'Pendiente';
+  };
+  const totalEsperadas = lista.reduce((n, t) => n + (t.estado !== 'no_aplica' && t.esperadas ? t.esperadas : 0), 0);
+  const totalSubidas = lista.reduce((n, t) => n + (t.esperadas ? Math.min(t.piezas, t.esperadas) : 0), 0);
+  return h('div', { class: 'mb-3' },
+    h('ul', { class: 'flex flex-wrap gap-2' }, lista.map(t => {
+      const e = estadoTipoCorte(t); const [clases, ic] = estilo[e];
+      return h('li', null, h(editable ? 'button' : 'span', {
+        type: editable ? 'button' : null,
+        class: `flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium ${clases} ${editable ? 'hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1E4E79]' : ''}`,
+        title: editable ? 'Configurar: número de piezas esperadas o "No aplica"' : null,
+        onClick: editable ? () => abrirModalNoAplica(sku, t) : null
+      }, icono(ic, 'w-3.5 h-3.5'), t.tipo_nombre, h('span', { class: 'font-normal' }, texto(t)),
+         e === 'no_aplica' && t.nota_no_aplica ? h('span', { class: 'font-normal italic' }, `· ${t.nota_no_aplica}`) : null));
+    })),
+    totalEsperadas ? h('p', { class: 'mt-2 text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, `Total configurado: ${totalSubidas} de ${totalEsperadas} piezas cargadas.`) : null,
+    editable ? h('p', { class: 'mt-1 text-xs text-[#7A8594] dark:text-[#7F8B99]' }, 'Da clic en un tipo para indicar cuántas piezas lleva, o marcarlo como "No aplica".') : null);
 }
 /* FIN COMPONENTE: CoberturaCorte */
 
@@ -2822,6 +3000,12 @@ function AdminCorte() {
     h('div', null, h('h2', { class: 'text-base font-semibold' }, titulo), h('p', { class: 'text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, texto)), boton), tabla);
   return h('div', { class: 'space-y-8' },
     EspacioDrive(),
+    driveListo() ? h('div', { class: `${CLS.panel} flex flex-wrap items-center gap-3 p-5` },
+      h('div', { class: 'min-w-0 flex-1' },
+        h('h2', { class: 'text-base font-semibold' }, 'Carpetas en Google Drive'),
+        h('p', { class: 'text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, 'Los archivos nuevos se guardan solos en Familia / SKU / Tipo de archivo. Usa este botón una vez para acomodar los que se subieron antes, o si cambiaste la familia o la clave de un SKU.')),
+      h('button', { type: 'button', class: CLS.btnSecundario, disabled: !!estado.corte.organizando, onClick: organizarArchivosDrive },
+        estado.corte.organizando ? [Spinner('w-4 h-4'), estado.corte.organizando.total ? `Acomodando ${estado.corte.organizando.hecho} de ${estado.corte.organizando.total}…` : 'Preparando…'] : 'Acomodar archivos en carpetas')) : null,
     bloque('Máquinas', 'Cada máquina tiene su cuenta de Operador; solo ve los documentos de su área. Asigna la cuenta en Usuarios.',
       h('button', { type: 'button', class: CLS.btnPrimario, onClick: () => abrirModalCorteCatalogo('maquina', null) }, icono('mas'), 'Nueva máquina'),
       maquinas.length ? TablaAdmin([['Máquina'], ['Área'], ['Estado'], ['']], maquinas.map(r => h('tr', null,
@@ -2897,16 +3081,27 @@ function ModalCorteCatalogo() {
 }
 /* FIN COMPONENTE: ModalCorteCatalogo */
 
-/* COMPONENTE: ModalNoAplica */
+/* COMPONENTE: ModalNoAplica — configurar un tipo de archivo en el SKU */
 function ModalNoAplica() {
-  const m = estado.modal;
+  const m = estado.modal, t = m.tipoDoc;
+  const tienePiezas = t.piezas > 0;
   return h('form', { novalidate: true, onSubmit: ev => { ev.preventDefault(); confirmarNoAplica(); } },
-    h('h2', { id: 'titulo-modal', class: 'text-lg font-semibold' }, `${m.tipoDoc.tipo_nombre} no aplica en ${m.sku.clave}`),
-    h('p', { class: 'mt-1 text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, 'Úsalo cuando el SKU no lleve ese tipo de corte, por ejemplo un SKU solo de melamina que no lleva tubular. Así se distingue de un archivo que todavía está pendiente. Si más adelante subes una pieza de este tipo, la marca se quita sola.'),
-    h('div', { class: 'mt-4' }, h('label', { for: 'na-nota', class: CLS.etiqueta }, 'Nota (opcional)'),
-      h('input', { id: 'na-nota', class: CLS.input, maxlength: '255', placeholder: 'Por ejemplo: este modelo no lleva piezas de tubular.', value: m.nota, disabled: m.enviando, onInput: ev => { estado.modal.nota = ev.target.value; } })),
+    h('h2', { id: 'titulo-modal', class: 'text-lg font-semibold' }, `${t.tipo_nombre} en ${m.sku.clave}`),
+    h('p', { class: 'mt-1 text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, tienePiezas ? `Hoy tiene ${t.piezas} ${t.piezas === 1 ? 'pieza cargada' : 'piezas cargadas'}.` : 'Todavía no tiene piezas cargadas.'),
+    h('div', { class: 'mt-4 space-y-4' },
+      h('div', null,
+        h('label', { for: 'na-esperadas', class: CLS.etiqueta }, 'Piezas que lleva este SKU'),
+        h('input', { id: 'na-esperadas', type: 'number', min: '0', max: '500', step: '1', inputmode: 'numeric', class: `${CLS.input} max-w-[10rem]`, disabled: m.noAplica || m.enviando,
+          placeholder: 'Ej. 3', value: m.esperadas, onInput: ev => { estado.modal.esperadas = ev.target.value; } }),
+        h('p', { class: 'mt-1 text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, 'Número de archivos de corte de este tipo. El operador verá si están todos antes de cortar. Déjalo vacío si no quieres controlarlo.')),
+      h('label', { for: 'na-check', class: `flex items-start gap-2 text-sm ${tienePiezas ? 'opacity-60' : ''}` },
+        h('input', { id: 'na-check', type: 'checkbox', class: 'mt-0.5 h-4 w-4 accent-[#1E4E79] dark:accent-[#7FB2E5]', checked: m.noAplica, disabled: tienePiezas || m.enviando,
+          onChange: ev => { estado.modal.noAplica = ev.target.checked; render(); } }),
+        h('span', null, h('span', { class: 'font-medium' }, 'No aplica: '), tienePiezas ? 'no se puede marcar mientras tenga piezas; retíralas primero.' : 'este SKU no lleva este tipo de archivo. Si es DXF o IGES, su casilla de entregable se pone en gris.')),
+      m.noAplica ? h('div', null, h('label', { for: 'na-nota', class: CLS.etiqueta }, 'Nota (opcional)'),
+        h('input', { id: 'na-nota', class: CLS.input, maxlength: '255', placeholder: 'Por ejemplo: este modelo no lleva piezas de tubular.', value: m.nota, disabled: m.enviando, onInput: ev => { estado.modal.nota = ev.target.value; } })) : null),
     ErrorModal(m.error),
-    PieModal('Marcar "No aplica"', confirmarNoAplica, { enviando: m.enviando }));
+    PieModal('Guardar', confirmarNoAplica, { enviando: m.enviando }));
 }
 /* FIN COMPONENTE: ModalNoAplica */
 
