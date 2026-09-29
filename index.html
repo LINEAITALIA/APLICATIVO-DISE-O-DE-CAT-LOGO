@@ -101,7 +101,7 @@ const driveListo = () => /^https:\/\/script\.google\.com\//.test(CONFIG.DRIVE_UR
 const LOGO_LINEA_ITALIA = 'data:image/png;base64,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'; // logo completo en negro; en modo oscuro se invierte a blanco
 let SB = null;      // cliente de Supabase
 let canal = null;   // canal de tiempo real
-const cache = { skus: new Map(), familias: {}, lineas: {}, entregables: {}, estatus: {}, perfiles: {}, areasCorte: {}, tiposDocumento: {}, maquinas: {}, entregablesNA: new Map() };
+const cache = { medidas: null, skus: new Map(), familias: {}, lineas: {}, entregables: {}, estatus: {}, perfiles: {}, areasCorte: {}, tiposDocumento: {}, maquinas: {}, entregablesNA: new Map() };
 const urlsFirmadas = new Map(); // ruta → { url, vence }
 function configurado() { return /^https:\/\/.+\.supabase\.co\/?$/.test(CONFIG.SUPABASE_URL) && !CONFIG.SUPABASE_URL.includes('TU-PROYECTO') && CONFIG.SUPABASE_ANON_KEY.length > 30; }
 </script>
@@ -327,6 +327,20 @@ const DataService = {
         p_medida: atributo === 'tubular' ? normalizarMedida(d.medida) : null, p_nombre: limpiarNombrePieza(d.nombre) }));
     } catch (e) { /* la actualización de nomenclatura aún no se ejecuta: el nombre ya quedó bien */ }
   },
+  async agregarMedida(lista, valor) {
+    exigirPermiso('subir_documentos');
+    await ejecutar(SB.rpc('ing_agregar_medida', { p_lista: lista, p_valor: valor }));
+    await DataService.recargarCatalogosCorte();
+  },
+  async quitarMedida(id) {
+    exigirPermiso('administrar');
+    await ejecutar(SB.rpc('ing_quitar_medida', { p_id: id }));
+    await DataService.recargarCatalogosCorte();
+  },
+  async eliminarCatalogo(catalogo, id) {
+    exigirPermiso('administrar');
+    await ejecutar(SB.rpc('ing_eliminar_catalogo', { p_catalogo: catalogo, p_id: id }));
+  },
   async listarObservaciones() {
     try { return await leerTodo(() => SB.from('ing_v_observaciones').select('*').order('created_at', { ascending: false }).order('id', { ascending: false })); }
     catch (e) { return null; } // la actualización de calidad aún no se ejecuta en Supabase
@@ -354,6 +368,8 @@ const DataService = {
         leerTodo(() => SB.from('ing_tipos_documento').select('*').is('deleted_at', null).order('id')),
         leerTodo(() => SB.from('ing_maquinas').select('id,nombre,area_id,activa').is('deleted_at', null).order('id'))]);
       cache.areasCorte = porId(areas); cache.tiposDocumento = porId(tipos); cache.maquinas = porId(maquinas);
+      try { const med = await leerTodo(() => SB.from('ing_medidas').select('id,lista,valor').is('deleted_at', null).order('id')); cache.medidas = med; }
+      catch (e) { cache.medidas = null; } // la lista de medidas aún no se instala: se usan las de siempre
     } catch (e) { cache.areasCorte = {}; cache.tiposDocumento = {}; cache.maquinas = {}; } // la actualización de documentos aún no se ejecuta
   },
   catalogosCorte() {
@@ -813,7 +829,7 @@ const estado = {
   pendientes: 0,
   confirmacion: null, // 'confirmada' cuando la persona llega desde el enlace del correo
   reporte: { abierto: false, cargando: false, error: null, datos: null, config: null },
-  obs: { lista: null, filtro: 'abiertas', vistas: null },
+  obs: { lista: null, filtro: 'abiertas', vistas: null, busqueda: '' },
   corte: { cargando: false, error: null, datos: null, filtros: { busqueda: '', tipo_id: '' }, descargas: null, verificacion: null, descargando: null, lote: null, espacio: null },
   modal: null,
   tema: temaInicial(),
@@ -884,7 +900,8 @@ async function entrarConSesion(usuario) {
       await DataService.recargarTodo();
       await cargarCatalogos();
       await cargarObservacionesGlobal({ primera: true });
-      if (primeraVez || estado.vista === 'corte' && !puede(estado.sesion.rol_id, 'documentos')) estado.vista = estado.sesion.rol_id === ROLES.INGENIERO ? 'skus' : 'tablero';
+      if (primeraVez || estado.vista === 'corte' && !puede(estado.sesion.rol_id, 'documentos')) estado.vista = [ROLES.INGENIERO, ROLES.CONSULTA].includes(estado.sesion.rol_id) ? 'skus' : 'tablero';
+      if (estado.vista === 'tablero' && estado.sesion.rol_id === ROLES.CONSULTA) estado.vista = 'skus';
     }
     estado.fase = 'app';
     if (estado.confirmacion === 'confirmada') { estado.confirmacion = null; agregarAviso('exito', `¡Tu correo quedó confirmado! Bienvenido, ${estado.sesion.nombre}.`); }
@@ -902,7 +919,7 @@ async function cerrarSesion() {
   await DataService.cerrarSesion();
   actualizarTituloPestana(0);
   Object.assign(estado, {
-    fase: 'auth', auth: { ...AUTH_INICIAL }, sesion: null, modal: null, detalle: { ...DETALLE_VACIO }, avisos: [],
+    fase: 'auth', auth: { ...AUTH_INICIAL }, sesion: null, modal: null, detalle: { ...DETALLE_VACIO }, avisos: [], campanaAbierta: false,
     obs: { lista: null, filtro: 'abiertas', vistas: null },
     skus: { cargando: false, error: null, datos: null, entregables: [], filtros: { ...FILTROS_SKUS_INICIALES }, celdaGuardando: null },
     tablero: { cargando: false, error: null, datos: null },
@@ -956,7 +973,7 @@ async function reenviarConfirmacion() {
 function suscribirCambios() {
   if (canal) SB.removeChannel(canal);
   canal = SB.channel('ing-cambios');
-  for (const tabla of ['ing_sku_entregables', 'ing_skus', 'ing_familias', 'ing_lineas', 'ing_entregables', 'ing_perfiles', 'ing_documentos_corte', 'ing_versiones_documento', 'ing_maquinas', 'ing_tipos_documento', 'ing_areas_corte', 'ing_sku_tipo_na', 'ing_sku_tipo_piezas', 'ing_observaciones']) {
+  for (const tabla of ['ing_sku_entregables', 'ing_skus', 'ing_familias', 'ing_lineas', 'ing_entregables', 'ing_perfiles', 'ing_documentos_corte', 'ing_versiones_documento', 'ing_maquinas', 'ing_tipos_documento', 'ing_areas_corte', 'ing_sku_tipo_na', 'ing_sku_tipo_piezas', 'ing_observaciones', 'ing_medidas']) {
     canal.on('postgres_changes', { event: '*', schema: 'public', table: tabla }, () => programarRecarga());
   }
   canal.subscribe();
@@ -1090,7 +1107,7 @@ async function cargarDocumentosDetalle(skuId) {
 }
 function abrirModalNoAplica(sku, tipo) {
   estado.modal = { tipo: 'noAplica', sku: { id: sku.id, clave: sku.clave }, tipoDoc: tipo,
-    noAplica: tipo.estado === 'no_aplica', nota: tipo.nota_no_aplica || '', esperadas: tipo.esperadas ? String(tipo.esperadas) : '', error: null, enviando: false };
+    noAplica: tipo.estado === 'no_aplica', nota: '', esperadas: tipo.esperadas ? String(tipo.esperadas) : '', error: null, enviando: false };
   enfocarDespues = tipo.estado === 'no_aplica' ? 'na-check' : 'na-esperadas'; render();
 }
 async function cambiarNoAplica(skuId, tipoId, valor, nota) {
@@ -1109,7 +1126,7 @@ async function confirmarNoAplica() {
   m.enviando = true; m.error = null; render();
   try {
     const eraNA = t.estado === 'no_aplica';
-    if (m.noAplica !== eraNA || (m.noAplica && m.nota !== (t.nota_no_aplica || ''))) await DataService.marcarNoAplica(m.sku.id, t.tipo_documento_id, m.noAplica, m.nota);
+    if (m.noAplica !== eraNA) await DataService.marcarNoAplica(m.sku.id, t.tipo_documento_id, m.noAplica, '');
     if (!m.noAplica && n !== (t.esperadas || 0)) await DataService.configurarPiezas(m.sku.id, t.tipo_documento_id, n);
     estado.modal = null;
     agregarAviso('exito', m.noAplica ? `${t.tipo_nombre}: marcado como "No aplica".` : n ? `${t.tipo_nombre}: ${n} ${n === 1 ? 'pieza esperada' : 'piezas esperadas'}.` : `${t.tipo_nombre}: guardado.`);
@@ -1315,6 +1332,57 @@ function BotonActivarAvisos() {
   if (permisoAvisos() !== 'default') return null;
   return h('button', { type: 'button', class: CLS.btnChico, onClick: activarAvisosNavegador }, icono('campana', 'w-3.5 h-3.5'), 'Activar avisos en esta computadora');
 }
+/* Campana: centro de notificaciones de cada rol */
+const claveVistos = () => `ing-avisos-vistos-${estado.sesion ? estado.sesion.user_id : ''}`;
+function avisosVistosDesde() { try { return localStorage.getItem(claveVistos()) || ''; } catch (e) { return ''; } }
+function marcarAvisosLeidos() { try { localStorage.setItem(claveVistos(), new Date().toISOString()); } catch (e) { /* sin almacenamiento */ } render(); }
+function avisosCampana() {
+  const s = estado.sesion, lista = [];
+  if (!s) return lista;
+  const primeraLinea = t => String(t || '').split('\n')[0].slice(0, 110);
+  if (s.rol_id === ROLES.OPERADOR) {
+    for (const d of cambiosOperador()) lista.push({ id: `pz-${d.version_id}`, fecha: d.subida_en, icono: 'descarga', titulo: `${d.version_vigente > 1 ? 'Pieza actualizada' : 'Pieza nueva'} · ${d.sku_clave}`,
+      texto: `${d.pieza} · versión ${d.version_vigente}. Descárgala y reemplázala en tu USB.`, accion: () => { (estado.corte.abiertos || (estado.corte.abiertos = new Set())).add(d.sku_id); irA('corte'); } });
+  }
+  const obs = estado.obs.lista || [];
+  if (puede(s.rol_id, 'resolver')) for (const o of obs.filter(x => x.estado === 'abierta')) lista.push({ id: `ob-${o.id}`, fecha: o.created_at, icono: 'bandera', titulo: `Observación de calidad · ${o.sku_clave}`,
+      texto: `${o.apartado_nombre}: ${primeraLinea(o.texto)}`, accion: () => abrirDetalle(o.sku_id) });
+  if (s.rol_id === ROLES.CONSULTA) for (const o of obs.filter(x => x.estado === 'resuelta' && x.resuelta_en).slice(0, 40)) lista.push({ id: `rs-${o.id}`, fecha: o.resuelta_en, icono: 'check', titulo: `Observación resuelta · ${o.sku_clave}`,
+      texto: `${o.apartado_nombre}: ${primeraLinea(o.respuesta)}`, accion: () => abrirDetalle(o.sku_id) });
+  if (puede(s.rol_id, 'administrar')) for (const p of Object.values(cache.perfiles || {}).filter(p => !p.activo && !p.rol_id && !p.deleted_at)) lista.push({ id: `us-${p.id}`, fecha: p.created_at, icono: 'candado', titulo: 'Cuenta por aprobar',
+      texto: `${p.nombre} (${p.email}) espera acceso.`, accion: () => { irA('admin'); if (estado.admin) { estado.admin.pestana = 'usuarios'; recargarAdminSilencioso(); } } });
+  return lista.sort((a, b) => String(b.fecha || '').localeCompare(String(a.fecha || '')));
+}
+function CampanaAvisos() {
+  const avisos = avisosCampana(), desde = avisosVistosDesde();
+  const noLeidos = avisos.filter(a => !desde || String(a.fecha || '') > desde).length;
+  const abierta = !!estado.campanaAbierta;
+  const cerrar = () => { estado.campanaAbierta = false; render(); };
+  return h('div', { class: 'relative z-50' },
+    h('button', { type: 'button', id: 'boton-campana', class: `${CLS.btnChico} relative z-50`, 'aria-haspopup': 'true', 'aria-expanded': String(abierta),
+      'aria-label': noLeidos ? `Notificaciones: ${noLeidos} sin leer` : 'Notificaciones', title: 'Notificaciones', onClick: () => { estado.campanaAbierta = !abierta; render(); } },
+      icono('campana', 'w-4 h-4'),
+      noLeidos ? h('span', { class: 'absolute -right-1.5 -top-1.5 flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-[#B42318] px-1 text-[11px] font-bold text-white dark:bg-[#C8372B]' }, noLeidos > 99 ? '99+' : String(noLeidos)) : null),
+    abierta ? h('div', { class: 'fixed inset-0 z-40', onClick: cerrar, 'aria-hidden': 'true' }) : null,
+    abierta ? h('div', { class: 'absolute right-0 top-full z-50 mt-2 w-[22rem] max-w-[calc(100vw-2rem)] overflow-hidden rounded-lg border border-[#D5DBE2] bg-white text-left shadow-xl dark:border-[#2E3A48] dark:bg-[#18202A]', role: 'dialog', 'aria-label': 'Notificaciones' },
+      h('div', { class: 'flex items-center justify-between gap-2 border-b border-[#E3E7EC] px-4 py-2.5 dark:border-[#26313D]' },
+        h('p', { class: 'text-sm font-semibold' }, 'Notificaciones'),
+        avisos.length ? h('button', { type: 'button', class: `${CLS.enlace} text-xs`, onClick: marcarAvisosLeidos }, 'Marcar todo como leído') : null),
+      permisoAvisos() === 'default' ? h('div', { class: 'border-b border-[#E3E7EC] px-4 py-2 dark:border-[#26313D]' }, BotonActivarAvisos(),
+        h('p', { class: 'mt-1 text-[11px] text-[#5B6675] dark:text-[#9AA7B6]' }, 'Para recibirlas aunque el aplicativo esté minimizado.')) : null,
+      !avisos.length ? h('p', { class: 'px-4 py-6 text-center text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, 'No tienes notificaciones pendientes.')
+        : h('ul', { class: 'max-h-96 divide-y divide-[#E3E7EC] overflow-y-auto dark:divide-[#26313D]' }, avisos.slice(0, 60).map(a => {
+            const nuevo = !desde || String(a.fecha || '') > desde;
+            return h('li', null, h('button', { type: 'button', class: `flex w-full items-start gap-3 px-4 py-2.5 text-left hover:bg-[#F4F6F8] focus:outline-none focus-visible:bg-[#F4F6F8] dark:hover:bg-[#1F2833] ${nuevo ? 'bg-[#F4F8FC] dark:bg-[#1A2531]' : ''}`,
+              onClick: () => { estado.campanaAbierta = false; a.accion(); } },
+              h('span', { class: `mt-0.5 shrink-0 ${nuevo ? 'text-[#1E4E79] dark:text-[#7FB2E5]' : 'text-[#9AA5B1]'}` }, icono(a.icono, 'w-4 h-4')),
+              h('span', { class: 'min-w-0 flex-1' },
+                h('span', { class: `block text-sm ${nuevo ? 'font-semibold' : 'font-medium'}` }, a.titulo),
+                h('span', { class: 'block text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, a.texto),
+                h('span', { class: 'mt-0.5 block text-[11px] text-[#7A8594]' }, a.fecha ? formatearFechaHora(a.fecha) : '')),
+              nuevo ? h('span', { class: 'mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[#1E4E79] dark:bg-[#7FB2E5]', 'aria-label': 'sin leer' }) : null));
+          }))) : null);
+}
 function actualizarTituloPestana(n) { document.title = n ? `(${n}) Ingeniería de producto` : 'Ingeniería de producto'; }
 
 /* ---------- Observaciones de calidad ---------- */
@@ -1500,7 +1568,7 @@ function planSubida() {
   const { atributo } = nomenDeTipo(tipo);
   const filas = m.archivos.map((f, i) => {
     const d = m.datos[i] || {};
-    const errores = datosNomenValidos(d, atributo);
+    const errores = { ...datosNomenValidos(d, atributo), ...fueraDeLista(d, atributo) };
     const pieza = Object.keys(errores).length ? '' : nombreEstandar(m.sku.clave, tipo, d);
     const previa = m.doc || previas.get(normalizarTexto(pieza));
     const renombrar = m.doc && pieza && normalizarTexto(pieza) !== normalizarTexto(m.doc.pieza);
@@ -1521,7 +1589,7 @@ function abrirModalRenombrar(sku, doc) {
 }
 async function guardarRenombrar() {
   const m = estado.modal, { atributo } = nomenDeTipo(m.tipoDoc);
-  if (Object.keys(datosNomenValidos(m.datos, atributo)).length) { m.error = 'Completa los datos marcados.'; render(); return; }
+  if (Object.keys(datosNomenValidos(m.datos, atributo)).length || Object.keys(fueraDeLista(m.datos, atributo)).length) { m.error = 'Completa los datos marcados.'; render(); return; }
   const pieza = nombreEstandar(m.sku.clave, m.tipoDoc, m.datos);
   m.enviando = true; m.error = null; render();
   try {
@@ -1740,6 +1808,21 @@ function pedirCambioAcceso(u, activo) {
   });
 }
 
+/* ---------- Eliminar catálogos (solo el jefe; el servidor no deja eliminar lo que se está usando) ---------- */
+function pedirEliminarCatalogo(catalogo, r) {
+  const nombres = { familia: 'la familia', linea: 'la línea', entregable: 'el entregable', maquina: 'la máquina', tipo: 'el tipo de documento', area: 'el área' };
+  const avisos = { entregable: 'La columna deja de aparecer en la matriz y en el avance. Las marcas que ya existían se conservan en el historial.' };
+  abrirConfirmacion({ titulo: `Eliminar ${nombres[catalogo]} ${r.nombre}`, peligro: true, textoBoton: 'Eliminar',
+    mensaje: `${avisos[catalogo] || 'Se elimina del catálogo y deja de ofrecerse.'} Si todavía se está usando, el aplicativo te dirá qué hay que cambiar primero.`,
+    accion: async () => {
+      await DataService.eliminarCatalogo(catalogo, r.id);
+      if (['maquina', 'tipo', 'area'].includes(catalogo)) await DataService.recargarCatalogosCorte();
+      await cargarCatalogos(); programarRecarga(0); recargarAdminSilencioso();
+      agregarAviso('exito', `Eliminado: ${r.nombre}.`);
+    } });
+}
+const BotonEliminar = (catalogo, r) => h('button', { type: 'button', class: `${CLS.btnChico} text-[#B42318] dark:text-[#F28B82]`, onClick: () => pedirEliminarCatalogo(catalogo, r), 'aria-label': `Eliminar ${r.nombre}` }, 'Eliminar');
+
 /* ---------- Diálogo de confirmación ---------- */
 function abrirConfirmacion({ titulo, mensaje, textoBoton, peligro = false, accion }) {
   estado.modal = { tipo: 'confirmar', titulo, mensaje, textoBoton, peligro, accion, error: null, enviando: false };
@@ -1769,7 +1852,7 @@ const PERMISOS = {
   altas: [ROLES.INGENIERO, ROLES.JEFE],                        // dar de alta y editar SKUs, familias y líneas
   documentos: [ROLES.INGENIERO, ROLES.JEFE, ROLES.CONSULTA],
   subir_documentos: [ROLES.INGENIERO, ROLES.JEFE],
-  observar: [ROLES.CONSULTA, ROLES.JEFE],      // señalar y reabrir observaciones de calidad
+  observar: [ROLES.CONSULTA],                  // señalar y reabrir observaciones de calidad (solo el auditor)
   resolver: [ROLES.INGENIERO, ROLES.JEFE]      // marcar observaciones como resueltas
 };
 function puede(rolId, accion) { return (PERMISOS[accion] || []).includes(rolId); }
@@ -1988,6 +2071,77 @@ function datosDePieza(doc, skuClave, tipo) {
   if (doc && doc.nombre_base) return { cantidad: String(doc.cantidad || 1), espesor: doc.espesor_mm != null ? numeroTexto(Number(doc.espesor_mm)) : '', calibre: doc.calibre != null ? String(doc.calibre) : '', medida: doc.medida || '', nombre: doc.nombre_base };
   return datosDesdeArchivo(doc ? doc.pieza : '', skuClave, tipo);
 }
+const MEDIDAS_BASE = { espesor: ['5.5', '12', '16', '19', '28'], calibre_lamina: ['12', '14', '16', '18', '22', '24'], calibre_tubular: ['14', '16', '18', '20'], medida_tubular: ['1X1', '2X1', '1.25X1.25', '1.5X1.5', '2X2', '3X1'] };
+const NOMBRES_LISTA = { espesor: 'Espesores de laminado plástico (mm)', calibre_lamina: 'Calibres de lámina', calibre_tubular: 'Calibres de tubular', medida_tubular: 'Medidas de tubular' };
+function listaMedidas(lista) { // [{ id, valor }], ordenadas de menor a mayor
+  const filas = cache.medidas ? cache.medidas.filter(x => x.lista === lista) : MEDIDAS_BASE[lista].map(v => ({ id: null, valor: v }));
+  const clave = v => { const n = String(v).split('X').map(Number); return n[0] * 1000 + (n[1] || 0); };
+  return filas.slice().sort((a, b) => clave(a.valor) - clave(b.valor));
+}
+const listaDeCampo = (k, atributo) => k === 'espesor' ? 'espesor' : k === 'medida' ? 'medida_tubular' : atributo === 'tubular' ? 'calibre_tubular' : 'calibre_lamina';
+function valorEnLista(k, v) { // formato con el que se compara contra la lista
+  if (v === '' || v == null) return '';
+  if (k === 'medida') return normalizarMedida(v) || String(v).toUpperCase();
+  const n = Number(String(v).replace(',', '.')); return isFinite(n) ? numeroTexto(n) : String(v);
+}
+function fueraDeLista(d, atributo) { // datos escritos que no están en la lista oficial
+  const e = {};
+  const campos = atributo === 'espesor' ? ['espesor'] : atributo === 'calibre' ? ['calibre'] : atributo === 'tubular' ? ['medida', 'calibre'] : [];
+  for (const k of campos) { const v = valorEnLista(k, d[k]); if (v && !listaMedidas(listaDeCampo(k, atributo)).some(x => x.valor === v)) e[k] = `${v} no está en la lista: agrégalo o elige otro.`; }
+  return e;
+}
+/* Menú de una medida: los valores de la lista + "Agregar a la lista…" */
+function SelectorMedida({ id, k, atributo, valor, clase, onElegir, alAgregar }) {
+  const lista = listaMedidas(listaDeCampo(k, atributo)), v = valorEnLista(k, valor);
+  const fuera = v && !lista.some(x => x.valor === v);
+  return h('select', { id, class: clase, value: fuera ? `__fuera` : v, onChange: ev => { if (ev.target.value === '__nuevo') alAgregar(); else if (ev.target.value !== '__fuera') onElegir(ev.target.value); } },
+    h('option', { value: '' }, 'Elige…'),
+    fuera ? h('option', { value: '__fuera' }, `${v} (no está en la lista)`) : null,
+    lista.map(x => h('option', { value: x.valor }, k === 'espesor' ? `${x.valor} mm` : k === 'calibre' ? `Cal. ${x.valor}` : x.valor)),
+    h('option', { value: '__nuevo' }, '＋ Agregar a la lista…'));
+}
+function abrirModalMedidas({ lista = null, volver = null, alVolver = null } = {}) {
+  estado.modal = { tipo: 'medidas', lista, volver, alVolver, nuevo: {}, error: null, enviando: false };
+  render();
+}
+async function agregarMedida(lista) {
+  const m = estado.modal, v = String((m.nuevo || {})[lista] || '').trim();
+  if (!v) return;
+  const valor = lista === 'medida_tubular' ? (normalizarMedida(v) || v) : v.replace(',', '.');
+  m.enviando = true; m.error = null; render();
+  try { await DataService.agregarMedida(lista, valor); m.nuevo = { ...m.nuevo, [lista]: '' }; m.ultimo = { lista, valor: String(valor).toUpperCase() }; agregarAviso('exito', `Agregado a la lista: ${String(valor).toUpperCase()}.`); }
+  catch (e) { m.error = e.message; }
+  finally { m.enviando = false; render(); }
+}
+async function quitarMedida(x) {
+  try { await DataService.quitarMedida(x.id); agregarAviso('exito', `Quitado de la lista: ${x.valor}.`); } catch (e) { agregarAviso('error', e.message); }
+  render();
+}
+function cerrarModalMedidas() {
+  const m = estado.modal;
+  if (m.volver) { estado.modal = m.volver; if (m.alVolver && m.ultimo) m.alVolver(m.ultimo.valor); }
+  else estado.modal = null;
+  render();
+}
+function ModalMedidas() {
+  const m = estado.modal, esJefe = puede(estado.sesion.rol_id, 'administrar');
+  const listas = m.lista ? [m.lista] : Object.keys(MEDIDAS_BASE);
+  return h('div', null,
+    h('h2', { id: 'titulo-modal', class: 'text-lg font-semibold' }, m.lista ? `Agregar a: ${NOMBRES_LISTA[m.lista]}` : 'Medidas de materiales'),
+    h('p', { class: 'mt-1 text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, esJefe ? 'Valores que se pueden elegir al subir piezas. Los ingenieros pueden agregar; solo el jefe puede quitar.' : 'Valores que se pueden elegir al subir piezas. Agrega uno nuevo si no aparece; solo el jefe puede quitarlos.'),
+    !cache.medidas ? h('p', { class: 'mt-3 rounded-md bg-[#FFF4DB] p-2 text-sm text-[#5C4410] dark:bg-[#3A2F14] dark:text-[#F0D9A0]' }, 'Falta ejecutar en Supabase el script actualizacion_catalogos_y_medidas.sql; mientras tanto se usan las medidas de siempre.') : null,
+    h('div', { class: 'mt-4 space-y-4' }, listas.map(lista => h('div', null,
+      h('p', { class: 'text-sm font-semibold' }, NOMBRES_LISTA[lista]),
+      h('ul', { class: 'mt-1.5 flex flex-wrap gap-1.5' }, listaMedidas(lista).map(x => h('li', { class: 'flex items-center gap-1 rounded-md border border-[#D5DBE2] px-2 py-0.5 text-sm tabular-nums dark:border-[#2E3A48]' }, x.valor,
+        esJefe && x.id ? h('button', { type: 'button', class: 'text-[#B42318] dark:text-[#F28B82]', 'aria-label': `Quitar ${x.valor}`, title: 'Quitar de la lista', onClick: () => quitarMedida(x) }, icono('x', 'w-3 h-3')) : null))),
+      cache.medidas ? h('div', { class: 'mt-2 flex gap-2' },
+        h('label', { for: `medida-${lista}`, class: 'sr-only' }, `Nuevo valor para ${NOMBRES_LISTA[lista]}`),
+        h('input', { id: `medida-${lista}`, class: `${CLS.input} max-w-[10rem] py-1 text-sm`, placeholder: lista === 'medida_tubular' ? 'Ej. 1.5X1' : lista === 'espesor' ? 'Ej. 25' : 'Ej. 20',
+          value: (m.nuevo || {})[lista] || '', disabled: m.enviando, onInput: ev => { estado.modal.nuevo = { ...(estado.modal.nuevo || {}), [lista]: ev.target.value }; }, onKeydown: ev => { if (ev.key === 'Enter') { ev.preventDefault(); agregarMedida(lista); } } }),
+        h('button', { type: 'button', class: CLS.btnChico, disabled: m.enviando, onClick: () => agregarMedida(lista) }, icono('mas', 'w-3.5 h-3.5'), 'Agregar')) : null))),
+    ErrorModal(m.error),
+    h('div', { class: 'mt-6 flex justify-end' }, h('button', { type: 'button', id: 'confirmar-cancelar', class: CLS.btnPrimario, onClick: cerrarModalMedidas }, m.volver ? 'Listo, regresar' : 'Cerrar')));
+}
 const SUGERENCIAS_NOMEN = { espesor: ['3', '6', '9', '12', '15', '16', '18', '19', '25', '28'], calibre: ['10', '12', '14', '16', '18', '20', '22'], medida: ['1X1', '2X1', '1.25X1.25', '1.5X1.5', '2X2', '3X1'] };
 
 /* Avance: completados ÷ entregables activos, redondeado a entero. Un SKU está completo solo al 100 %. */
@@ -2181,7 +2335,12 @@ function FormularioAuth() {
   const botones = { login: ['Iniciar sesión', 'Iniciando sesión…'], registro: ['Crear cuenta', 'Creando cuenta…'], recuperar: ['Enviar enlace', 'Enviando…'], nueva_password: ['Guardar contraseña', 'Guardando…'] };
   const campo = (id, etiqueta, clave, tipo, autocomplete, ayuda) => h('div', null,
     h('label', { for: id, class: CLS.etiqueta }, etiqueta),
-    h('input', { id, type: tipo, class: CLS.input, autocomplete, value: a[clave], onInput: ev => { estado.auth[clave] = ev.target.value; } }),
+    (clave === 'email' || clave === 'password') ? h('div', { class: 'relative' },
+      h('input', { id, type: tipo, class: `${CLS.input} pr-10`, autocomplete, value: a[clave], onInput: ev => { estado.auth[clave] = ev.target.value; } }),
+      h('button', { type: 'button', class: 'absolute inset-y-0 right-0 flex w-10 items-center justify-center rounded-r-md text-[#7A8594] hover:text-[#1B2430] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1E4E79] dark:hover:text-[#E6EAEF]',
+        'aria-label': `Borrar ${etiqueta.toLowerCase()}`, title: `Borrar ${etiqueta.toLowerCase()}`,
+        onClick: () => { estado.auth[clave] = ''; const el = document.getElementById(id); if (el) { el.value = ''; el.focus(); } } }, icono('x', 'w-4 h-4')))
+    : h('input', { id, type: tipo, class: CLS.input, autocomplete, value: a[clave], onInput: ev => { estado.auth[clave] = ev.target.value; } }),
     ayuda ? h('p', { class: 'mt-1 text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, ayuda) : null);
   const enlace = (texto, pantalla) => h('button', { type: 'button', class: `${CLS.enlace} dark:text-[#7FB2E5] text-sm`, onClick: () => irAPantallaAuth(pantalla) }, texto);
   return MarcoAcceso(
@@ -2210,7 +2369,7 @@ function BarraSuperior() {
   const s = estado.sesion;
   const esOperador = s.rol_id === ROLES.OPERADOR;
   const secciones = esOperador ? [{ vista: 'corte', texto: 'Archivos de corte' }] : [
-    { vista: 'skus', texto: 'Avance por SKU' }, { vista: 'tablero', texto: 'Tablero' }, { vista: 'historial', texto: 'Historial' }
+    { vista: 'skus', texto: 'Avance por SKU' }, ...(s.rol_id === ROLES.CONSULTA ? [] : [{ vista: 'tablero', texto: 'Tablero' }]), { vista: 'historial', texto: 'Historial' }
   ];
   if (!esOperador && puede(s.rol_id, 'documentos') && estado.obs.lista) { const n = estado.obs.lista.filter(o => o.estado === 'abierta').length; secciones.push({ vista: 'observaciones', texto: n ? `Observaciones (${n})` : 'Observaciones' }); }
   if (!esOperador && puede(s.rol_id, 'documentos') && DataService.catalogosCorte().tipos.length) secciones.push({ vista: 'corte', texto: 'Archivos de corte' });
@@ -2233,6 +2392,7 @@ function BarraSuperior() {
         h('div', { class: 'text-right' },
           h('p', { class: 'text-sm font-medium leading-tight' }, s.nombre),
           h('p', { class: 'text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, esOperador ? (s.maquina ? `${s.maquina.nombre} · ${s.maquina.area}` : 'Operador sin máquina asignada') : s.rol_nombre)),
+        CampanaAvisos(),
         BotonTema(),
         h('button', { type: 'button', class: CLS.btnChico, onClick: cerrarSesion }, 'Cerrar sesión'))));
 }
@@ -2685,7 +2845,7 @@ function AdminFamilias() {
         h('td', { class: CLS.td }, f.activa ? 'Activa' : h('span', { class: 'text-[#5B6675] dark:text-[#9AA7B6]' }, 'Inactiva')),
         h('td', { class: `${CLS.td} whitespace-nowrap text-right` }, h('div', { class: 'flex justify-end gap-2' },
           h('button', { type: 'button', class: CLS.btnChico, onClick: () => abrirModalCatalogo('familia', f), 'aria-label': `Editar ${f.nombre}` }, icono('editar', 'w-3.5 h-3.5'), 'Editar'),
-          h('button', { type: 'button', class: CLS.btnChico, onClick: () => cambiarActivoFamilia(f, !f.activa) }, f.activa ? 'Desactivar' : 'Activar')))))));
+          h('button', { type: 'button', class: CLS.btnChico, onClick: () => cambiarActivoFamilia(f, !f.activa) }, f.activa ? 'Desactivar' : 'Activar'), BotonEliminar('familia', f)))))));
 }
 /* FIN COMPONENTE: AdminFamilias */
 
@@ -2703,7 +2863,7 @@ function AdminLineas() {
         h('td', { class: CLS.td }, l.activa ? 'Activa' : h('span', { class: 'text-[#5B6675] dark:text-[#9AA7B6]' }, 'Inactiva')),
         h('td', { class: `${CLS.td} whitespace-nowrap text-right` }, h('div', { class: 'flex justify-end gap-2' },
           h('button', { type: 'button', class: CLS.btnChico, onClick: () => abrirModalCatalogo('linea', l), 'aria-label': `Editar ${l.nombre}` }, icono('editar', 'w-3.5 h-3.5'), 'Editar'),
-          h('button', { type: 'button', class: CLS.btnChico, onClick: () => cambiarActivoLinea(l, !l.activa) }, l.activa ? 'Desactivar' : 'Activar')))))));
+          h('button', { type: 'button', class: CLS.btnChico, onClick: () => cambiarActivoLinea(l, !l.activa) }, l.activa ? 'Desactivar' : 'Activar'), BotonEliminar('linea', l)))))));
 }
 /* FIN COMPONENTE: AdminLineas */
 
@@ -2722,7 +2882,7 @@ function AdminEntregables() {
           h('button', { type: 'button', class: CLS.btnChico, disabled: i === 0, onClick: () => moverEntregable(e, 'subir'), 'aria-label': `Subir ${e.nombre}` }, icono('arriba', 'w-3.5 h-3.5')),
           h('button', { type: 'button', class: CLS.btnChico, disabled: i === lista.length - 1, onClick: () => moverEntregable(e, 'bajar'), 'aria-label': `Bajar ${e.nombre}` }, icono('abajo', 'w-3.5 h-3.5')),
           h('button', { type: 'button', class: CLS.btnChico, onClick: () => abrirModalCatalogo('entregable', e), 'aria-label': `Editar ${e.nombre}` }, icono('editar', 'w-3.5 h-3.5'), 'Editar'),
-          h('button', { type: 'button', class: CLS.btnChico, onClick: () => pedirCambioActivoEntregable(e, !e.activo) }, e.activo ? 'Desactivar' : 'Activar')))))));
+          h('button', { type: 'button', class: CLS.btnChico, onClick: () => pedirCambioActivoEntregable(e, !e.activo) }, e.activo ? 'Desactivar' : 'Activar'), BotonEliminar('entregable', e)))))));
 }
 /* FIN COMPONENTE: AdminEntregables */
 
@@ -2730,10 +2890,10 @@ function AdminEntregables() {
 function Modal() {
   const m = estado.modal;
   if (!m) return null;
-  const contenido = { desmarcar: ModalDesmarcar, sku: ModalSku, catalogo: ModalCatalogo, aprobar: ModalAprobar, reporte: ModalReporte, importarImagenes: ModalImportarImagenes, documento: ModalDocumento, retirarDocumento: ModalRetirarDocumento, versionesDocumento: ModalVersionesDocumento, corteCatalogo: ModalCorteCatalogo, noAplica: ModalNoAplica, renombrarPieza: ModalRenombrarPieza, observacion: ModalObservacion, atenderObs: ModalAtenderObs, confirmar: ModalConfirmacion }[m.tipo]();
+  const contenido = { desmarcar: ModalDesmarcar, sku: ModalSku, catalogo: ModalCatalogo, aprobar: ModalAprobar, reporte: ModalReporte, importarImagenes: ModalImportarImagenes, documento: ModalDocumento, retirarDocumento: ModalRetirarDocumento, versionesDocumento: ModalVersionesDocumento, corteCatalogo: ModalCorteCatalogo, noAplica: ModalNoAplica, renombrarPieza: ModalRenombrarPieza, medidas: ModalMedidas, observacion: ModalObservacion, atenderObs: ModalAtenderObs, confirmar: ModalConfirmacion }[m.tipo]();
   return h('div', { class: 'fixed inset-0 z-50 flex items-center justify-center p-4' },
     h('button', { type: 'button', class: 'absolute inset-0 h-full w-full cursor-default bg-[#1B2430]/40 dark:bg-[#000000]/40', 'aria-label': 'Cerrar diálogo', tabindex: '-1', onClick: cerrarModal }),
-    h('div', { class: `relative max-h-[90vh] w-full ${m.tipo === 'documento' ? 'max-w-3xl' : m.tipo === 'renombrarPieza' ? 'max-w-xl' : 'max-w-md'} overflow-y-auto rounded-lg bg-white dark:bg-[#18202A] p-6 shadow-xl`, role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'titulo-modal' }, contenido));
+    h('div', { 'data-scroll-id': `modal-${m.tipo}`, class: `relative max-h-[90vh] w-full ${m.tipo === 'documento' ? 'max-w-3xl' : m.tipo === 'renombrarPieza' ? 'max-w-xl' : 'max-w-md'} overflow-y-auto rounded-lg bg-white dark:bg-[#18202A] p-6 shadow-xl`, role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'titulo-modal' }, contenido));
 }
 function PieModal(textoBoton, onConfirmar, { peligro = false, enviando = false, textoEnviando = 'Guardando…' } = {}) {
   return h('div', { class: 'mt-6 flex flex-wrap justify-end gap-2' },
@@ -2985,6 +3145,7 @@ function VistaCorteOperador() {
               h('p', { class: 'text-base font-medium' }, d.pieza, cambiosOperador().some(x => x.version_id === d.version_id)
                 ? h('span', { class: 'ml-2 rounded bg-[#FFF4DB] px-1.5 py-0.5 text-xs font-semibold text-[#B26A00] dark:bg-[#3A2F14] dark:text-[#E0A650]' }, d.version_vigente > 1 ? 'ACTUALIZADA' : 'NUEVA') : null),
               h('p', { class: 'text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, `Subida ${formatearFechaHora(d.subida_en)}`)),
+            h('span', { class: 'rounded-md bg-[#EEF3F8] px-2 py-0.5 text-sm font-semibold tabular-nums text-[#1E4E79] dark:bg-[#1C2A3A] dark:text-[#7FB2E5]', title: 'Piezas que se cortan con este archivo' }, `× ${cantidadACortar(d)}`),
             h('span', { class: 'inline-flex items-center gap-1 rounded-md bg-[#E6F2EB] px-2 py-0.5 text-sm font-semibold text-[#1F7A4D] dark:bg-[#173526] dark:text-[#5CC48E]' }, icono('check', 'w-3.5 h-3.5'), `v${d.version_vigente}`),
             visorDisponible(d) ? h('button', { type: 'button', class: CLS.btnSecundario, onClick: () => verPieza(d), 'aria-label': `Ver pieza ${d.pieza}` }, icono('ojo'), 'Ver pieza') : null,
             h('button', { type: 'button', class: CLS.btnSecundario, disabled: !!c.descargando, onClick: () => descargarDocumento(d), 'aria-label': `Descargar ${d.pieza}` },
@@ -3002,12 +3163,19 @@ function VistaCorteOperador() {
       c.datos && skus.length ? h('p', { class: 'pb-3 text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, `${skus.length} ${skus.length === 1 ? 'SKU' : 'SKUs'} · ${lista.length} piezas`) : null),
     contenido);
 }
+function cantidadACortar(d) {
+  if (d.cantidad) return Number(d.cantidad);
+  const m = /(?:^|[_\s-])(\d{1,3})\s*-?\s*PZ(?:A|AS|S)?(?=$|[_\s.-])/i.exec(String(d.pieza || ''));
+  return m ? Number(m[1]) : 1;
+}
+const totalACortar = piezas => piezas.reduce((t, d) => t + cantidadACortar(d), 0);
 function ConteoTipoOperador(tipo, piezas, esperadas) {
   const n = piezas.length;
-  if (!esperadas) return h('p', { class: 'bg-[#F7F9FA] px-4 py-1.5 text-xs font-semibold text-[#5B6675] dark:bg-[#1F2833] dark:text-[#9AA7B6]' }, `${tipo} · ${n} ${n === 1 ? 'pieza' : 'piezas'}`);
+  const cortar = totalACortar(piezas);
+  if (!esperadas) return h('p', { class: 'bg-[#F7F9FA] px-4 py-1.5 text-xs font-semibold text-[#5B6675] dark:bg-[#1F2833] dark:text-[#9AA7B6]' }, `${tipo} · ${n} ${n === 1 ? 'archivo' : 'archivos'} · ${cortar} ${cortar === 1 ? 'pieza' : 'piezas'} a cortar`);
   const ok = n === esperadas;
   return h('p', { class: `flex flex-wrap items-center gap-2 px-4 py-2 text-sm font-semibold ${ok ? 'bg-[#E6F2EB] text-[#1F7A4D] dark:bg-[#173526] dark:text-[#5CC48E]' : 'bg-[#FDF3F2] text-[#B42318] dark:bg-[#3A1D1B] dark:text-[#F28B82]'}`, role: ok ? null : 'alert' },
-    icono(ok ? 'check' : 'alerta', 'w-4 h-4'), `${tipo}: ${n} de ${esperadas} piezas`,
+    icono(ok ? 'check' : 'alerta', 'w-4 h-4'), `${tipo}: ${n} de ${esperadas} archivos · ${cortar} ${cortar === 1 ? 'pieza' : 'piezas'} a cortar`,
     ok ? h('span', { class: 'font-normal' }, '· completas') : h('span', { class: 'font-normal' }, n < esperadas ? `· faltan ${esperadas - n}. No cortes hasta que ingeniería las suba.` : `· hay ${n - esperadas} de más. Consulta a ingeniería.`));
 }
 function ResumenSkuOperador(k, tipos, esperadasMap) {
@@ -3016,9 +3184,10 @@ function ResumenSkuOperador(k, tipos, esperadasMap) {
     const e = esperadasMap.get(`${k.sku_id}-${piezas[0].tipo_documento_id}`);
     if (e) { esperadas += e; cargadas += piezas.length; if (piezas.length !== e) faltan = true; }
   }
-  const base = `${k.piezas.length} ${k.piezas.length === 1 ? 'pieza por cortar' : 'piezas por cortar'} · ${[...tipos.keys()].join(', ')}`;
+  const total = totalACortar(k.piezas);
+  const base = `Total a cortar: ${total} ${total === 1 ? 'pieza' : 'piezas'} · ${k.piezas.length} ${k.piezas.length === 1 ? 'archivo' : 'archivos'} · ${[...tipos.keys()].join(', ')}`;
   return h('span', { class: `mt-0.5 flex flex-wrap items-center gap-1 text-xs font-medium ${faltan ? 'text-[#B42318] dark:text-[#F28B82]' : 'text-[#1E4E79] dark:text-[#7FB2E5]'}` },
-    faltan ? icono('alerta', 'w-3.5 h-3.5') : null, faltan ? `${cargadas} de ${esperadas} piezas: incompleto · ${[...tipos.keys()].join(', ')}` : base);
+    faltan ? icono('alerta', 'w-3.5 h-3.5') : null, faltan ? `Incompleto: ${cargadas} de ${esperadas} archivos · Total a cortar: ${total} ${total === 1 ? 'pieza' : 'piezas'} · ${[...tipos.keys()].join(', ')}` : base);
 }
 /* FIN COMPONENTE: VistaCorteOperador */
 
@@ -3139,7 +3308,7 @@ function CoberturaCorte(sku, editable) {
         title: editable ? 'Configurar: número de piezas esperadas o "No aplica"' : null,
         onClick: editable ? () => abrirModalNoAplica(sku, t) : null
       }, icono(ic, 'w-3.5 h-3.5'), t.tipo_nombre, h('span', { class: 'font-normal' }, texto(t)),
-         e === 'no_aplica' && t.nota_no_aplica ? h('span', { class: 'font-normal italic' }, `· ${t.nota_no_aplica}`) : null));
+         null));
     })),
     totalEsperadas ? h('p', { class: 'mt-2 text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, `Total configurado: ${totalSubidas} de ${totalEsperadas} piezas cargadas.`) : null,
     editable ? h('p', { class: 'mt-1 text-xs text-[#7A8594] dark:text-[#7F8B99]' }, 'Da clic en un tipo para indicar cuántas piezas lleva, o marcarlo como "No aplica".') : null);
@@ -3178,18 +3347,29 @@ function ModalDocumento() {
       h('label', { for: `pz-${k}-${i}`, class: 'block text-[11px] font-medium text-[#5B6675] dark:text-[#9AA7B6]' }, etiqueta),
       h('input', { id: `pz-${k}-${i}`, class: `${err ? CLS.inputError : CLS.input} py-1 text-sm`, value: (m.datos[i] || {})[k] || '', title: err || '', ...extra, onInput: ev => setDato(i, k, ev.target.value) }));
   };
-  const camposAtributo = i => atributo === 'espesor' ? [campo(i, 'espesor', 'Espesor (mm)', 'w-24', { inputmode: 'decimal', list: 'sug-espesor' })]
-    : atributo === 'calibre' ? [campo(i, 'calibre', 'Calibre', 'w-20', { inputmode: 'numeric', list: 'sug-calibre' })]
-    : atributo === 'tubular' ? [campo(i, 'medida', 'Tubular', 'w-28', { list: 'sug-medida', placeholder: '2X1' }), campo(i, 'calibre', 'Calibre', 'w-20', { inputmode: 'numeric', list: 'sug-calibre' })] : [];
+  const menu = (i, k, etiqueta, ancho) => {
+    const f = plan.filas[i], err = f && f.errores[k];
+    return h('div', { class: ancho },
+      h('label', { for: `pz-${k}-${i}`, class: 'block text-[11px] font-medium text-[#5B6675] dark:text-[#9AA7B6]' }, etiqueta),
+      SelectorMedida({ id: `pz-${k}-${i}`, k, atributo, valor: (m.datos[i] || {})[k], clase: `${err ? CLS.inputError : CLS.input} py-1 text-sm`,
+        onElegir: v => { estado.modal.datos[i] = { ...(estado.modal.datos[i] || {}), [k]: v }; render(); },
+        alAgregar: () => { const volver = estado.modal; abrirModalMedidas({ lista: listaDeCampo(k, atributo), volver, alVolver: v => { volver.datos[i] = { ...(volver.datos[i] || {}), [k]: v }; } }); } }),
+      err ? h('p', { class: 'mt-0.5 max-w-[12rem] text-[11px] text-[#B42318] dark:text-[#F28B82]' }, err) : null);
+  };
+  const camposAtributo = i => atributo === 'espesor' ? [menu(i, 'espesor', 'Espesor', 'w-28')]
+    : atributo === 'calibre' ? [menu(i, 'calibre', 'Calibre', 'w-28')]
+    : atributo === 'tubular' ? [menu(i, 'medida', 'Tubular', 'w-32'), menu(i, 'calibre', 'Calibre', 'w-28')] : [];
   const aplicarATodas = () => { const c = estado.modal.comun || {}; m.archivos.forEach((_, i) => { const d = { ...(estado.modal.datos[i] || {}) }; ['espesor', 'calibre', 'medida'].forEach(k => { if (c[k]) d[k] = c[k]; }); estado.modal.datos[i] = d; }); render(); };
   const barraComun = m.archivos.length > 1 && atributo !== 'ninguno' ? h('div', { class: 'flex flex-wrap items-end gap-2 rounded-md bg-[#F4F6F8] p-2 dark:bg-[#1F2833]' },
-    h('p', { class: 'w-full text-xs font-medium' }, 'Si todas las piezas llevan el mismo dato, escríbelo una vez:'),
+    h('p', { class: 'w-full text-xs font-medium' }, 'Si todas las piezas llevan el mismo dato, elígelo una vez:'),
     ...(atributo === 'espesor' ? [['espesor', 'Espesor (mm)', 'sug-espesor']] : atributo === 'calibre' ? [['calibre', 'Calibre', 'sug-calibre']] : [['medida', 'Tubular', 'sug-medida'], ['calibre', 'Calibre', 'sug-calibre']])
-      .map(([k, et, lista]) => h('div', { class: 'w-28' }, h('label', { for: `comun-${k}`, class: 'block text-[11px] font-medium text-[#5B6675] dark:text-[#9AA7B6]' }, et),
-        h('input', { id: `comun-${k}`, class: `${CLS.input} py-1 text-sm`, list: lista, value: (m.comun || {})[k] || '', onInput: ev => { estado.modal.comun = { ...(estado.modal.comun || {}), [k]: ev.target.value }; } }))),
+      .map(([k, et]) => h('div', { class: 'w-32' }, h('label', { for: `comun-${k}`, class: 'block text-[11px] font-medium text-[#5B6675] dark:text-[#9AA7B6]' }, et),
+        SelectorMedida({ id: `comun-${k}`, k, atributo, valor: (m.comun || {})[k], clase: `${CLS.input} py-1 text-sm`,
+          onElegir: v => { estado.modal.comun = { ...(estado.modal.comun || {}), [k]: v }; render(); },
+          alAgregar: () => { const volver = estado.modal; abrirModalMedidas({ lista: listaDeCampo(k, atributo), volver, alVolver: v => { volver.comun = { ...(volver.comun || {}), [k]: v }; } }); } }))),
     h('button', { type: 'button', class: CLS.btnChico, onClick: aplicarATodas }, 'Aplicar a todas')) : null;
   const listas = ['espesor', 'calibre', 'medida'].map(k => h('datalist', { id: `sug-${k}` }, SUGERENCIAS_NOMEN[k].map(v => h('option', { value: v }))));
-  const listaArchivos = m.archivos.length ? h('div', { class: 'max-h-72 space-y-2 overflow-y-auto rounded-md border border-[#D5DBE2] p-2 dark:border-[#2E3A48]' },
+  const listaArchivos = m.archivos.length ? h('div', { 'data-scroll-id': 'lista-piezas', class: 'max-h-96 space-y-2 overflow-y-auto rounded-md border border-[#D5DBE2] p-2 dark:border-[#2E3A48]' },
     plan.filas.map((f, i) => h('div', { class: 'rounded-md border border-[#E3E7EC] p-2 dark:border-[#26313D]' },
       h('p', { class: 'text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, `Archivo: ${f.archivo.name} · ${formatoTamano(f.archivo.size)}`),
       h('div', { class: 'mt-1 flex flex-wrap items-end gap-2' },
@@ -3265,7 +3445,7 @@ function AdminCorte() {
   const estadoTxt = on => on ? 'Activo' : h('span', { class: 'text-[#5B6675] dark:text-[#9AA7B6]' }, 'Inactivo');
   const acciones = (entidad, r, activo) => h('td', { class: `${CLS.td} whitespace-nowrap text-right` }, h('div', { class: 'flex justify-end gap-2' },
     h('button', { type: 'button', class: CLS.btnChico, onClick: () => abrirModalCorteCatalogo(entidad, r) }, icono('editar', 'w-3.5 h-3.5'), 'Editar'),
-    h('button', { type: 'button', class: CLS.btnChico, onClick: () => cambiarActivoCorte(entidad, r, !activo) }, activo ? 'Desactivar' : 'Activar')));
+    h('button', { type: 'button', class: CLS.btnChico, onClick: () => cambiarActivoCorte(entidad, r, !activo) }, activo ? 'Desactivar' : 'Activar'), BotonEliminar(entidad, r)));
   const bloque = (titulo, texto, boton, tabla) => h('div', { class: 'space-y-2' }, h('div', { class: 'flex flex-wrap items-end justify-between gap-2' },
     h('div', null, h('h2', { class: 'text-base font-semibold' }, titulo), h('p', { class: 'text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, texto)), boton), tabla);
   return h('div', { class: 'space-y-8' },
@@ -3286,6 +3466,9 @@ function AdminCorte() {
       TablaAdmin([['Tipo de documento'], ['Área'], ['Formatos'], ['Estado'], ['']], tipos.map(r => h('tr', null,
         h('th', { scope: 'row', class: `${CLS.td} text-left font-medium` }, r.nombre), h('td', { class: CLS.td }, r.area_nombre),
         h('td', { class: `${CLS.td} tabular-nums` }, r.extensiones.split(',').map(x => '.' + x).join(', ')), h('td', { class: CLS.td }, estadoTxt(r.activo)), acciones('tipo', r, r.activo))))),
+    bloque('Medidas de materiales', 'Espesores de laminado plástico, calibres de lámina y de tubular, y medidas de tubular que se pueden elegir al subir piezas.',
+      h('button', { type: 'button', class: CLS.btnSecundario, onClick: () => abrirModalMedidas() }, 'Administrar medidas'),
+      h('p', { class: 'text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, Object.keys(MEDIDAS_BASE).map(l => `${NOMBRES_LISTA[l]}: ${listaMedidas(l).map(x => x.valor).join(', ')}`).join(' · '))),
     bloque('Áreas de corte', 'Agrupan máquinas y tipos de documento.',
       h('button', { type: 'button', class: CLS.btnSecundario, onClick: () => abrirModalCorteCatalogo('area', null) }, icono('mas'), 'Nueva área'),
       TablaAdmin([['Área'], ['Estado'], ['']], areas.map(r => h('tr', null,
@@ -3374,8 +3557,7 @@ function ModalNoAplica() {
         h('input', { id: 'na-check', type: 'checkbox', class: 'mt-0.5 h-4 w-4 accent-[#1E4E79] dark:accent-[#7FB2E5]', checked: m.noAplica, disabled: tienePiezas || m.enviando,
           onChange: ev => { estado.modal.noAplica = ev.target.checked; render(); } }),
         h('span', null, h('span', { class: 'font-medium' }, 'No aplica: '), tienePiezas ? 'no se puede marcar mientras tenga piezas; retíralas primero.' : 'este SKU no lleva este tipo de archivo. Si es DXF o IGES, su casilla de entregable se pone en gris.')),
-      m.noAplica ? h('div', null, h('label', { for: 'na-nota', class: CLS.etiqueta }, 'Nota (opcional)'),
-        h('input', { id: 'na-nota', class: CLS.input, maxlength: '255', placeholder: 'Por ejemplo: este modelo no lleva piezas de tubular.', value: m.nota, disabled: m.enviando, onInput: ev => { estado.modal.nota = ev.target.value; } })) : null),
+      null),
     ErrorModal(m.error),
     PieModal('Guardar', confirmarNoAplica, { enviando: m.enviando }));
 }
@@ -3425,7 +3607,9 @@ function TarjetaObservacion(o, { conSku = true } = {}) {
 /* COMPONENTE: VistaObservaciones */
 function VistaObservaciones() {
   const o = estado.obs, lista = o.lista || [];
-  const filtradas = lista.filter(x => o.filtro === 'todas' || (o.filtro === 'abiertas' ? x.estado === 'abierta' : x.estado === 'resuelta'));
+  const q = normalizarTexto(o.busqueda || '');
+  const coincide = x => !q || normalizarTexto(`${x.sku_clave} ${x.sku_descripcion || ''} ${x.apartado_nombre} ${x.texto} ${x.respuesta || ''} ${x.autor_nombre || ''}`).includes(q);
+  const filtradas = lista.filter(x => (o.filtro === 'todas' || (o.filtro === 'abiertas' ? x.estado === 'abierta' : x.estado === 'resuelta')) && coincide(x));
   const n = { abiertas: lista.filter(x => x.estado === 'abierta').length, resueltas: lista.filter(x => x.estado === 'resuelta').length, todas: lista.length };
   const pestaña = (clave, texto) => h('button', { type: 'button', 'aria-pressed': String(o.filtro === clave),
     class: `rounded-md px-3 py-1.5 text-sm font-medium ${o.filtro === clave ? 'bg-[#1E4E79] text-white dark:bg-[#2F6DA3]' : 'border border-[#C3CBD4] dark:border-[#3A4756]'}`,
@@ -3435,8 +3619,13 @@ function VistaObservaciones() {
     : 'Problemas que el auditor de calidad señaló en los SKUs. Corrige el apartado indicado y marca la observación como resuelta, explicando qué se corrigió.';
   return h('section', { class: 'space-y-5' },
     EncabezadoVista('Observaciones de calidad', texto, BotonActivarAvisos()),
-    h('div', { class: 'flex flex-wrap gap-2' }, pestaña('abiertas', 'Abiertas'), pestaña('resueltas', 'Resueltas'), pestaña('todas', 'Todas')),
+    h('div', { class: 'flex flex-wrap items-center gap-2' }, pestaña('abiertas', 'Abiertas'), pestaña('resueltas', 'Resueltas'), pestaña('todas', 'Todas'),
+      h('div', { class: 'relative w-full sm:ml-auto sm:w-80' }, h('span', { class: 'pointer-events-none absolute inset-y-0 left-3 flex items-center text-[#7A8594]' }, icono('buscar')),
+        h('label', { for: 'obs-busqueda', class: 'sr-only' }, 'Buscar observaciones'),
+        h('input', { id: 'obs-busqueda', type: 'search', class: `${CLS.input} pl-9`, placeholder: 'Buscar por SKU, apartado o texto', value: o.busqueda || '', onInput: ev => { estado.obs.busqueda = ev.target.value; conRetraso('obs', render, 150); } }))),
+    q && o.lista ? h('p', { class: 'text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, `${filtradas.length} ${filtradas.length === 1 ? 'observación coincide' : 'observaciones coinciden'} con "${o.busqueda}"`) : null,
     !o.lista ? EstadoCargando('Cargando observaciones…', 3)
+      : !filtradas.length && q ? EstadoVacio({ titulo: 'Ninguna observación coincide', texto: 'Prueba con otra clave de SKU o palabra.', accion: null })
       : !filtradas.length ? EstadoVacio({ titulo: o.filtro === 'abiertas' ? 'No hay observaciones abiertas' : 'No hay observaciones', texto: o.filtro === 'abiertas' ? 'Todo lo señalado por calidad está atendido.' : 'Aún no se ha registrado ninguna.', accion: null })
       : h('ul', { class: 'space-y-3' }, filtradas.map(x => TarjetaObservacion(x))));
 }
@@ -3461,7 +3650,9 @@ function ObservacionesSku(s) {
 /* COMPONENTE: ModalObservacion — el auditor señala un problema en un apartado */
 function ModalObservacion() {
   const m = estado.modal;
-  const ents = entregablesActivos(), tipos = DataService.catalogosCorte().tipos.filter(t => t.activo);
+  const noAplican = new Set((estado.detalle.cobertura || []).filter(c => c.estado === 'no_aplica').map(c => c.tipo_documento_id));
+  const ents = entregablesActivos().filter(e => !(skuConAvance(cache.skus.get(m.sku.id), entregablesActivos()).casillas.find(c => c.entregable_id === e.id) || {}).no_aplica);
+  const tipos = DataService.catalogosCorte().tipos.filter(t => t.activo && !noAplican.has(t.id));
   const [tipo, id] = m.apartado.split(':');
   const piezas = tipo === 'corte' ? (estado.detalle.documentos || []).filter(d => d.activo && d.tipo_documento_id === Number(id)) : [];
   return h('form', { novalidate: true, onSubmit: ev => { ev.preventDefault(); guardarObservacion(); } },
@@ -3500,8 +3691,8 @@ function ModalAtenderObs() {
 
 /* COMPONENTE: ModalRenombrarPieza — pasar una pieza al formato estándar */
 function ModalRenombrarPieza() {
-  const m = estado.modal, { atributo, codigo } = nomenDeTipo(m.tipoDoc), e = datosNomenValidos(m.datos, atributo);
-  const nuevo = Object.keys(e).length ? '—' : nombreEstandar(m.sku.clave, m.tipoDoc, m.datos);
+  const m = estado.modal, { atributo, codigo } = nomenDeTipo(m.tipoDoc), e = datosNomenValidos(m.datos, atributo), fl = fueraDeLista(m.datos, atributo);
+  const nuevo = Object.keys(e).length || Object.keys(fl).length ? '—' : nombreEstandar(m.sku.clave, m.tipoDoc, m.datos);
   const campo = (k, et, ancho, extra) => h('div', { class: ancho },
     h('label', { for: `rn-${k}`, class: CLS.etiqueta }, et),
     h('input', { id: `rn-${k}`, class: e[k] ? CLS.inputError : CLS.input, value: m.datos[k] || '', disabled: m.enviando, ...extra, onInput: ev => { estado.modal.datos = { ...estado.modal.datos, [k]: ev.target.value }; conRetraso('pieza', render, 200); } }),
@@ -3513,9 +3704,12 @@ function ModalRenombrarPieza() {
     h('div', { class: 'mt-4 flex flex-wrap items-start gap-3' },
       campo('cantidad', 'Piezas', 'w-20', { type: 'number', min: '1', max: '999' }),
       h('div', { class: 'pt-8 text-sm font-semibold' }, codigo),
-      atributo === 'espesor' ? campo('espesor', 'Espesor (mm)', 'w-28', { list: 'sug-espesor', inputmode: 'decimal' }) : null,
-      atributo === 'tubular' ? campo('medida', 'Tubular', 'w-32', { list: 'sug-medida', placeholder: '2X1' }) : null,
-      atributo === 'calibre' || atributo === 'tubular' ? campo('calibre', 'Calibre', 'w-24', { list: 'sug-calibre', inputmode: 'numeric' }) : null,
+      ...[['espesor', 'Espesor', atributo === 'espesor'], ['medida', 'Tubular', atributo === 'tubular'], ['calibre', 'Calibre', atributo === 'calibre' || atributo === 'tubular']]
+        .filter(([, , ok]) => ok).map(([k, et]) => h('div', { class: 'w-32' }, h('label', { for: `rn-${k}`, class: CLS.etiqueta }, et),
+          SelectorMedida({ id: `rn-${k}`, k, atributo, valor: m.datos[k], clase: (e[k] || fl[k]) ? CLS.inputError : CLS.input,
+            onElegir: v => { estado.modal.datos = { ...estado.modal.datos, [k]: v }; render(); },
+            alAgregar: () => { const volver = estado.modal; abrirModalMedidas({ lista: listaDeCampo(k, atributo), volver, alVolver: v => { volver.datos = { ...volver.datos, [k]: v }; } }); } }),
+          (e[k] || fl[k]) ? h('p', { class: 'mt-1 text-xs text-[#B42318] dark:text-[#F28B82]' }, e[k] || fl[k]) : null)),
       campo('nombre', 'Nombre de la pieza', 'min-w-[12rem] flex-1', { maxlength: '80' })),
     h('p', { class: 'mt-4 text-sm' }, 'Nuevo nombre: ', h('code', { class: 'break-all font-semibold' }, nuevo)),
     h('p', { class: 'mt-1 text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, 'Solo cambia el nombre: el archivo, sus versiones y su historial se conservan.'),

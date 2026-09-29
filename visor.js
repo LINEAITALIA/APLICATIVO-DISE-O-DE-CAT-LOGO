@@ -44,6 +44,68 @@
     const b = el('button', 'rounded-md border border-[#C3CBD4] bg-white px-3 py-1.5 text-sm font-medium text-[#1B2430] hover:bg-[#F4F6F8] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1E4E79] dark:border-[#3A4756] dark:bg-[#1B232D] dark:text-[#E6EAEF] dark:hover:bg-[#243040]', texto);
     b.type = 'button'; if (etiqueta) { b.title = etiqueta; b.setAttribute('aria-label', etiqueta); } b.onclick = fn; return b;
   }
+  function menuDesplegable(v, etiqueta, opciones) { // botón con menú; opciones: [{ texto, accion }] o '-' para separador
+    const cont = el('div', 'relative');
+    const b = boton(`${etiqueta} ▾`, () => panel.classList.toggle('hidden'));
+    b.textContent = `${etiqueta} ▾`; b.setAttribute('aria-haspopup', 'true');
+    const panel = el('div', 'absolute right-0 top-full z-20 mt-1 hidden min-w-[15rem] overflow-hidden rounded-md border border-[#D5DBE2] bg-white py-1 text-[#1B2430] shadow-lg dark:border-[#2E3A48] dark:bg-[#1B232D] dark:text-[#E6EAEF]');
+    panel.setAttribute('role', 'menu');
+    for (const o of opciones) {
+      if (o === '-') { panel.append(el('div', 'my-1 border-t border-[#E3E7EC] dark:border-[#2E3A48]')); continue; }
+      const it = el('button', 'block w-full px-3 py-2 text-left text-sm hover:bg-[#F4F6F8] focus:bg-[#F4F6F8] focus:outline-none dark:hover:bg-[#243040] dark:focus:bg-[#243040]', o.texto);
+      it.type = 'button'; it.setAttribute('role', 'menuitem'); it.onclick = () => { panel.classList.add('hidden'); o.accion(); }; panel.append(it);
+    }
+    v.raiz.addEventListener('pointerdown', ev => { if (!cont.contains(ev.target)) panel.classList.add('hidden'); }, true);
+    cont.append(b, panel);
+    return { nodo: cont, boton: b, etiqueta: t => { b.textContent = `${t} ▾`; } };
+  }
+// Ajuste de cilindro a una cara curva: eje por las normales, círculo por mínimos cuadrados
+function jacobi3(A) { // valores y vectores propios de una matriz simétrica 3x3
+  const a = A.map(r => r.slice()), V = [[1,0,0],[0,1,0],[0,0,1]];
+  for (let it = 0; it < 50; it++) {
+    let p = 0, q = 1; for (const [i, j] of [[0,1],[0,2],[1,2]]) if (Math.abs(a[i][j]) > Math.abs(a[p][q])) { p = i; q = j; }
+    if (Math.abs(a[p][q]) < 1e-12) break;
+    const th = (a[q][q] - a[p][p]) / (2 * a[p][q]), t = Math.sign(th || 1) / (Math.abs(th) + Math.sqrt(th * th + 1)), c = 1 / Math.sqrt(t * t + 1), s = t * c;
+    for (let k = 0; k < 3; k++) { const akp = a[k][p], akq = a[k][q]; a[k][p] = c * akp - s * akq; a[k][q] = s * akp + c * akq; }
+    for (let k = 0; k < 3; k++) { const apk = a[p][k], aqk = a[q][k]; a[p][k] = c * apk - s * aqk; a[q][k] = s * apk + c * aqk; }
+    for (let k = 0; k < 3; k++) { const vkp = V[k][p], vkq = V[k][q]; V[k][p] = c * vkp - s * vkq; V[k][q] = s * vkp + c * vkq; }
+  }
+  return { valores: [a[0][0], a[1][1], a[2][2]], vectores: [0,1,2].map(j => [V[0][j], V[1][j], V[2][j]]) };
+}
+function ajustarCilindro(pos, nor) { // pos, nor: arreglos planos [x,y,z,...]
+  const n = pos.length / 3; if (n < 6) return { error: 'La cara es muy pequeña para medir.' };
+  let minDot = 1; const n0 = [nor[0], nor[1], nor[2]];
+  const M = [[0,0,0],[0,0,0],[0,0,0]];
+  for (let i = 0; i < n; i++) { const v = [nor[3*i], nor[3*i+1], nor[3*i+2]]; minDot = Math.min(minDot, v[0]*n0[0] + v[1]*n0[1] + v[2]*n0[2]);
+    for (let a = 0; a < 3; a++) for (let b = 0; b < 3; b++) M[a][b] += v[a] * v[b]; }
+  if (minDot > 0.996) return { error: 'Esa cara es plana. Da clic en una superficie curva: la pared de un barreno o una esquina redondeada.' };
+  const { valores, vectores } = jacobi3(M);
+  const eje = vectores[valores.indexOf(Math.min(...valores))];
+  const aux = Math.abs(eje[0]) < 0.9 ? [1,0,0] : [0,1,0];
+  const cruz = (a, b) => [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]], unit = a => { const l = Math.hypot(...a); return a.map(x => x / l); };
+  const u = unit(cruz(eje, aux)), w = cruz(eje, u);
+  // círculo por mínimos cuadrados (Kasa) en el plano perpendicular al eje
+  let Sxx=0,Sxy=0,Syy=0,Sx=0,Sy=0,Sz=0,Sxz=0,Syz=0; const P = [];
+  for (let i = 0; i < n; i++) { const p = [pos[3*i], pos[3*i+1], pos[3*i+2]], x = p[0]*u[0]+p[1]*u[1]+p[2]*u[2], y = p[0]*w[0]+p[1]*w[1]+p[2]*w[2], z = x*x + y*y;
+    P.push([x, y]); Sxx+=x*x; Sxy+=x*y; Syy+=y*y; Sx+=x; Sy+=y; Sz+=z; Sxz+=x*z; Syz+=y*z; }
+  const A = [[Sxx,Sxy,Sx],[Sxy,Syy,Sy],[Sx,Sy,n]], B = [-Sxz,-Syz,-Sz];
+  const det = m => m[0][0]*(m[1][1]*m[2][2]-m[1][2]*m[2][1]) - m[0][1]*(m[1][0]*m[2][2]-m[1][2]*m[2][0]) + m[0][2]*(m[1][0]*m[2][1]-m[1][1]*m[2][0]);
+  const D = det(A); if (Math.abs(D) < 1e-12) return { error: 'No se pudo calcular el radio de esa cara.' };
+  const sol = [0,1,2].map(k => det(A.map((r, i) => r.map((v, j) => j === k ? B[i] : v))) / D);
+  const cx = -sol[0] / 2, cy = -sol[1] / 2, r = Math.sqrt(Math.max(cx*cx + cy*cy - sol[2], 0));
+  let err = 0; const angs = [];
+  for (const [x, y] of P) { err += (Math.hypot(x - cx, y - cy) - r) ** 2; angs.push(Math.atan2(y - cy, x - cx)); }
+  err = Math.sqrt(err / n);
+  if (!(r > 0) || err > Math.max(0.02 * r, 0.02)) return { error: 'Esa superficie no es circular; no tiene un radio que medir.' };
+  angs.sort((a, b) => a - b); let hueco = angs[0] + 2 * Math.PI - angs[angs.length - 1]; for (let i = 1; i < angs.length; i++) hueco = Math.max(hueco, angs[i] - angs[i-1]);
+  const cobertura = 360 - hueco * 180 / Math.PI;
+  // centro en 3D (a la altura media de la cara) y si la superficie mira hacia el eje (barreno) o hacia afuera
+  let h = 0; for (let i = 0; i < n; i++) h += pos[3*i]*eje[0] + pos[3*i+1]*eje[1] + pos[3*i+2]*eje[2]; h /= n;
+  const c3 = [0,1,2].map(k => cx*u[k] + cy*w[k] + h*eje[k]);
+  let haciaEje = 0; for (let i = 0; i < n; i++) { const d = [c3[0]-pos[3*i], c3[1]-pos[3*i+1], c3[2]-pos[3*i+2]]; haciaEje += d[0]*nor[3*i] + d[1]*nor[3*i+1] + d[2]*nor[3*i+2]; }
+  return { r, centro: c3, eje, u, w, cobertura, completo: cobertura > 300, interior: haciaEje > 0, error: null };
+}
+
   function cerrar() {
     if (!actual) return;
     try { actual.limpiar && actual.limpiar(); } catch (e) { /* nada */ }
@@ -118,18 +180,18 @@
     return pts;
   }
   function geometriaDxf(dxf) {
-    const trazos = [], textos = [], puntos = [], curvas = [], bloques = dxf.blocks || {};
+    const trazos = [], textos = [], puntos = [], curvas = [], segmentos = [], bloques = dxf.blocks || {};
     const mat = (m, x, y) => [m[0] * x + m[1] * y + m[4], m[2] * x + m[3] * y + m[5]];
     function recorrer(entidades, m, nivel) {
       for (const e of entidades || []) {
         try {
           const P = (x, y) => mat(m, x, y);
           switch (e.type) {
-            case 'LINE': { const a = P(e.vertices[0].x, e.vertices[0].y), b = P(e.vertices[1].x, e.vertices[1].y); trazos.push([a, b]); puntos.push(a, b); break; }
+            case 'LINE': { const a = P(e.vertices[0].x, e.vertices[0].y), b = P(e.vertices[1].x, e.vertices[1].y); trazos.push([a, b]); puntos.push(a, b); segmentos.push([a, b]); break; }
             case 'LWPOLYLINE': case 'POLYLINE': {
               const v = (e.vertices || []).filter(p => p && isFinite(p.x)); if (v.length < 2) break;
               const pts = [P(v[0].x, v[0].y)], n = (e.shape || e.closed) ? v.length : v.length - 1;
-              for (let i = 0; i < n; i++) { const a = v[i], b = v[(i + 1) % v.length]; bulgePuntos([a.x, a.y], [b.x, b.y], a.bulge || 0).forEach(p => pts.push(P(p[0], p[1]))); }
+              for (let i = 0; i < n; i++) { const a = v[i], b = v[(i + 1) % v.length]; bulgePuntos([a.x, a.y], [b.x, b.y], a.bulge || 0).forEach(p => pts.push(P(p[0], p[1]))); if (!a.bulge) segmentos.push([P(a.x, a.y), P(b.x, b.y)]); }
               trazos.push(pts); v.forEach(q => puntos.push(P(q.x, q.y))); break;
             }
             case 'CIRCLE': {
@@ -175,7 +237,7 @@
     recorrer(dxf.entities, [1, 0, 0, 1, 0, 0], 0);
     let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
     for (const t of trazos) for (const [x, y] of t) { if (x < x0) x0 = x; if (y < y0) y0 = y; if (x > x1) x1 = x; if (y > y1) y1 = y; }
-    return { trazos, textos, puntos, curvas, caja: isFinite(x0) ? { x0, y0, x1, y1 } : null, entidades: (dxf.entities || []).length };
+    return { trazos, textos, puntos, curvas, segmentos, caja: isFinite(x0) ? { x0, y0, x1, y1 } : null, entidades: (dxf.entities || []).length };
   }
   const UNIDADES = { 1: 'in', 2: 'ft', 4: 'mm', 5: 'cm', 6: 'm' };
   async function verDxf(v, bytes) {
@@ -216,6 +278,22 @@
       for (const p of g.puntos) { const [x, y] = aPantalla(p), d = Math.hypot(x - mx, y - my); if (d < dmin) { dmin = d; mejor = p; } }
       return mejor;
     }
+    function segmentoCercano(mx, my) { // arista recta más cercana a menos de 8 px
+      let mejor = null, dmin = 8;
+      for (const sg of g.segmentos) {
+        const [ax, ay] = aPantalla(sg[0]), [bx, by] = aPantalla(sg[1]), dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy;
+        const t = l2 ? Math.max(0, Math.min(1, ((mx - ax) * dx + (my - ay) * dy) / l2)) : 0, d = Math.hypot(mx - (ax + t * dx), my - (ay + t * dy));
+        if (d < dmin) { dmin = d; mejor = sg; }
+      }
+      return mejor;
+    }
+    function pieDePerpendicular(sg, p) { // punto de la recta de la arista más cercano a p
+      const [a, b] = sg, dx = b[0] - a[0], dy = b[1] - a[1], l2 = dx * dx + dy * dy || 1, t = ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / l2;
+      return [a[0] + t * dx, a[1] + t * dy];
+    }
+    function puntoOrto(a, p) { // horizontal o vertical, según el eje con más recorrido
+      return Math.abs(p[0] - a[0]) >= Math.abs(p[1] - a[1]) ? [p[0], a[1]] : [a[0], p[1]];
+    }
     function curvaCercana(mx, my) {
       const w = aMundo(mx, my); let mejor = null, dmin = 10 / vista.s;
       for (const cv of g.curvas) { const d = Math.abs(Math.hypot(w[0] - cv.c[0], w[1] - cv.c[1]) - cv.r); if (d < dmin) { dmin = d; mejor = cv; } }
@@ -233,10 +311,15 @@
       ctx.save();
       for (const m of med.lista) {
         ctx.strokeStyle = acento(); ctx.lineWidth = 1.8; ctx.setLineDash([]);
-        if (m.tipo === 'dist') {
+        if (m.tipo === 'arista') { // arista resaltada y perpendicular punteada hasta el punto
+          const [sx, sy] = aPantalla(m.sg[0]), [ex, ey] = aPantalla(m.sg[1]);
+          ctx.lineWidth = 3; ctx.globalAlpha = 0.45; ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); ctx.stroke(); ctx.globalAlpha = 1; ctx.lineWidth = 1.8;
+        }
+        if (m.tipo === 'dist' || m.tipo === 'orto' || m.tipo === 'arista') {
           const [ax, ay] = aPantalla(m.a), [bx, by] = aPantalla(m.b);
-          ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.stroke(); marca(m.a); marca(m.b);
-          etiqueta(`${fmt(m.d)} ${uni}`, (ax + bx) / 2, (ay + by) / 2 - 4, col);
+          if (m.tipo === 'arista') ctx.setLineDash([5, 3]);
+          ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.stroke(); ctx.setLineDash([]); marca(m.a); marca(m.b);
+          etiqueta(`${fmt(m.d)} ${uni}${m.tipo === 'orto' ? (m.eje === 'X' ? ' ↔' : ' ↕') : m.tipo === 'arista' ? ' ⟂' : ''}`, (ax + bx) / 2, (ay + by) / 2 - 4, col);
         } else {
           const [cx, cy] = aPantalla(m.c.c);
           ctx.beginPath(); ctx.arc(cx, cy, m.c.r * vista.s, 0, Math.PI * 2); ctx.stroke();
@@ -244,7 +327,15 @@
           etiqueta(`R ${fmt(m.c.r)} · Ø ${fmt(m.c.r * 2)} ${uni}`, cx + m.c.r * vista.s * 0.7071, cy - m.c.r * vista.s * 0.7071 - 4, col);
         }
       }
-      if (med.herramienta === 'dist' && med.pendiente && med.cursor) { // línea elástica mientras se elige el segundo punto
+      if (med.herramienta === 'arista' && !med.arista && med.cursorSeg) { const [sx, sy] = aPantalla(med.cursorSeg[0]), [ex, ey] = aPantalla(med.cursorSeg[1]); ctx.strokeStyle = acento(); ctx.lineWidth = 3; ctx.globalAlpha = 0.5; ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); ctx.stroke(); ctx.globalAlpha = 1; }
+      if (med.herramienta === 'arista' && med.arista && med.cursor) {
+        const pie = pieDePerpendicular(med.arista, med.cursor), [sx, sy] = aPantalla(med.arista[0]), [ex, ey] = aPantalla(med.arista[1]), [ax, ay] = aPantalla(med.cursor), [bx, by] = aPantalla(pie);
+        ctx.strokeStyle = acento(); ctx.lineWidth = 3; ctx.globalAlpha = 0.45; ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); ctx.stroke(); ctx.globalAlpha = 1;
+        ctx.lineWidth = 1.2; ctx.setLineDash([5, 4]); ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.stroke(); ctx.setLineDash([]);
+        etiqueta(`${fmt(Math.hypot(med.cursor[0] - pie[0], med.cursor[1] - pie[1]))} ${uni} ⟂`, (ax + bx) / 2, (ay + by) / 2 - 4, col);
+      }
+      if ((med.herramienta === 'dist' || med.herramienta === 'orto') && med.pendiente && med.cursor) { // línea elástica mientras se elige el segundo punto
+        if (med.herramienta === 'orto') med.cursor = puntoOrto(med.pendiente, med.cursor);
         const [ax, ay] = aPantalla(med.pendiente), [bx, by] = aPantalla(med.cursor);
         ctx.strokeStyle = acento(); ctx.lineWidth = 1.2; ctx.setLineDash([5, 4]); ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.stroke(); ctx.setLineDash([]);
         marca(med.pendiente); etiqueta(`${fmt(Math.hypot(med.cursor[0] - med.pendiente[0], med.cursor[1] - med.pendiente[1]))} ${uni}`, (ax + bx) / 2, (ay + by) / 2 - 4, col);
@@ -266,12 +357,24 @@
       const fueClic = arrastre && !arrastre.movio; arrastre = null; canvas.style.cursor = med.herramienta ? 'crosshair' : '';
       if (!fueClic || !med.herramienta) return;
       const r = canvas.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top;
-      if (med.herramienta === 'dist') {
-        const p = iman(mx, my) || aMundo(mx, my);
-        if (!med.pendiente) med.pendiente = p;
-        else { const d = Math.hypot(p[0] - med.pendiente[0], p[1] - med.pendiente[1]);
-          med.lista.push({ tipo: 'dist', a: med.pendiente, b: p, d }); med.pendiente = null;
-          resultado.textContent = `${fmt(d)} ${uni}  (ΔX ${fmt(Math.abs(p[0] - med.lista[med.lista.length - 1].a[0]))}, ΔY ${fmt(Math.abs(p[1] - med.lista[med.lista.length - 1].a[1]))})`; }
+      if (med.herramienta === 'dist' || med.herramienta === 'orto') {
+        let p = iman(mx, my) || aMundo(mx, my);
+        if (!med.pendiente) { med.pendiente = p; resultado.textContent = 'Ahora el segundo punto…'; }
+        else {
+          const a = med.pendiente;
+          if (med.herramienta === 'orto') {
+            p = puntoOrto(a, p); const eje = p[1] === a[1] ? 'X' : 'Y', d = Math.abs(eje === 'X' ? p[0] - a[0] : p[1] - a[1]);
+            med.lista.push({ tipo: 'orto', a, b: p, d, eje }); resultado.textContent = `${fmt(d)} ${uni} en línea recta ${eje === 'X' ? 'horizontal' : 'vertical'}`;
+          } else {
+            const d = Math.hypot(p[0] - a[0], p[1] - a[1]);
+            med.lista.push({ tipo: 'dist', a, b: p, d }); resultado.textContent = `${fmt(d)} ${uni}  (ΔX ${fmt(Math.abs(p[0] - a[0]))}, ΔY ${fmt(Math.abs(p[1] - a[1]))})`;
+          }
+          med.pendiente = null;
+        }
+      } else if (med.herramienta === 'arista') {
+        if (!med.arista) { const sg = segmentoCercano(mx, my); if (sg) { med.arista = sg; resultado.textContent = 'Arista elegida. Ahora da clic en el punto a medir (se pega a centros de barrenos).'; } else resultado.textContent = 'Da clic justo sobre una línea recta del dibujo.'; }
+        else { const p = iman(mx, my) || aMundo(mx, my), pie = pieDePerpendicular(med.arista, p), d = Math.hypot(p[0] - pie[0], p[1] - pie[1]);
+          med.lista.push({ tipo: 'arista', sg: med.arista, a: p, b: pie, d }); med.arista = null; resultado.textContent = `${fmt(d)} ${uni} perpendicular a la arista`; }
       } else {
         const cv = curvaCercana(mx, my);
         if (cv) { med.lista.push({ tipo: 'radio', c: cv }); resultado.textContent = `R ${fmt(cv.r)} · Ø ${fmt(cv.r * 2)} ${uni}${cv.completo ? ' (barreno)' : ' (arco)'}`; }
@@ -285,29 +388,35 @@
       if (arrastre && Math.hypot(e.clientX - arrastre.x, e.clientY - arrastre.y) > 4) { arrastre.movio = true; canvas.style.cursor = 'grabbing'; }
       if (arrastre && arrastre.movio) { tocado = true; vista.ox = arrastre.ox + e.clientX - arrastre.x; vista.oy = arrastre.oy + e.clientY - arrastre.y; dibujar(); return; }
       if (med.herramienta) {
-        med.iman = med.herramienta === 'dist' ? iman(mx, my) : null;
+        med.iman = med.herramienta === 'dist' || med.herramienta === 'orto' || (med.herramienta === 'arista' && med.arista) ? iman(mx, my) : null;
         med.cursor = med.iman || aMundo(mx, my);
+        med.cursorSeg = med.herramienta === 'arista' && !med.arista ? segmentoCercano(mx, my) : null;
         med.cursorCurva = med.herramienta === 'radio' ? curvaCercana(mx, my) : null;
         dibujar();
       }
     });
     // Botones de medición
-    const btnDist = boton('Medir distancia', () => elegir('dist'), 'Medir la distancia entre dos puntos');
-    const btnRadio = boton('Medir radio', () => elegir('radio'), 'Medir el radio o diámetro de un barreno o arco');
-    const btnBorrar = boton('Borrar medidas', () => { med.lista = []; med.pendiente = null; resultado.textContent = '—'; dibujar(); }, 'Borrar todas las medidas');
-    const activo = 'ring-2 ring-[#D9480F] dark:ring-[#FFB347]';
+    const NOMBRES_2D = { dist: 'Distancia libre', orto: 'Horizontal o vertical', arista: 'Perpendicular a una arista', radio: 'Radio o diámetro' };
+    const AYUDA_2D = { dist: 'Clic en el primer punto y luego en el segundo. Se pega a esquinas y centros de barrenos.',
+      orto: 'Clic en dos puntos: la medida sale en línea recta, sin ángulo (horizontal o vertical, la que tenga más recorrido).',
+      arista: 'Clic sobre una arista recta y luego en el punto a medir: da la distancia perpendicular a esa arista.',
+      radio: 'Clic sobre la línea de un círculo o arco.' };
+    const activo = ['ring-2', 'ring-[#D9480F]', 'dark:ring-[#FFB347]'];
     function elegir(h) {
-      med.herramienta = med.herramienta === h ? null : h; med.pendiente = null; med.iman = null; med.cursorCurva = null;
-      btnDist.classList.remove(...activo.split(' ')); btnRadio.classList.remove(...activo.split(' '));
-      if (med.herramienta === 'dist') btnDist.classList.add(...activo.split(' '));
-      if (med.herramienta === 'radio') btnRadio.classList.add(...activo.split(' '));
-      canvas.style.cursor = med.herramienta ? 'crosshair' : '';
-      ayuda.textContent = med.herramienta === 'dist' ? 'Clic en el primer punto y luego en el segundo. Se pega a esquinas y centros de barrenos.'
-        : med.herramienta === 'radio' ? 'Clic sobre la línea de un círculo o arco.' : 'Arrastra para mover · rueda del mouse para acercar';
+      med.herramienta = h; med.pendiente = null; med.arista = null; med.iman = null; med.cursorCurva = null; med.cursorSeg = null;
+      menuMedir.etiqueta(h ? `Medir: ${NOMBRES_2D[h]}` : 'Medir');
+      menuMedir.boton.classList[h ? 'add' : 'remove'](...activo);
+      canvas.style.cursor = h ? 'crosshair' : '';
+      ayuda.textContent = h ? AYUDA_2D[h] : 'Arrastra para mover · rueda del mouse para acercar';
       dibujar();
     }
+    const menuMedir = menuDesplegable(v, 'Medir', [
+      ...Object.keys(NOMBRES_2D).map(k => ({ texto: NOMBRES_2D[k], accion: () => elegir(k) })), '-',
+      { texto: 'Borrar medidas', accion: () => { med.lista = []; med.pendiente = null; med.arista = null; resultado.textContent = '—'; dibujar(); } },
+      { texto: 'Salir de medición', accion: () => elegir(null) }]);
     canvas.addEventListener('wheel', e => { e.preventDefault(); const r = canvas.getBoundingClientRect(); zoom(e.deltaY < 0 ? 1.2 : 1 / 1.2, e.clientX - r.left, e.clientY - r.top); }, { passive: false });
-    v.herramientas.append(btnDist, btnRadio, btnBorrar, boton('−', () => zoom(1 / 1.3), 'Alejar'), boton('+', () => zoom(1.3), 'Acercar'), boton('Ajustar', ajustar, 'Ver la pieza completa'));
+    const btnCompleta = boton('Ver completa', () => { tocado = false; ajustar(); }, 'Centrar y ver la pieza completa'); btnCompleta.textContent = 'Ver completa';
+    v.herramientas.append(menuMedir.nodo, boton('−', () => zoom(1 / 1.3), 'Alejar'), boton('+', () => zoom(1.3), 'Acercar'), btnCompleta);
     datoPie(v, 'Medidas:', `${fmt(c.x1 - c.x0)} × ${fmt(c.y1 - c.y0)} ${uni}`);
     datoPie(v, 'Elementos:', String(g.entidades));
     const resultado = datoPie(v, 'Medida:', '—');
@@ -355,7 +464,7 @@
     renderer.domElement.setAttribute('aria-label', `Pieza 3D de ${fmt(tam.x)} por ${fmt(tam.y)} por ${fmt(tam.z)} milímetros`);
     const radio = Math.max(tam.length() / 2, 1e-3);
     const camara = new THREE.PerspectiveCamera(35, 1, radio / 100, radio * 100);
-    const control = new THREE.OrbitControls(camara, renderer.domElement); control.enableDamping = true;
+    const control = new THREE.OrbitControls(camara, renderer.domElement); control.enableDamping = true; control.screenSpacePanning = true;
     function vista(dir) {
       const d = new THREE.Vector3(dir[0], dir[1], dir[2]).normalize(), dist = radio / Math.sin(THREE.MathUtils.degToRad(camara.fov / 2)) * 1.05;
       camara.position.copy(d.multiplyScalar(dist));
@@ -363,14 +472,33 @@
       control.target.set(0, 0, 0); control.update();
     }
     const ISO = [1, 0.8, 1.2];
-    v.herramientas.append(boton('Isométrica', () => vista(ISO)), boton('Frente', () => vista([0, 0, 1])), boton('Lado', () => vista([1, 0, 0])),
-      boton('Arriba', () => vista([0, 1, 0])), boton('Aristas', () => { aristas.visible = !aristas.visible; }, 'Mostrar u ocultar las aristas'));
+    function verCompleta() { // centra la pieza y la ajusta a la pantalla sin cambiar el ángulo
+      const dir = camara.position.clone().sub(control.target); if (dir.lengthSq() < 1e-9) dir.set(...ISO);
+      const dist = radio / Math.sin(THREE.MathUtils.degToRad(camara.fov / 2)) * 1.05;
+      control.target.set(0, 0, 0); camara.position.copy(dir.normalize().multiplyScalar(dist)); control.update();
+    }
+    const VISTAS = [['Isométrica', ISO], ['Frente', [0, 0, 1]], ['Atrás', [0, 0, -1]], ['Derecha', [1, 0, 0]], ['Izquierda', [-1, 0, 0]], ['Arriba', [0, 1, 0]], ['Abajo', [0, -1, 0]]];
+    const menuVistas = menuDesplegable(v, 'Vista', VISTAS.map(([t, d]) => ({ texto: t, accion: () => { vista(d); menuVistas.etiqueta(`Vista: ${t}`); } })));
+    let modoMover = false;
+    const btnMover = boton('Mover', () => {
+      modoMover = !modoMover;
+      control.mouseButtons = modoMover ? { LEFT: THREE.MOUSE.PAN, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.ROTATE } : { LEFT: THREE.MOUSE.ROTATE, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.PAN };
+      control.touches = modoMover ? { ONE: THREE.TOUCH.PAN, TWO: THREE.TOUCH.DOLLY_ROTATE } : { ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_PAN };
+      btnMover.textContent = modoMover ? 'Modo: mover' : 'Modo: girar';
+      btnMover.classList[modoMover ? 'add' : 'remove']('ring-2', 'ring-[#1E4E79]', 'dark:ring-[#7FB2E5]');
+      if (!med.herramienta) ayuda.textContent = modoMover ? 'Arrastra para recorrer la pieza · clic derecho para girar · rueda para acercar' : 'Arrastra para girar · clic derecho para recorrer · rueda para acercar';
+    }, 'Cambiar entre girar y recorrer la pieza con el mouse');
+    btnMover.textContent = 'Modo: girar';
+    const btnCompleta = boton('Ver completa', verCompleta, 'Centrar y ver la pieza completa'); btnCompleta.textContent = 'Ver completa';
+    v.raiz.__vista3d = { grupo, camara, control }; // solo para pruebas automáticas
+    const btnAristas = boton('Aristas', () => { aristas.visible = !aristas.visible; }, 'Mostrar u ocultar las aristas'); btnAristas.textContent = 'Aristas';
+    v.herramientas.append(menuVistas.nodo, btnMover, btnCompleta, btnAristas);
     datoPie(v, 'Medidas:', `${fmt(tam.x)} × ${fmt(tam.y)} × ${fmt(tam.z)} mm`);
     datoPie(v, 'Superficies:', String(res.meshes.length));
     datoPie(v, 'Triángulos:', triangulos.toLocaleString('es-MX'));
     /* ----- Medición 3D: distancia (2 clics) y radio (3 clics sobre un borde curvo). Se pega a los vértices. ----- */
     const resultado = datoPie(v, 'Medida:', '—');
-    const ayuda = el('span', 'ml-auto', 'Arrastra para girar · clic derecho para mover · rueda para acercar'); v.pie.append(ayuda);
+    const ayuda = el('span', 'ml-auto', 'Arrastra para girar · clic derecho para recorrer · rueda para acercar'); v.pie.append(ayuda);
     const capa = el('div', 'pointer-events-none absolute inset-0 overflow-hidden'); v.lienzo.append(capa);
     const med = { herramienta: null, puntos: [], objetos: [], etiquetas: [] };
     const colMed = esOscuro() ? 0xffb347 : 0xd9480f;
@@ -406,10 +534,37 @@
       const centro = a.clone().add(cruz.clone().cross(ab).multiplyScalar(ac.lengthSq()).add(ac.clone().cross(cruz).multiplyScalar(ab.lengthSq())).multiplyScalar(1 / (2 * area2 * area2)));
       return { r: ab.length() * ac.length() * b.distanceTo(c) / (2 * area2), centro };
     }
+    function ponerAnillo(c, eje, r) { // círculo del barreno o radio medido
+      const e = new THREE.Vector3(...eje).normalize(), a = Math.abs(e.x) < 0.9 ? new THREE.Vector3(1, 0, 0) : new THREE.Vector3(0, 1, 0);
+      const u = e.clone().cross(a).normalize(), w = e.clone().cross(u), pts = [];
+      for (let i = 0; i <= 64; i++) { const t = i / 64 * Math.PI * 2; pts.push(c.clone().add(u.clone().multiplyScalar(r * Math.cos(t))).add(w.clone().multiplyScalar(r * Math.sin(t)))); }
+      ponerLinea(pts);
+    }
+    function medirCara(ev) {
+      const r = renderer.domElement.getBoundingClientRect();
+      raton.set(((ev.clientX - r.left) / r.width) * 2 - 1, -((ev.clientY - r.top) / r.height) * 2 + 1);
+      rayo.setFromCamera(raton, camara);
+      const hit = rayo.intersectObjects(grupo.children, false)[0];
+      if (!hit) { resultado.textContent = 'Da clic sobre la pieza.'; return; }
+      const geo = hit.object.geometry, mw = hit.object.matrixWorld, nm = new THREE.Matrix3().getNormalMatrix(mw);
+      const P = geo.attributes.position, N = geo.attributes.normal, pos = [], nor = [];
+      for (let i = 0; i < P.count; i++) {
+        const p = new THREE.Vector3().fromBufferAttribute(P, i).applyMatrix4(mw), n = new THREE.Vector3().fromBufferAttribute(N, i).applyMatrix3(nm).normalize();
+        pos.push(p.x, p.y, p.z); nor.push(n.x, n.y, n.z);
+      }
+      const a = ajustarCilindro(pos, nor);
+      if (a.error) { resultado.textContent = a.error; return; }
+      const c = new THREE.Vector3(...a.centro);
+      ponerAnillo(c, a.eje, a.r); ponerPunto(c);
+      const tipo = a.completo ? 'Barreno (círculo completo)' : `Radio (arco de ${Math.round(a.cobertura)}°)`;
+      ponerEtiqueta(c, a.completo ? `Ø ${fmt(a.r * 2)} · R ${fmt(a.r)} mm` : `R ${fmt(a.r)} mm`);
+      resultado.textContent = `${tipo}: R ${fmt(a.r)} · Ø ${fmt(a.r * 2)} mm`;
+    }
     let presion = null;
     renderer.domElement.addEventListener('pointerdown', ev => { presion = { x: ev.clientX, y: ev.clientY }; });
     renderer.domElement.addEventListener('pointerup', ev => {
       if (!med.herramienta || !presion || Math.hypot(ev.clientX - presion.x, ev.clientY - presion.y) > 5 || ev.button !== 0) return;
+      if (med.herramienta === 'cara') { medirCara(ev); return; }
       const p = puntoEn(ev); if (!p) { resultado.textContent = 'Da clic sobre la pieza.'; return; }
       med.puntos.push(p); ponerPunto(p);
       if (med.herramienta === 'dist' && med.puntos.length === 2) {
@@ -427,19 +582,21 @@
       med.objetos.forEach(o => { escena.remove(o); if (o.geometry && o.geometry !== geoPunto) o.geometry.dispose(); });
       med.etiquetas.forEach(e => e.d.remove()); med.objetos = []; med.etiquetas = []; med.puntos = []; resultado.textContent = '—';
     }
-    const btnDist = boton('Medir distancia', () => elegir('dist'), 'Medir la distancia entre dos puntos');
-    const btnRadio = boton('Medir radio', () => elegir('radio'), 'Medir un radio con tres puntos sobre un borde curvo');
+    const NOMBRES_3D = { dist: 'Distancia entre dos puntos', cara: 'Barreno o radio (un clic)', radio: 'Radio por tres puntos' };
+    const AYUDA_3D = { dist: 'Clic en dos puntos de la pieza. Se pega a las esquinas.',
+      cara: 'Clic sobre la pared de un barreno o sobre una esquina redondeada: da su diámetro o radio.',
+      radio: 'Clic en tres puntos sobre un borde curvo; calcula el radio del círculo que pasa por ellos.' };
     const activo = ['ring-2', 'ring-[#D9480F]', 'dark:ring-[#FFB347]'];
     function elegir(h) {
-      med.herramienta = med.herramienta === h ? null : h; med.puntos = [];
-      btnDist.classList.remove(...activo); btnRadio.classList.remove(...activo);
-      if (med.herramienta === 'dist') btnDist.classList.add(...activo);
-      if (med.herramienta === 'radio') btnRadio.classList.add(...activo);
-      renderer.domElement.style.cursor = med.herramienta ? 'crosshair' : '';
-      ayuda.textContent = med.herramienta === 'dist' ? 'Clic en dos puntos de la pieza. Se pega a las esquinas.'
-        : med.herramienta === 'radio' ? 'Clic en tres puntos sobre un borde curvo (por ejemplo, la orilla de un barreno).' : 'Arrastra para girar · clic derecho para mover · rueda para acercar';
+      med.herramienta = h; med.puntos = [];
+      menuMedir.etiqueta(h ? `Medir: ${NOMBRES_3D[h]}` : 'Medir');
+      menuMedir.boton.classList[h ? 'add' : 'remove'](...activo);
+      renderer.domElement.style.cursor = h ? 'crosshair' : '';
+      ayuda.textContent = h ? AYUDA_3D[h] : (modoMover ? 'Arrastra para recorrer la pieza · clic derecho para girar · rueda para acercar' : 'Arrastra para girar · clic derecho para recorrer · rueda para acercar');
     }
-    v.herramientas.prepend(btnDist, btnRadio, boton('Borrar medidas', borrarMedidas, 'Borrar todas las medidas'));
+    const menuMedir = menuDesplegable(v, 'Medir', [...Object.keys(NOMBRES_3D).map(k => ({ texto: NOMBRES_3D[k], accion: () => elegir(k) })), '-',
+      { texto: 'Borrar medidas', accion: borrarMedidas }, { texto: 'Salir de medición', accion: () => elegir(null) }]);
+    v.herramientas.prepend(menuMedir.nodo);
     function moverEtiquetas() {
       const w = v.lienzo.clientWidth, h = v.lienzo.clientHeight;
       for (const e of med.etiquetas) { const q = e.p.clone().project(camara); e.d.style.left = `${(q.x + 1) / 2 * w}px`; e.d.style.top = `${(1 - q.y) / 2 * h - 6}px`; e.d.style.display = q.z < 1 ? '' : 'none'; }
