@@ -315,11 +315,43 @@ const DataService = {
     const { data } = await ejecutar(SB.from('ing_perfiles').select('*').eq('id', userId).maybeSingle());
     return data;
   },
+  async renombrarPieza(documentoId, pieza) {
+    exigirPermiso('subir_documentos');
+    await ejecutar(SB.rpc('ing_renombrar_pieza', { p_documento: documentoId, p_pieza: pieza }));
+  },
+  async guardarNomenclatura(skuId, tipoId, pieza, d, atributo) {
+    try {
+      await ejecutar(SB.rpc('ing_nomenclatura_pieza', { p_sku: skuId, p_tipo: tipoId, p_pieza: pieza, p_cantidad: Number(d.cantidad),
+        p_espesor: atributo === 'espesor' ? Number(String(d.espesor).replace(',', '.')) : null,
+        p_calibre: atributo === 'calibre' || atributo === 'tubular' ? Number(d.calibre) : null,
+        p_medida: atributo === 'tubular' ? normalizarMedida(d.medida) : null, p_nombre: limpiarNombrePieza(d.nombre) }));
+    } catch (e) { /* la actualización de nomenclatura aún no se ejecuta: el nombre ya quedó bien */ }
+  },
+  async listarObservaciones() {
+    try { return await leerTodo(() => SB.from('ing_v_observaciones').select('*').order('created_at', { ascending: false }).order('id', { ascending: false })); }
+    catch (e) { return null; } // la actualización de calidad aún no se ejecuta en Supabase
+  },
+  async crearObservacion({ sku_id, apartado, entregable_id, tipo_documento_id, documento_id, texto }) {
+    exigirPermiso('observar');
+    if (String(texto || '').trim().length < 10) throw new ErrorApi('Describe el problema (mínimo 10 caracteres).', { tipo: 'validacion' });
+    await ejecutar(SB.rpc('ing_crear_observacion', { p_sku: sku_id, p_apartado: apartado, p_entregable: entregable_id || null, p_tipo: tipo_documento_id || null, p_documento: documento_id || null, p_texto: String(texto).trim() }));
+  },
+  async resolverObservacion(id, respuesta) {
+    exigirPermiso('resolver');
+    await ejecutar(SB.rpc('ing_resolver_observacion', { p_id: id, p_respuesta: String(respuesta || '').trim() }));
+  },
+  async reabrirObservacion(id, motivo) {
+    exigirPermiso('observar');
+    await ejecutar(SB.rpc('ing_reabrir_observacion', { p_id: id, p_motivo: String(motivo || '').trim() }));
+  },
+  async marcarCorteRevisado() {
+    try { const { data } = await ejecutar(SB.rpc('ing_marcar_corte_revisado')); return data; } catch (e) { return new Date().toISOString(); }
+  },
   async recargarCatalogosCorte() {
     try {
       const [areas, tipos, maquinas] = await Promise.all([
         leerTodo(() => SB.from('ing_areas_corte').select('id,nombre,activa').is('deleted_at', null).order('id')),
-        leerTodo(() => SB.from('ing_tipos_documento').select('id,nombre,area_id,extensiones,orden,activo').is('deleted_at', null).order('id')),
+        leerTodo(() => SB.from('ing_tipos_documento').select('*').is('deleted_at', null).order('id')),
         leerTodo(() => SB.from('ing_maquinas').select('id,nombre,area_id,activa').is('deleted_at', null).order('id'))]);
       cache.areasCorte = porId(areas); cache.tiposDocumento = porId(tipos); cache.maquinas = porId(maquinas);
     } catch (e) { cache.areasCorte = {}; cache.tiposDocumento = {}; cache.maquinas = {}; } // la actualización de documentos aún no se ejecuta
@@ -781,6 +813,7 @@ const estado = {
   pendientes: 0,
   confirmacion: null, // 'confirmada' cuando la persona llega desde el enlace del correo
   reporte: { abierto: false, cargando: false, error: null, datos: null, config: null },
+  obs: { lista: null, filtro: 'abiertas', vistas: null },
   corte: { cargando: false, error: null, datos: null, filtros: { busqueda: '', tipo_id: '' }, descargas: null, verificacion: null, descargando: null, lote: null, espacio: null },
   modal: null,
   tema: temaInicial(),
@@ -839,7 +872,9 @@ async function entrarConSesion(usuario) {
       render(); return;
     }
     const primeraVez = !estado.sesion;
-    estado.sesion = { user_id: perfil.id, nombre: perfil.nombre, email: perfil.email, rol_id: Number(perfil.rol_id), rol_nombre: NOMBRES_ROL[perfil.rol_id], maquina_id: perfil.maquina_id ? Number(perfil.maquina_id) : null };
+    estado.sesion = { user_id: perfil.id, nombre: perfil.nombre, email: perfil.email, rol_id: Number(perfil.rol_id), rol_nombre: NOMBRES_ROL[perfil.rol_id], maquina_id: perfil.maquina_id ? Number(perfil.maquina_id) : null, corte_revisado_en: perfil.corte_revisado_en || null };
+    // primera vez: se toma este momento como punto de partida para los avisos
+    if (Number(perfil.rol_id) === ROLES.OPERADOR && !perfil.corte_revisado_en && 'corte_revisado_en' in perfil) estado.sesion.corte_revisado_en = await DataService.marcarCorteRevisado();
     if (estado.sesion.rol_id === ROLES.OPERADOR) {
       await DataService.recargarCatalogosCorte();
       const maq = cache.maquinas[String(estado.sesion.maquina_id)];
@@ -848,6 +883,7 @@ async function entrarConSesion(usuario) {
     } else {
       await DataService.recargarTodo();
       await cargarCatalogos();
+      await cargarObservacionesGlobal({ primera: true });
       if (primeraVez || estado.vista === 'corte' && !puede(estado.sesion.rol_id, 'documentos')) estado.vista = estado.sesion.rol_id === ROLES.INGENIERO ? 'skus' : 'tablero';
     }
     estado.fase = 'app';
@@ -864,8 +900,10 @@ async function revisarAcceso() {
 async function cerrarSesion() {
   if (canal) { SB.removeChannel(canal); canal = null; }
   await DataService.cerrarSesion();
+  actualizarTituloPestana(0);
   Object.assign(estado, {
-    fase: 'auth', auth: { ...AUTH_INICIAL }, sesion: null, modal: null, detalle: { ...DETALLE_VACIO },
+    fase: 'auth', auth: { ...AUTH_INICIAL }, sesion: null, modal: null, detalle: { ...DETALLE_VACIO }, avisos: [],
+    obs: { lista: null, filtro: 'abiertas', vistas: null },
     skus: { cargando: false, error: null, datos: null, entregables: [], filtros: { ...FILTROS_SKUS_INICIALES }, celdaGuardando: null },
     tablero: { cargando: false, error: null, datos: null },
     historial: { cargando: false, error: null, datos: null, total: 0, usuarios: [], filtros: { ...FILTROS_HISTORIAL_INICIALES }, limite: 50, exportando: false },
@@ -918,7 +956,7 @@ async function reenviarConfirmacion() {
 function suscribirCambios() {
   if (canal) SB.removeChannel(canal);
   canal = SB.channel('ing-cambios');
-  for (const tabla of ['ing_sku_entregables', 'ing_skus', 'ing_familias', 'ing_lineas', 'ing_entregables', 'ing_perfiles', 'ing_documentos_corte', 'ing_versiones_documento', 'ing_maquinas', 'ing_tipos_documento', 'ing_areas_corte', 'ing_sku_tipo_na', 'ing_sku_tipo_piezas']) {
+  for (const tabla of ['ing_sku_entregables', 'ing_skus', 'ing_familias', 'ing_lineas', 'ing_entregables', 'ing_perfiles', 'ing_documentos_corte', 'ing_versiones_documento', 'ing_maquinas', 'ing_tipos_documento', 'ing_areas_corte', 'ing_sku_tipo_na', 'ing_sku_tipo_piezas', 'ing_observaciones']) {
     canal.on('postgres_changes', { event: '*', schema: 'public', table: tabla }, () => programarRecarga());
   }
   canal.subscribe();
@@ -928,6 +966,7 @@ async function recargarYRefrescar() {
   if (estado.fase !== 'app') return;
   if (estado.sesion.rol_id === ROLES.OPERADOR) { await DataService.recargarCatalogosCorte(); cargarCorte({ silencioso: true }); return; }
   try { await DataService.recargarTodo(); } catch (e) { return; }
+  cargarObservacionesGlobal();
   const yo = cache.perfiles[estado.sesion.user_id];
   if (!yo || !yo.activo || !yo.rol_id) { const { data } = await SB.auth.getSession(); if (data.session) entrarConSesion(data.session.user); return; }
   if (Number(yo.rol_id) !== estado.sesion.rol_id) {
@@ -962,6 +1001,7 @@ function cargarVista() {
   else if (estado.vista === 'tablero') cargarTablero();
   else if (estado.vista === 'historial') cargarHistorial();
   else if (estado.vista === 'corte') cargarCorte();
+  else if (estado.vista === 'observaciones') cargarObservacionesGlobal();
   else if (estado.vista === 'admin') { if (puede(estado.sesion.rol_id, 'administrar')) cargarAdmin(); else render(); }
 }
 async function cargarCatalogos() {
@@ -1259,6 +1299,97 @@ async function cambiarActivoLinea(l, activa) {
   catch (e) { agregarAviso('error', e.message); }
 }
 
+/* ---------- Avisos: dentro del aplicativo y, si se permite, como notificación del sistema ---------- */
+function permisoAvisos() { return 'Notification' in window ? Notification.permission : 'no_soportado'; }
+async function activarAvisosNavegador() {
+  if (!('Notification' in window)) { agregarAviso('error', 'Este navegador no permite notificaciones. Los avisos seguirán apareciendo dentro del aplicativo.'); return; }
+  const r = await Notification.requestPermission();
+  agregarAviso(r === 'granted' ? 'exito' : 'error', r === 'granted' ? 'Listo: esta computadora mostrará los avisos aunque el aplicativo esté en otra pestaña o minimizado.' : 'No se dio permiso. Puedes activarlo después desde el candado junto a la dirección del navegador.');
+  render();
+}
+function notificar(titulo, cuerpo) {
+  agregarAviso('exito', `${titulo}: ${cuerpo}`);
+  try { if (permisoAvisos() === 'granted' && document.visibilityState !== 'visible') new Notification(titulo, { body: cuerpo, tag: titulo }); } catch (e) { /* sin notificaciones */ }
+}
+function BotonActivarAvisos() {
+  if (permisoAvisos() !== 'default') return null;
+  return h('button', { type: 'button', class: CLS.btnChico, onClick: activarAvisosNavegador }, icono('campana', 'w-3.5 h-3.5'), 'Activar avisos en esta computadora');
+}
+function actualizarTituloPestana(n) { document.title = n ? `(${n}) Ingeniería de producto` : 'Ingeniería de producto'; }
+
+/* ---------- Observaciones de calidad ---------- */
+async function cargarObservacionesGlobal({ primera = false } = {}) {
+  if (!puede(estado.sesion.rol_id, 'documentos')) return;
+  const lista = await DataService.listarObservaciones();
+  if (lista === null) { estado.obs.lista = null; return; }
+  const abiertas = lista.filter(o => o.estado === 'abierta');
+  const antes = estado.obs.vistas;
+  estado.obs.vistas = new Set(abiertas.map(o => o.id));
+  if (!primera && antes && puede(estado.sesion.rol_id, 'resolver')) {
+    const nuevas = abiertas.filter(o => !antes.has(o.id));
+    if (nuevas.length) notificar('Observación de calidad', nuevas.length === 1 ? `${nuevas[0].sku_clave} · ${nuevas[0].apartado_nombre}: ${nuevas[0].texto.split('\n')[0].slice(0, 90)}` : `${nuevas.length} observaciones nuevas por revisar.`);
+  }
+  estado.obs.lista = lista;
+  actualizarTituloPestana(puede(estado.sesion.rol_id, 'resolver') ? abiertas.length : 0);
+  render();
+}
+const obsAbiertasDe = skuId => (estado.obs.lista || []).filter(o => o.estado === 'abierta' && o.sku_id === skuId);
+function abrirModalObservacion(sku) {
+  estado.modal = { tipo: 'observacion', sku: { id: sku.id, clave: sku.clave }, apartado: 'general', texto: '', documento_id: '', error: null, enviando: false };
+  enfocarDespues = 'obs-apartado'; render();
+}
+async function guardarObservacion() {
+  const m = estado.modal;
+  const [tipo, id] = m.apartado.split(':');
+  m.enviando = true; m.error = null; render();
+  try {
+    await DataService.crearObservacion({ sku_id: m.sku.id, apartado: tipo, entregable_id: tipo === 'entregable' ? Number(id) : null,
+      tipo_documento_id: tipo === 'corte' ? Number(id) : null, documento_id: tipo === 'corte' && m.documento_id ? Number(m.documento_id) : null, texto: m.texto });
+    estado.modal = null; agregarAviso('exito', `Observación registrada en ${m.sku.clave}. Los ingenieros recibirán el aviso.`);
+    await cargarObservacionesGlobal();
+  } catch (e) { if (estado.modal) { estado.modal.error = e.message; estado.modal.enviando = false; } }
+  render();
+}
+function abrirModalAtenderObs(o, accion) {
+  estado.modal = { tipo: 'atenderObs', obs: o, accion, texto: '', error: null, enviando: false };
+  enfocarDespues = 'obs-texto'; render();
+}
+async function guardarAtenderObs() {
+  const m = estado.modal;
+  if (String(m.texto).trim().length < 10) { m.error = m.accion === 'resolver' ? 'Explica qué se corrigió (mínimo 10 caracteres).' : 'Explica por qué se reabre (mínimo 10 caracteres).'; render(); return; }
+  m.enviando = true; m.error = null; render();
+  try {
+    if (m.accion === 'resolver') await DataService.resolverObservacion(m.obs.id, m.texto); else await DataService.reabrirObservacion(m.obs.id, m.texto);
+    estado.modal = null; agregarAviso('exito', m.accion === 'resolver' ? 'Observación marcada como resuelta.' : 'Observación reabierta; los ingenieros recibirán el aviso.');
+    await cargarObservacionesGlobal();
+  } catch (e) { if (estado.modal) { estado.modal.error = e.message; estado.modal.enviando = false; } }
+  render();
+}
+
+/* ---------- Avisos a operadores: piezas nuevas o actualizadas desde su última revisión ---------- */
+function cambiosOperador() {
+  const desde = estado.sesion.corte_revisado_en ? new Date(estado.sesion.corte_revisado_en).getTime() : null;
+  if (desde === null) return [];
+  return (estado.corte.datos || []).filter(d => d.subida_en && new Date(d.subida_en).getTime() > desde)
+    .sort((a, b) => String(b.subida_en).localeCompare(String(a.subida_en)));
+}
+async function marcarArchivosRevisados() {
+  estado.sesion.corte_revisado_en = await DataService.marcarCorteRevisado();
+  estado.corte.avisados = new Set();
+  actualizarTituloPestana(0);
+  agregarAviso('exito', 'Listo. Te avisaremos cuando haya nuevos cambios.');
+  render();
+}
+function revisarCambiosOperador() {
+  if (estado.sesion.rol_id !== ROLES.OPERADOR) return;
+  const cambios = cambiosOperador();
+  const avisados = estado.corte.avisados || (estado.corte.avisados = new Set(cambios.map(d => d.version_id)));
+  const nuevos = cambios.filter(d => !avisados.has(d.version_id));
+  nuevos.forEach(d => avisados.add(d.version_id));
+  if (nuevos.length) notificar('Archivos de corte actualizados', nuevos.length === 1 ? `${nuevos[0].sku_clave} · ${nuevos[0].pieza}: versión ${nuevos[0].version_vigente}. Actualiza tu USB.` : `${nuevos.length} piezas nuevas o actualizadas. Actualiza tus archivos.`);
+  actualizarTituloPestana(cambios.length);
+}
+
 /* ---------- Documentos de corte ---------- */
 async function cargarCorte({ silencioso = false } = {}) {
   const c = estado.corte;
@@ -1266,6 +1397,7 @@ async function cargarCorte({ silencioso = false } = {}) {
   try {
     const [docs, descargas, esperadas] = await Promise.all([DataService.listarDocumentos(), puede(estado.sesion.rol_id, 'documentos') ? DataService.listarDescargas(60) : Promise.resolve(null), DataService.piezasEsperadas()]);
     c.datos = docs; c.descargas = descargas; c.esperadas = esperadas; c.error = null;
+    revisarCambiosOperador();
   } catch (e) { c.error = e.message; }
   finally { c.cargando = false; render(); }
 }
@@ -1339,7 +1471,7 @@ function abrirModalDocumento(sku, doc) {
   const tipos = DataService.catalogosCorte().tipos.filter(t => t.activo);
   if (!tipos.length) { agregarAviso('error', 'No hay tipos de documento activos. Revisa Administración → Corte.'); return; }
   estado.modal = { tipo: 'documento', sku: { id: sku.id, clave: sku.clave }, doc,
-    tipo_id: String(doc ? doc.tipo_documento_id : tipos[0].id), archivos: [], piezas: {}, cambios: '',
+    tipo_id: String(doc ? doc.tipo_documento_id : tipos[0].id), archivos: [], datos: {}, comun: {}, cambios: '',
     fase: 'elegir', hecho: 0, total: 0, errores: [], cancelar: false, error: null, enviando: false };
   render();
 }
@@ -1351,8 +1483,8 @@ function elegirArchivosDocumento(lista) {
   const validos = archivos.filter(f => permitidas.includes(extensionDe(f.name)) && f.size > 0 && f.size <= LIMITE_DOCUMENTO_MB * 1024 * 1024);
   m.rechazados = archivos.length - validos.length;
   m.archivos = m.doc ? validos.slice(0, 1) : validos;
-  m.piezas = {};
-  m.archivos.forEach((f, i) => { m.piezas[i] = m.doc ? m.doc.pieza : piezaDesdeArchivo(f.name); });
+  m.datos = {};
+  m.archivos.forEach((f, i) => { m.datos[i] = m.doc ? datosDePieza(m.doc, m.sku.clave, tipo) : datosDesdeArchivo(f.name, m.sku.clave, tipo); });
   m.error = m.archivos.length ? null : `No se encontró ningún archivo ${permitidas.map(x => '.' + x).join(' o ')} válido en lo que elegiste.`;
   render();
 }
@@ -1364,10 +1496,17 @@ function piezasExistentes(tipoId) {
 function planSubida() {
   const m = estado.modal;
   const previas = piezasExistentes(m.tipo_id);
+  const tipo = DataService.catalogosCorte().tipos.find(t => t.id === Number(m.tipo_id));
+  const { atributo } = nomenDeTipo(tipo);
   const filas = m.archivos.map((f, i) => {
-    const pieza = String(m.piezas[i] || '').trim();
-    const previa = previas.get(normalizarTexto(pieza));
-    return { archivo: f, pieza, previa, esPrimera: !previa, error: validarNombrePieza(pieza) };
+    const d = m.datos[i] || {};
+    const errores = datosNomenValidos(d, atributo);
+    const pieza = Object.keys(errores).length ? '' : nombreEstandar(m.sku.clave, tipo, d);
+    const previa = m.doc || previas.get(normalizarTexto(pieza));
+    const renombrar = m.doc && pieza && normalizarTexto(pieza) !== normalizarTexto(m.doc.pieza);
+    const choque = renombrar && previas.get(normalizarTexto(pieza));
+    return { archivo: f, pieza, datos: d, errores, previa, renombrar, esPrimera: !previa,
+      error: Object.keys(errores).length ? 'Completa los datos marcados.' : choque ? 'Ya existe otra pieza con ese nombre.' : validarNombrePieza(pieza) };
   });
   const repetidas = new Set();
   const vistas = new Set();
@@ -1375,18 +1514,39 @@ function planSubida() {
   filas.forEach(x => { if (!x.error && repetidas.has(normalizarTexto(x.pieza))) x.error = 'Hay dos archivos con el mismo nombre de pieza.'; });
   return { filas, nuevas: filas.filter(x => x.esPrimera && !x.error).length, versiones: filas.filter(x => !x.esPrimera && !x.error).length, conError: filas.filter(x => x.error).length };
 }
+function abrirModalRenombrar(sku, doc) {
+  const tipo = DataService.catalogosCorte().tipos.find(t => t.id === doc.tipo_documento_id);
+  estado.modal = { tipo: 'renombrarPieza', sku: { id: sku.id, clave: sku.clave }, doc, tipoDoc: tipo, datos: datosDePieza(doc, sku.clave, tipo), error: null, enviando: false };
+  render();
+}
+async function guardarRenombrar() {
+  const m = estado.modal, { atributo } = nomenDeTipo(m.tipoDoc);
+  if (Object.keys(datosNomenValidos(m.datos, atributo)).length) { m.error = 'Completa los datos marcados.'; render(); return; }
+  const pieza = nombreEstandar(m.sku.clave, m.tipoDoc, m.datos);
+  m.enviando = true; m.error = null; render();
+  try {
+    await DataService.renombrarPieza(m.doc.id, pieza);
+    await DataService.guardarNomenclatura(m.sku.id, m.tipoDoc.id, pieza, m.datos, atributo);
+    estado.modal = null; agregarAviso('exito', `Pieza renombrada: ${pieza}.`); cargarDocumentosDetalle(m.sku.id);
+  } catch (e) { if (estado.modal) { estado.modal.error = e.message; estado.modal.enviando = false; } }
+  render();
+}
 async function guardarDocumento() {
   const m = estado.modal;
   const tipo = DataService.catalogosCorte().tipos.find(t => t.id === Number(m.tipo_id));
   const plan = planSubida();
   if (!m.archivos.length) { m.error = 'Elige al menos un archivo.'; render(); return; }
-  if (plan.conError) { m.error = 'Revisa los nombres de pieza marcados en rojo.'; render(); return; }
+  if (plan.conError) { m.error = 'Revisa las piezas marcadas en rojo.'; render(); return; }
   const errCambios = validarCambiosDocumento(m.cambios, plan.versiones === 0);
   if (errCambios) { m.error = errCambios; render(); return; }
   m.fase = 'subiendo'; m.enviando = true; m.total = plan.filas.length; m.hecho = 0; m.errores = []; render();
   for (const f of plan.filas) {
     if (m.cancelar) break;
-    try { await DataService.subirDocumento({ sku: m.sku, tipo, pieza: f.pieza, archivo: f.archivo, cambios: m.cambios, esPrimera: f.esPrimera }); }
+    try {
+      if (f.renombrar) await DataService.renombrarPieza(m.doc.id, f.pieza);
+      await DataService.subirDocumento({ sku: m.sku, tipo, pieza: f.pieza, archivo: f.archivo, cambios: m.cambios, esPrimera: f.esPrimera });
+      await DataService.guardarNomenclatura(m.sku.id, tipo.id, f.pieza, f.datos, nomenDeTipo(tipo).atributo);
+    }
     catch (e) { m.errores.push(`${f.pieza}: ${e.message}`); }
     m.hecho++; render();
   }
@@ -1425,7 +1585,7 @@ async function organizarArchivosDrive() {
 function abrirModalCorteCatalogo(entidad, registro) {
   const { areas } = DataService.catalogosCorte();
   estado.modal = { tipo: 'corteCatalogo', entidad, id: registro ? registro.id : null,
-    datos: { nombre: registro ? registro.nombre : '', area_id: String(registro ? registro.area_id || '' : (areas.find(a => a.activa) || {}).id || ''), extensiones: registro ? registro.extensiones || '' : 'dxf' },
+    datos: { nombre: registro ? registro.nombre : '', area_id: String(registro ? registro.area_id || '' : (areas.find(a => a.activa) || {}).id || ''), extensiones: registro ? registro.extensiones || '' : 'dxf', codigo_material: registro ? registro.codigo_material || '' : '', atributo: registro ? registro.atributo || 'ninguno' : 'ninguno' },
     errores: {}, error: null, enviando: false };
   enfocarDespues = 'corte-nombre'; render();
 }
@@ -1433,7 +1593,7 @@ async function guardarCorteCatalogo() {
   const m = estado.modal;
   const datos = { nombre: m.datos.nombre };
   if (m.entidad !== 'area') { if (!m.datos.area_id) { m.errores = { area_id: 'Elige el área.' }; render(); return; } datos.area_id = m.datos.area_id; }
-  if (m.entidad === 'tipo') datos.extensiones = m.datos.extensiones;
+  if (m.entidad === 'tipo') { datos.extensiones = m.datos.extensiones; if ('atributo' in (DataService.catalogosCorte().tipos[0] || {})) { datos.codigo_material = limpiarNombrePieza(m.datos.codigo_material).replace(/[-.]/g, '') || null; datos.atributo = m.datos.atributo || 'ninguno'; } }
   m.enviando = true; m.errores = {}; m.error = null; render();
   try {
     await DataService.guardarCatalogoCorte(m.entidad, m.id, datos);
@@ -1599,7 +1759,7 @@ function cerrarModal() { if (estado.modal && estado.modal.enviando) return; esta
 <script>
 const ROLES = { INGENIERO: 1, JEFE: 2, CONSULTA: 3, OPERADOR: 4 };
 const ESTATUS_SKU = { ACTIVO: 1, DESCONTINUADO: 2 };
-const NOMBRES_ROL = { 1: 'Ingeniero', 2: 'Jefe de ingeniería', 3: 'Consulta', 4: 'Operador' };
+const NOMBRES_ROL = { 1: 'Ingeniero', 2: 'Jefe de ingeniería', 3: 'Auditor de calidad', 4: 'Operador' };
 
 /* Quién puede hacer qué. ver: los tres roles; marcar/desmarcar: ingeniero y jefe; administrar: solo jefe. */
 const PERMISOS = {
@@ -1608,7 +1768,9 @@ const PERMISOS = {
   administrar: [ROLES.JEFE],                                   // usuarios, máquinas, eliminar SKUs, desactivar catálogos
   altas: [ROLES.INGENIERO, ROLES.JEFE],                        // dar de alta y editar SKUs, familias y líneas
   documentos: [ROLES.INGENIERO, ROLES.JEFE, ROLES.CONSULTA],
-  subir_documentos: [ROLES.INGENIERO, ROLES.JEFE]
+  subir_documentos: [ROLES.INGENIERO, ROLES.JEFE],
+  observar: [ROLES.CONSULTA, ROLES.JEFE],      // señalar y reabrir observaciones de calidad
+  resolver: [ROLES.INGENIERO, ROLES.JEFE]      // marcar observaciones como resueltas
 };
 function puede(rolId, accion) { return (PERMISOS[accion] || []).includes(rolId); }
 
@@ -1731,7 +1893,11 @@ function piezaDesdeArchivo(nombre) { return String(nombre || '').replace(/\.[^.]
 function nombreDescargaDocumento(d) {
   const limpio = x => normalizarTexto(x).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
   const fecha = String(d.subida_en || d.created_at || '').slice(0, 10);
-  return `${d.sku_clave}_${limpio(d.pieza)}_v${d.version_vigente || d.version}_${fecha}.${extensionDe(d.nombre_original) || 'dat'}`;
+  const ext = extensionDe(d.nombre_original) || 'dat', v = d.version_vigente || d.version;
+  // Piezas con nombre estándar (ya empiezan con el modelo): se usa tal cual, más la versión
+  if (d.pieza && d.sku_clave && String(d.pieza).toUpperCase().startsWith(String(d.sku_clave).toUpperCase().replace(/[_\s]+/g, '-') + '_'))
+    return `${d.pieza}_V${v}.${ext}`;
+  return `${d.sku_clave}_${limpio(d.pieza)}_v${v}_${fecha}.${ext}`;
 }
 function guardarArchivo(bytes, nombre) {
   const url = URL.createObjectURL(new Blob([bytes], { type: 'application/octet-stream' }));
@@ -1749,6 +1915,80 @@ function nombreDrive(pieza, version, nombreOriginal, fecha) {
   return `${pieza} v${version} (${String(fecha || new Date().toISOString()).slice(0, 10)}).${ext}`;
 }
 function formatoTamano(bytes) { return bytes >= 1048576 ? `${(bytes / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`; }
+
+/* ---------- Nomenclatura estándar de piezas ----------
+   LP:      1000_1PZA_LP19MM_CUBIERTA        Lámina:  1000_2PZAS_LAMINA_CAL18_COSTADO
+   Tubular: 1000_2PZAS_TUBULAR2X1_CAL18_LATERAL   Tela / Panel: 1000_2PZAS_TELA_FRENTE */
+const NOMEN_POR_DEFECTO = [ // si Supabase aún no tiene los códigos, se deducen del nombre del tipo
+  [/melamina|laminado/i, 'LP', 'espesor'], [/l[aá]mina/i, 'LAMINA', 'calibre'], [/tubular|tubo/i, 'TUBULAR', 'tubular'],
+  [/tela/i, 'TELA', 'ninguno'], [/panel/i, 'PANEL', 'ninguno']];
+function nomenDeTipo(tipo) {
+  if (!tipo) return { codigo: 'PIEZA', atributo: 'ninguno' };
+  if (tipo.codigo_material) return { codigo: String(tipo.codigo_material).toUpperCase(), atributo: tipo.atributo || 'ninguno' };
+  const r = NOMEN_POR_DEFECTO.find(([re]) => re.test(tipo.nombre)) || [null, 'PIEZA', 'ninguno'];
+  return { codigo: r[1], atributo: r[2] };
+}
+const sinAcentos = t => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+function limpiarNombrePieza(t) { // CUBIERTA, SOPORTE-CUBIERTA
+  return sinAcentos(t).toUpperCase().replace(/[_\s]+/g, '-').replace(/[^A-Z0-9.\-]/g, '').replace(/-+/g, '-').replace(/^-|-$/g, '');
+}
+function numeroTexto(n) { return String(Math.round(n * 1000) / 1000); }
+function parteMedida(t) { // "1 1/4" o "1 1-4" → 1.25 · "3/4" → 0.75 · "2" → 2
+  const s = String(t).trim().replace(',', '.');
+  let m = /^(\d+)\s+(\d+)\s*[\/\-]\s*(\d+)$/.exec(s); if (m) return Number(m[1]) + Number(m[2]) / Number(m[3]);
+  m = /^(\d+)\s*\/\s*(\d+)$/.exec(s); if (m) return Number(m[1]) / Number(m[2]);
+  m = /^\d+(\.\d+)?$/.exec(s); if (m) return Number(s);
+  return null;
+}
+function normalizarMedida(t) { // "2 x 1" → 2X1 · "1 1/4 X 1 1/4" → 1.25X1.25 · "1" (redondo) → 1
+  const partes = sinAcentos(t).toUpperCase().replace(/["”]/g, '').split('X').map(x => x.trim()).filter(Boolean);
+  if (!partes.length || partes.length > 2) return null;
+  const nums = partes.map(parteMedida);
+  return nums.some(n => n === null || !(n > 0)) ? null : nums.map(numeroTexto).join('X');
+}
+function datosNomenValidos(d, atributo) {
+  const e = {};
+  const n = Number(d.cantidad);
+  if (!Number.isInteger(n) || n < 1 || n > 999) e.cantidad = 'Cantidad de 1 a 999.';
+  if (atributo === 'espesor') { const x = Number(String(d.espesor).replace(',', '.')); if (!(x > 0 && x <= 200)) e.espesor = 'Espesor en mm.'; }
+  if (atributo === 'calibre' || atributo === 'tubular') { const c = Number(d.calibre); if (!Number.isInteger(c) || c < 1 || c > 40) e.calibre = 'Calibre de 1 a 40.'; }
+  if (atributo === 'tubular' && !normalizarMedida(d.medida)) e.medida = 'Medida como 2X1 o 1 1/4 X 1 1/4.';
+  if (!limpiarNombrePieza(d.nombre)) e.nombre = 'Nombre de la pieza.';
+  return e;
+}
+function nombreEstandar(skuClave, tipo, d) {
+  const { codigo, atributo } = nomenDeTipo(tipo);
+  const n = Number(d.cantidad);
+  const partes = [sinAcentos(skuClave).toUpperCase().replace(/[_\s]+/g, '-'), `${n}${n === 1 ? 'PZA' : 'PZAS'}`];
+  if (atributo === 'espesor') partes.push(`${codigo}${numeroTexto(Number(String(d.espesor).replace(',', '.')))}MM`);
+  else if (atributo === 'calibre') partes.push(codigo, `CAL${Number(d.calibre)}`);
+  else if (atributo === 'tubular') partes.push(`${codigo}${normalizarMedida(d.medida)}`, `CAL${Number(d.calibre)}`);
+  else partes.push(codigo);
+  partes.push(limpiarNombrePieza(d.nombre));
+  return partes.join('_');
+}
+/* Propuesta a partir del nombre del archivo (ej. "LATERAL 2 X 1 CAL 18 2 PZAS"); el ingeniero la revisa. */
+function datosDesdeArchivo(nombreArchivo, skuClave, tipo) {
+  const { codigo, atributo } = nomenDeTipo(tipo);
+  let t = ' ' + sinAcentos(String(nombreArchivo).replace(/\.[^.]+$/, '')).toUpperCase().replace(/_/g, ' ').replace(/\s+/g, ' ') + ' ';
+  const d = { cantidad: '1', espesor: '', calibre: '', medida: '', nombre: '' };
+  const quitar = re => { const m = re.exec(t); if (m) t = t.replace(m[0], ' '); return m; };
+  const esc = x => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  let m = quitar(/\s(\d{1,3})\s*-?\s*PZ(?:A|AS|S)?\.?(?=\s)/); if (m) d.cantidad = m[1];
+  m = quitar(/\sCAL(?:IBRE)?\.?\s*(\d{1,2})(?=\s)/); if (m) d.calibre = m[1];
+  if (atributo === 'tubular') { m = quitar(/\s((?:\d+\s+)?\d+(?:\s*[\/\-]\s*\d+)?(?:\.\d+)?)\s*X\s*((?:\d+\s+)?\d+(?:\s*[\/\-]\s*\d+)?(?:\.\d+)?)(?=\s)/); if (m) d.medida = `${m[1]} X ${m[2]}`; }
+  m = quitar(/\s(\d+(?:[.,]\d+)?)\s*MM(?=\s)/); if (m && atributo === 'espesor') d.espesor = m[1].replace(',', '.');
+  [skuClave, codigo, 'LP', 'LAMINADO', 'PLASTICO', 'MELAMINA', 'LAMINA', 'TUBULAR', 'TUBO', 'PTR', 'TELA', 'PANEL', 'ACUSTICO']
+    .forEach(w => { if (w) t = t.replace(new RegExp(`\\s${esc(sinAcentos(w).toUpperCase())}(?=\\s)`, 'g'), ' '); });
+  d.nombre = limpiarNombrePieza(t.replace(/\s-\s/g, ' ').trim()).replace(/^[0-9.\-]+$/, '');
+  return d;
+}
+/* Datos guardados de una pieza (para su nueva versión o para renombrarla). */
+function datosDePieza(doc, skuClave, tipo) {
+  if (doc && doc.nombre_base) return { cantidad: String(doc.cantidad || 1), espesor: doc.espesor_mm != null ? numeroTexto(Number(doc.espesor_mm)) : '', calibre: doc.calibre != null ? String(doc.calibre) : '', medida: doc.medida || '', nombre: doc.nombre_base };
+  return datosDesdeArchivo(doc ? doc.pieza : '', skuClave, tipo);
+}
+const SUGERENCIAS_NOMEN = { espesor: ['3', '6', '9', '12', '15', '16', '18', '19', '25', '28'], calibre: ['10', '12', '14', '16', '18', '20', '22'], medida: ['1X1', '2X1', '1.25X1.25', '1.5X1.5', '2X2', '3X1'] };
 
 /* Avance: completados ÷ entregables activos, redondeado a entero. Un SKU está completo solo al 100 %. */
 function calcularPorcentaje(completados, total) { return total ? Math.round((completados * 100) / total) : 0; }
@@ -1789,6 +2029,8 @@ const ICONOS = {
   candado: 'M7 11V8a5 5 0 0 1 10 0v3M5 11h14v10H5z', mas: 'M12 5v14M5 12h14', arriba: 'M12 19V5M6 11l6-6 6 6', abajo: 'M12 5v14M6 13l6 6 6-6',
   reporte: 'M7 3h7l5 5v13H7zM14 3v5h5M10 17v-3M13 17v-5M16 17v-2',
   chevron: 'M9 6l6 6-6 6',
+  campana: 'M6 8a6 6 0 1112 0c0 7 3 9 3 9H3s3-2 3-9M10 21a2 2 0 004 0',
+  bandera: 'M5 21V4M5 4h11l-2 4 2 4H5',
   ojo: 'M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12zM12 15a3 3 0 100-6 3 3 0 000 6z',
   descarga: 'M12 4v11M7 10l5 5 5-5M5 20h14', escudo: 'M12 3l7 3v5c0 5-3.5 8.5-7 10-3.5-1.5-7-5-7-10V6z', subir: 'M12 20V9M7 14l5-5 5 5M5 4h14',
   sol: 'M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10zM12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4', luna: 'M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z',
@@ -1970,6 +2212,7 @@ function BarraSuperior() {
   const secciones = esOperador ? [{ vista: 'corte', texto: 'Archivos de corte' }] : [
     { vista: 'skus', texto: 'Avance por SKU' }, { vista: 'tablero', texto: 'Tablero' }, { vista: 'historial', texto: 'Historial' }
   ];
+  if (!esOperador && puede(s.rol_id, 'documentos') && estado.obs.lista) { const n = estado.obs.lista.filter(o => o.estado === 'abierta').length; secciones.push({ vista: 'observaciones', texto: n ? `Observaciones (${n})` : 'Observaciones' }); }
   if (!esOperador && puede(s.rol_id, 'documentos') && DataService.catalogosCorte().tipos.length) secciones.push({ vista: 'corte', texto: 'Archivos de corte' });
   if (puede(s.rol_id, 'administrar')) secciones.push({ vista: 'admin', texto: estado.pendientes ? `Administración (${estado.pendientes})` : 'Administración' });
   return h('header', { class: 'border-b border-[#D5DBE2] dark:border-[#2E3A48] bg-white dark:bg-[#18202A]' },
@@ -2072,15 +2315,17 @@ function FilaSku(sku) {
     h('th', { scope: 'row', class: `${CLS.td} sticky left-0 z-[5] bg-white dark:bg-[#18202A] text-left font-semibold tabular-nums group-hover:bg-[#F7F9FA] dark:group-hover:bg-[#1F2833]` },
       h('button', { type: 'button', id: `abrir-${sku.id}`, class: `${CLS.enlace} flex items-center gap-3`, onClick: () => abrirDetalle(sku.id), 'aria-label': `Ver detalle de ${sku.clave}` }, MiniaturaSku(sku), h('span', null, sku.clave))),
     h('td', { class: `${CLS.td} group-hover:bg-[#F7F9FA] dark:group-hover:bg-[#1F2833] ${sku.descontinuado ? 'text-[#5B6675] dark:text-[#9AA7B6]' : ''}` },
+      obsAbiertasDe(sku.id).length ? h('span', { class: 'mr-2 inline-flex items-center gap-1 rounded bg-[#FDF3F2] px-1.5 py-0.5 text-xs font-semibold text-[#B42318] dark:bg-[#3A1D1B] dark:text-[#F28B82]', title: 'Observaciones de calidad abiertas' }, icono('bandera', 'w-3 h-3'), String(obsAbiertasDe(sku.id).length)) : null,
       sku.descripcion, sku.descontinuado ? h('span', { class: 'ml-2 inline-block rounded border border-[#C3CBD4] dark:border-[#3A4756] px-1.5 text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, 'Descontinuado') : null),
     h('td', { class: `${CLS.td} whitespace-nowrap text-[#5B6675] dark:text-[#9AA7B6] group-hover:bg-[#F7F9FA] dark:group-hover:bg-[#1F2833]` }, sku.familia_nombre, estado.catalogos.lineas.length ? h('span', { class: 'block text-xs text-[#7A8594] dark:text-[#7F8B99]' }, sku.linea_nombre) : null),
-    sku.casillas.map(c => CeldaEntregable(sku, c)),
+    sku.casillas.map(c => CeldaEntregable(sku, c, obsAbiertasDe(sku.id))),
     h('td', { class: `${CLS.td} border-l border-l-[#E3E7EC] dark:border-l-[#26313D] group-hover:bg-[#F7F9FA] dark:group-hover:bg-[#1F2833]` }, AvanceSku(sku)));
 }
 /* FIN COMPONENTE: MatrizSkus */
 
 /* COMPONENTE: CeldaEntregable */
-function CeldaEntregable(sku, c) {
+function CeldaEntregable(sku, c, obs) {
+  const conObs = (obs || []).some(o => o.apartado === 'entregable' && o.entregable_id === c.entregable_id);
   if (c.no_aplica) return h('td', { class: 'border-b border-l border-[#E3E7EC] dark:border-[#26313D] p-0' },
     h('div', { class: 'flex h-11 w-full items-center justify-center bg-[#EEF1F4] text-[11px] font-semibold text-[#9AA5B1] dark:bg-[#1C232C] dark:text-[#5F6C7B]',
       title: 'No aplica: este SKU no lleva este archivo. No cuenta en el avance. Para habilitarla, quita el "No aplica" en el detalle del SKU.',
@@ -2093,13 +2338,13 @@ function CeldaEntregable(sku, c) {
     : c.completado ? icono('check', 'w-5 h-5')
     : h('span', { class: 'block h-4 w-4 rounded-sm border-2 border-[#9AA5B1] dark:border-[#5F6C7B]', 'aria-hidden': 'true' });
   const color = c.completado ? `bg-[#E6F2EB] dark:bg-[#173526] text-[#1F7A4D] dark:text-[#5CC48E] ${editable ? 'hover:bg-[#D3E8DB] dark:hover:bg-[#1D422F]' : ''}` : `bg-white dark:bg-[#18202A] ${editable ? 'hover:bg-[#EEF3F8] dark:hover:bg-[#22303F]' : ''}`;
-  return h('td', { class: 'border-b border-l border-[#E3E7EC] dark:border-[#26313D] p-0' },
+  return h('td', { class: 'relative border-b border-l border-[#E3E7EC] dark:border-[#26313D] p-0' },
     h('button', {
       type: 'button', id: `celda-${sku.id}-${c.entregable_id}`, title: detalle,
       'aria-label': `${c.nombre} de ${sku.clave}: ${detalle}${accion}`, 'aria-pressed': String(c.completado),
       disabled: !editable || guardando, onClick: () => alternarCasilla(sku, c),
       class: `flex h-11 w-full items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#1E4E79] dark:focus-visible:ring-[#7FB2E5] ${color} ${editable ? 'cursor-pointer' : 'cursor-default'}`
-    }, contenido));
+    }, contenido), conObs ? h('span', { class: 'pointer-events-none absolute right-0 top-0 h-0 w-0 border-l-[10px] border-t-[10px] border-l-transparent border-t-[#B42318] dark:border-t-[#F28B82]', title: 'Observación de calidad abierta', 'aria-label': 'Observación de calidad abierta' }) : null);
 }
 /* FIN COMPONENTE: CeldaEntregable */
 
@@ -2129,6 +2374,7 @@ function PanelDetalleSku() {
     const s = d.datos;
     cuerpo = h('div', { class: 'space-y-6 p-6' },
       ImagenReferencia(s, editable),
+      puede(estado.sesion.rol_id, 'documentos') && estado.obs.lista ? ObservacionesSku(s) : null,
       puede(estado.sesion.rol_id, 'documentos') && DataService.catalogosCorte().tipos.length ? DocumentosCorteSku(s) : null,
       h('dl', { class: 'grid grid-cols-2 gap-x-4 gap-y-3 text-sm' },
         h('div', null, h('dt', { class: 'text-[#5B6675] dark:text-[#9AA7B6]' }, 'Familia'), h('dd', { class: 'font-medium' }, s.familia_nombre)),
@@ -2484,10 +2730,10 @@ function AdminEntregables() {
 function Modal() {
   const m = estado.modal;
   if (!m) return null;
-  const contenido = { desmarcar: ModalDesmarcar, sku: ModalSku, catalogo: ModalCatalogo, aprobar: ModalAprobar, reporte: ModalReporte, importarImagenes: ModalImportarImagenes, documento: ModalDocumento, retirarDocumento: ModalRetirarDocumento, versionesDocumento: ModalVersionesDocumento, corteCatalogo: ModalCorteCatalogo, noAplica: ModalNoAplica, confirmar: ModalConfirmacion }[m.tipo]();
+  const contenido = { desmarcar: ModalDesmarcar, sku: ModalSku, catalogo: ModalCatalogo, aprobar: ModalAprobar, reporte: ModalReporte, importarImagenes: ModalImportarImagenes, documento: ModalDocumento, retirarDocumento: ModalRetirarDocumento, versionesDocumento: ModalVersionesDocumento, corteCatalogo: ModalCorteCatalogo, noAplica: ModalNoAplica, renombrarPieza: ModalRenombrarPieza, observacion: ModalObservacion, atenderObs: ModalAtenderObs, confirmar: ModalConfirmacion }[m.tipo]();
   return h('div', { class: 'fixed inset-0 z-50 flex items-center justify-center p-4' },
     h('button', { type: 'button', class: 'absolute inset-0 h-full w-full cursor-default bg-[#1B2430]/40 dark:bg-[#000000]/40', 'aria-label': 'Cerrar diálogo', tabindex: '-1', onClick: cerrarModal }),
-    h('div', { class: 'relative max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg bg-white dark:bg-[#18202A] p-6 shadow-xl', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'titulo-modal' }, contenido));
+    h('div', { class: `relative max-h-[90vh] w-full ${m.tipo === 'documento' ? 'max-w-3xl' : m.tipo === 'renombrarPieza' ? 'max-w-xl' : 'max-w-md'} overflow-y-auto rounded-lg bg-white dark:bg-[#18202A] p-6 shadow-xl`, role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'titulo-modal' }, contenido));
 }
 function PieModal(textoBoton, onConfirmar, { peligro = false, enviando = false, textoEnviando = 'Guardando…' } = {}) {
   return h('div', { class: 'mt-6 flex flex-wrap justify-end gap-2' },
@@ -2564,7 +2810,7 @@ function ModalCatalogo() {
 /* COMPONENTE: ModalAprobar */
 function ModalAprobar() {
   const m = estado.modal;
-  const descripciones = { 1: 'Marca y desmarca entregables de cualquier SKU y sube imágenes.', 2: 'Todo lo del ingeniero, más alta de SKUs, catálogos y aprobación de usuarios.', 4: 'Cuenta de una máquina de corte: solo descarga y verifica los documentos vigentes de su área.', 3: 'Ve avance, tablero e historial sin modificar nada.' };
+  const descripciones = { 1: 'Marca y desmarca entregables de cualquier SKU y sube imágenes.', 2: 'Todo lo del ingeniero, más alta de SKUs, catálogos y aprobación de usuarios.', 4: 'Cuenta de una máquina de corte: solo descarga y verifica los documentos vigentes de su área.', 3: 'Revisa avance, archivos e historial sin modificarlos, y señala observaciones que los ingenieros deben atender.' };
   return h('form', { novalidate: true, onSubmit: ev => { ev.preventDefault(); guardarAprobacion(); } },
     h('h2', { id: 'titulo-modal', class: 'text-lg font-semibold' }, `Aprobar a ${m.nombre}`),
     h('p', { class: 'mt-1 text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, `Confirma que ${m.email} es de alguien de tu equipo antes de darle acceso.`),
@@ -2736,7 +2982,8 @@ function VistaCorteOperador() {
           ConteoTipoOperador(tipo, piezas, (c.esperadas || new Map()).get(`${k.sku_id}-${piezas[0].tipo_documento_id}`)),
           h('ul', { class: 'divide-y divide-[#E3E7EC] dark:divide-[#26313D]' }, piezas.sort((a, b) => compararNatural(a.pieza, b.pieza)).map(d => h('li', { class: 'flex flex-wrap items-center gap-3 px-4 py-2.5' },
             h('div', { class: 'min-w-0 flex-1' },
-              h('p', { class: 'text-base font-medium' }, d.pieza),
+              h('p', { class: 'text-base font-medium' }, d.pieza, cambiosOperador().some(x => x.version_id === d.version_id)
+                ? h('span', { class: 'ml-2 rounded bg-[#FFF4DB] px-1.5 py-0.5 text-xs font-semibold text-[#B26A00] dark:bg-[#3A2F14] dark:text-[#E0A650]' }, d.version_vigente > 1 ? 'ACTUALIZADA' : 'NUEVA') : null),
               h('p', { class: 'text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, `Subida ${formatearFechaHora(d.subida_en)}`)),
             h('span', { class: 'inline-flex items-center gap-1 rounded-md bg-[#E6F2EB] px-2 py-0.5 text-sm font-semibold text-[#1F7A4D] dark:bg-[#173526] dark:text-[#5CC48E]' }, icono('check', 'w-3.5 h-3.5'), `v${d.version_vigente}`),
             visorDisponible(d) ? h('button', { type: 'button', class: CLS.btnSecundario, onClick: () => verPieza(d), 'aria-label': `Ver pieza ${d.pieza}` }, icono('ojo'), 'Ver pieza') : null,
@@ -2744,6 +2991,7 @@ function VistaCorteOperador() {
               c.descargando === String(d.version_id) ? [Spinner('w-4 h-4'), 'Descargando…'] : [icono('descarga'), 'Descargar']))))))) : null);
   }));
   return h('section', { class: 'space-y-5' },
+    AvisoCambiosOperador(),
     EncabezadoVista(`Archivos de corte · ${s.maquina.area}`, `Máquina ${s.maquina.nombre}. Solo aparecen las versiones vigentes. Elige un SKU para ver sus piezas, descárgalas, cópialas a la USB y verifícalas antes de cortar.`, null),
     VerificadorArchivo(),
     h('div', { class: 'flex flex-wrap items-end gap-3' },
@@ -2852,6 +3100,7 @@ function DocumentosCorteSku(s) {
               h('button', { type: 'button', class: CLS.btnChico, disabled: !!estado.corte.descargando, onClick: () => descargarDocumento(x) }, icono('descarga', 'w-3.5 h-3.5'), 'Descargar'),
               h('button', { type: 'button', class: CLS.btnChico, onClick: () => abrirHistorialDocumento(x) }, `Versiones (${x.version_vigente})`),
               editable ? h('button', { type: 'button', class: CLS.btnChico, onClick: () => abrirModalDocumento(s, x) }, icono('subir', 'w-3.5 h-3.5'), 'Nueva versión') : null,
+              editable ? h('button', { type: 'button', class: CLS.btnChico, onClick: () => abrirModalRenombrar(s, x) }, icono('editar', 'w-3.5 h-3.5'), 'Renombrar') : null,
               editable ? h('button', { type: 'button', class: `${CLS.btnChico} text-[#B42318] dark:text-[#F28B82]`, onClick: () => pedirRetirarDocumento(x) }, 'Retirar') : null))))))),
     retirados.length ? h('p', { class: 'mt-2 text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, 'Piezas retiradas: ', retirados.map((x, i) => [i ? '; ' : '', h('button', { type: 'button', class: `${CLS.enlace} text-xs`, onClick: () => abrirHistorialDocumento(x) }, x.pieza), x.motivo_retiro ? ` (${x.motivo_retiro})` : ''])) : null);
 }
@@ -2921,20 +3170,41 @@ function ModalDocumento() {
   }
 
   const plan = planSubida();
-  const listaArchivos = m.archivos.length ? h('div', { class: 'max-h-56 space-y-2 overflow-y-auto rounded-md border border-[#D5DBE2] p-2 dark:border-[#2E3A48]' },
-    plan.filas.map((f, i) => h('div', { class: 'flex flex-wrap items-center gap-2' },
-      h('div', { class: 'min-w-0 flex-1' },
-        h('label', { for: `pieza-${i}`, class: 'sr-only' }, `Nombre de la pieza ${i + 1}`),
-        h('input', { id: `pieza-${i}`, class: `${f.error ? CLS.inputError : CLS.input} py-1.5 text-sm`, maxlength: String(LIMITE_PIEZA), value: m.piezas[i] || '', disabled: !!m.doc,
-          onInput: ev => { estado.modal.piezas[i] = ev.target.value; conRetraso('pieza', render, 250); } }),
-        h('p', { class: 'mt-0.5 text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, `${f.archivo.name} · ${formatoTamano(f.archivo.size)}`)),
-      h('span', { class: `whitespace-nowrap text-xs font-medium ${f.error ? 'text-[#B42318] dark:text-[#F28B82]' : f.esPrimera ? 'text-[#1F7A4D] dark:text-[#5CC48E]' : 'text-[#B26A00] dark:text-[#E0A650]'}` },
-        f.error ? f.error : f.esPrimera ? 'Pieza nueva' : `Nueva versión (v${f.previa.version_vigente + 1})`)))) : null;
-
+  const { atributo, codigo } = nomenDeTipo(tipo);
+  const setDato = (i, k, v) => { estado.modal.datos[i] = { ...(estado.modal.datos[i] || {}), [k]: v }; conRetraso('pieza', render, 250); };
+  const campo = (i, k, etiqueta, ancho, extra) => {
+    const f = plan.filas[i], err = f && f.errores[k];
+    return h('div', { class: ancho },
+      h('label', { for: `pz-${k}-${i}`, class: 'block text-[11px] font-medium text-[#5B6675] dark:text-[#9AA7B6]' }, etiqueta),
+      h('input', { id: `pz-${k}-${i}`, class: `${err ? CLS.inputError : CLS.input} py-1 text-sm`, value: (m.datos[i] || {})[k] || '', title: err || '', ...extra, onInput: ev => setDato(i, k, ev.target.value) }));
+  };
+  const camposAtributo = i => atributo === 'espesor' ? [campo(i, 'espesor', 'Espesor (mm)', 'w-24', { inputmode: 'decimal', list: 'sug-espesor' })]
+    : atributo === 'calibre' ? [campo(i, 'calibre', 'Calibre', 'w-20', { inputmode: 'numeric', list: 'sug-calibre' })]
+    : atributo === 'tubular' ? [campo(i, 'medida', 'Tubular', 'w-28', { list: 'sug-medida', placeholder: '2X1' }), campo(i, 'calibre', 'Calibre', 'w-20', { inputmode: 'numeric', list: 'sug-calibre' })] : [];
+  const aplicarATodas = () => { const c = estado.modal.comun || {}; m.archivos.forEach((_, i) => { const d = { ...(estado.modal.datos[i] || {}) }; ['espesor', 'calibre', 'medida'].forEach(k => { if (c[k]) d[k] = c[k]; }); estado.modal.datos[i] = d; }); render(); };
+  const barraComun = m.archivos.length > 1 && atributo !== 'ninguno' ? h('div', { class: 'flex flex-wrap items-end gap-2 rounded-md bg-[#F4F6F8] p-2 dark:bg-[#1F2833]' },
+    h('p', { class: 'w-full text-xs font-medium' }, 'Si todas las piezas llevan el mismo dato, escríbelo una vez:'),
+    ...(atributo === 'espesor' ? [['espesor', 'Espesor (mm)', 'sug-espesor']] : atributo === 'calibre' ? [['calibre', 'Calibre', 'sug-calibre']] : [['medida', 'Tubular', 'sug-medida'], ['calibre', 'Calibre', 'sug-calibre']])
+      .map(([k, et, lista]) => h('div', { class: 'w-28' }, h('label', { for: `comun-${k}`, class: 'block text-[11px] font-medium text-[#5B6675] dark:text-[#9AA7B6]' }, et),
+        h('input', { id: `comun-${k}`, class: `${CLS.input} py-1 text-sm`, list: lista, value: (m.comun || {})[k] || '', onInput: ev => { estado.modal.comun = { ...(estado.modal.comun || {}), [k]: ev.target.value }; } }))),
+    h('button', { type: 'button', class: CLS.btnChico, onClick: aplicarATodas }, 'Aplicar a todas')) : null;
+  const listas = ['espesor', 'calibre', 'medida'].map(k => h('datalist', { id: `sug-${k}` }, SUGERENCIAS_NOMEN[k].map(v => h('option', { value: v }))));
+  const listaArchivos = m.archivos.length ? h('div', { class: 'max-h-72 space-y-2 overflow-y-auto rounded-md border border-[#D5DBE2] p-2 dark:border-[#2E3A48]' },
+    plan.filas.map((f, i) => h('div', { class: 'rounded-md border border-[#E3E7EC] p-2 dark:border-[#26313D]' },
+      h('p', { class: 'text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, `Archivo: ${f.archivo.name} · ${formatoTamano(f.archivo.size)}`),
+      h('div', { class: 'mt-1 flex flex-wrap items-end gap-2' },
+        campo(i, 'cantidad', 'Piezas', 'w-16', { type: 'number', min: '1', max: '999', inputmode: 'numeric' }),
+        h('div', { class: 'pb-1.5 text-sm font-semibold text-[#5B6675] dark:text-[#9AA7B6]' }, codigo),
+        ...camposAtributo(i),
+        campo(i, 'nombre', 'Nombre de la pieza', 'min-w-[10rem] flex-1', { maxlength: '80', placeholder: 'CUBIERTA' })),
+      h('div', { class: 'mt-1.5 flex flex-wrap items-center justify-between gap-2' },
+        h('code', { class: 'break-all text-xs font-semibold' }, f.pieza || '—'),
+        h('span', { class: `whitespace-nowrap text-xs font-medium ${f.error ? 'text-[#B42318] dark:text-[#F28B82]' : f.esPrimera ? 'text-[#1F7A4D] dark:text-[#5CC48E]' : 'text-[#B26A00] dark:text-[#E0A650]'}` },
+          f.error ? f.error : f.esPrimera ? 'Pieza nueva' : `Nueva versión (v${f.previa.version_vigente + 1})${f.renombrar ? ' · se renombra' : ''}`))))) : null;
   return h('div', null, titulo,
     h('p', { class: 'mt-1 text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, m.doc
       ? `La versión v${m.doc.version_vigente} quedará obsoleta y los operadores ya no podrán descargarla.`
-      : 'Elige todos los archivos de un tipo a la vez. Cada archivo es una pieza y toma su nombre; si la pieza ya existe, se registra como versión nueva.'),
+      : 'Elige todos los archivos de un tipo a la vez. El aplicativo propone los datos de cada pieza leyendo el nombre del archivo; revísalos y corrige lo necesario. El nombre se arma solo con el formato estándar.'),
     h('div', { class: 'mt-4 space-y-4' },
       m.doc ? null : h('div', null, h('label', { for: 'doc-tipo', class: CLS.etiqueta }, 'Tipo de documento'),
         h('select', { id: 'doc-tipo', class: CLS.input, value: m.tipo_id, onChange: ev => { estado.modal.tipo_id = ev.target.value; estado.modal.archivos = []; estado.modal.piezas = {}; estado.modal.error = null; render(); } },
@@ -2945,7 +3215,7 @@ function ModalDocumento() {
           h('button', { type: 'button', class: CLS.btnSecundario, onClick: () => document.getElementById('doc-archivo').click() }, m.archivos.length ? 'Cambiar selección' : (m.doc ? 'Elegir archivo' : 'Elegir archivos')),
           h('span', { class: 'text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, m.archivos.length ? `${m.archivos.length} ${m.archivos.length === 1 ? 'archivo' : 'archivos'}` : `Formato ${ext}, hasta ${LIMITE_DOCUMENTO_MB} MB cada uno`)),
         m.rechazados ? h('p', { class: 'mt-1 text-xs text-[#B26A00] dark:text-[#E0A650]' }, `Se descartaron ${m.rechazados} archivos por formato o tamaño.`) : null),
-      listaArchivos,
+      listas, barraComun, listaArchivos,
       m.archivos.length ? h('p', { class: 'text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, `${plan.nuevas} piezas nuevas · ${plan.versiones} versiones nuevas${plan.conError ? ` · ${plan.conError} con problema` : ''}`) : null,
       h('div', null, h('label', { for: 'doc-cambios', class: CLS.etiqueta }, plan.versiones ? 'Qué cambió (obligatorio)' : 'Notas (opcional)'),
         h('textarea', { id: 'doc-cambios', rows: '2', maxlength: '500', class: CLS.input, placeholder: plan.versiones ? 'Por ejemplo: se corrigió la cota del costado izquierdo.' : 'Por ejemplo: versión inicial liberada para producción.', value: m.cambios, onInput: ev => { estado.modal.cambios = ev.target.value; } }),
@@ -3073,6 +3343,12 @@ function ModalCorteCatalogo() {
       m.entidad === 'area' ? null : h('div', null, h('label', { for: 'corte-area', class: CLS.etiqueta }, m.entidad === 'tipo' ? 'Área que lo descarga' : 'Área de la máquina'),
         h('select', { id: 'corte-area', class: e.area_id ? CLS.inputError : CLS.input, value: m.datos.area_id, onChange: ev => campo('area_id', ev.target.value) }, h('option', { value: '' }, 'Elige el área'), areas.map(a => h('option', { value: a.id }, a.nombre))),
         ErrorCampo(e.area_id, 'corte-area-error')),
+      m.entidad === 'tipo' ? h('div', { class: 'grid gap-4 sm:grid-cols-2' },
+        h('div', null, h('label', { for: 'corte-codigo', class: CLS.etiqueta }, 'Código en el nombre'),
+          h('input', { id: 'corte-codigo', class: CLS.input, maxlength: '20', placeholder: 'LP, LAMINA, TUBULAR…', value: m.datos.codigo_material, onInput: ev => campo('codigo_material', ev.target.value) })),
+        h('div', null, h('label', { for: 'corte-atributo', class: CLS.etiqueta }, 'Dato que se pide'),
+          h('select', { id: 'corte-atributo', class: CLS.input, value: m.datos.atributo, onChange: ev => campo('atributo', ev.target.value) },
+            [['ninguno', 'Ninguno (tela, panel)'], ['espesor', 'Espesor en mm (laminado plástico)'], ['calibre', 'Calibre (lámina)'], ['tubular', 'Medida y calibre (tubular)']].map(([v, t]) => h('option', { value: v }, t))))) : null,
       m.entidad === 'tipo' ? h('div', null, h('label', { for: 'corte-ext', class: CLS.etiqueta }, 'Formatos permitidos'),
         h('input', { id: 'corte-ext', class: e.extensiones ? CLS.inputError : CLS.input, placeholder: 'dxf   o   igs,iges', value: m.datos.extensiones, onInput: ev => campo('extensiones', ev.target.value) }),
         e.extensiones ? ErrorCampo(e.extensiones, 'corte-ext-error') : h('p', { class: 'mt-1 text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, 'Extensiones sin punto, separadas por coma.')) : null),
@@ -3104,6 +3380,149 @@ function ModalNoAplica() {
     PieModal('Guardar', confirmarNoAplica, { enviando: m.enviando }));
 }
 /* FIN COMPONENTE: ModalNoAplica */
+
+/* COMPONENTE: AvisoCambiosOperador — piezas nuevas o actualizadas desde la última revisión */
+function AvisoCambiosOperador() {
+  const cambios = cambiosOperador();
+  if (!cambios.length) return h('div', { class: 'flex justify-end' }, BotonActivarAvisos());
+  return h('section', { class: 'rounded-md border-2 border-[#C98A1B] bg-[#FFF4DB] p-4 text-[#5C4410] dark:border-[#D9A03A] dark:bg-[#3A2F14] dark:text-[#F0D9A0]', role: 'alert' },
+    h('div', { class: 'flex flex-wrap items-center gap-3' },
+      h('p', { class: 'flex flex-1 items-center gap-2 text-base font-semibold' }, icono('campana', 'w-5 h-5'),
+        `${cambios.length} ${cambios.length === 1 ? 'pieza nueva o actualizada' : 'piezas nuevas o actualizadas'} desde tu última revisión`),
+      BotonActivarAvisos(),
+      h('button', { type: 'button', class: CLS.btnPrimario, onClick: marcarArchivosRevisados }, icono('check'), 'Ya actualicé mis archivos')),
+    h('p', { class: 'mt-1 text-sm' }, 'Descarga estas piezas y reemplaza las que tengas en tu USB o en la computadora de la máquina. Las versiones anteriores ya no son válidas.'),
+    h('ul', { class: 'mt-3 max-h-56 divide-y divide-[#E9D29B] overflow-y-auto rounded-md border border-[#E9D29B] bg-white/70 dark:divide-[#5C4A1F] dark:border-[#5C4A1F] dark:bg-[#1B232D]/60' },
+      cambios.map(d => h('li', { class: 'flex flex-wrap items-center gap-3 px-3 py-2 text-sm' },
+        h('span', { class: 'rounded bg-[#FFF4DB] px-1.5 py-0.5 text-xs font-semibold dark:bg-[#3A2F14]' }, d.version_vigente > 1 ? 'ACTUALIZADA' : 'NUEVA'),
+        h('span', { class: 'min-w-0 flex-1' }, h('span', { class: 'font-semibold tabular-nums' }, d.sku_clave), ` · ${d.pieza} · ${d.tipo_nombre} · v${d.version_vigente}`,
+          h('span', { class: 'ml-2 text-xs opacity-80' }, formatearFechaHora(d.subida_en))),
+        visorDisponible(d) ? h('button', { type: 'button', class: CLS.btnChico, onClick: () => verPieza(d), 'aria-label': `Ver pieza ${d.pieza}` }, icono('ojo', 'w-3.5 h-3.5'), 'Ver pieza') : null,
+        h('button', { type: 'button', class: CLS.btnChico, disabled: !!estado.corte.descargando, onClick: () => descargarDocumento(d) }, icono('descarga', 'w-3.5 h-3.5'), 'Descargar')))));
+}
+/* FIN COMPONENTE: AvisoCambiosOperador */
+
+/* COMPONENTE: TarjetaObservacion */
+function TarjetaObservacion(o, { conSku = true } = {}) {
+  const abierta = o.estado === 'abierta';
+  const [texto, ...reaperturas] = String(o.texto).split('\n\nReabierta: ');
+  return h('li', { class: `rounded-md border p-3 ${abierta ? 'border-[#E7B4AE] bg-[#FDF3F2] dark:border-[#6B2E29] dark:bg-[#3A1D1B]' : 'border-[#D5DBE2] bg-white dark:border-[#2E3A48] dark:bg-[#18202A]'}` },
+    h('div', { class: 'flex flex-wrap items-center gap-2 text-xs' },
+      h('span', { class: `rounded px-1.5 py-0.5 font-semibold ${abierta ? 'bg-[#B42318] text-white dark:bg-[#C8372B]' : 'bg-[#E6F2EB] text-[#1F7A4D] dark:bg-[#173526] dark:text-[#5CC48E]'}` }, abierta ? 'ABIERTA' : 'RESUELTA'),
+      conSku ? h('button', { type: 'button', class: `${CLS.enlace} font-semibold tabular-nums`, onClick: () => abrirDetalle(o.sku_id) }, o.sku_clave) : null,
+      h('span', { class: 'font-medium' }, o.apartado_nombre),
+      h('span', { class: 'text-[#5B6675] dark:text-[#9AA7B6]' }, `${o.autor_nombre || '—'} · ${formatearFechaHora(o.created_at)}`)),
+    h('p', { class: 'mt-1.5 whitespace-pre-line text-sm' }, texto),
+    reaperturas.map(r => h('p', { class: 'mt-1 text-sm' }, h('span', { class: 'font-semibold text-[#B42318] dark:text-[#F28B82]' }, 'Reabierta: '), r)),
+    !abierta && o.respuesta ? h('p', { class: 'mt-2 rounded bg-[#F4F6F8] px-2 py-1.5 text-sm dark:bg-[#1F2833]' }, h('span', { class: 'font-semibold' }, 'Corrección: '), o.respuesta,
+      h('span', { class: 'block text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, `${o.resuelta_por_nombre || '—'} · ${formatearFechaHora(o.resuelta_en)}`)) : null,
+    h('div', { class: 'mt-2 flex flex-wrap gap-2' },
+      abierta && puede(estado.sesion.rol_id, 'resolver') ? h('button', { type: 'button', class: CLS.btnChico, onClick: () => abrirModalAtenderObs(o, 'resolver') }, icono('check', 'w-3.5 h-3.5'), 'Marcar como resuelta') : null,
+      !abierta && puede(estado.sesion.rol_id, 'observar') ? h('button', { type: 'button', class: CLS.btnChico, onClick: () => abrirModalAtenderObs(o, 'reabrir') }, 'Reabrir') : null));
+}
+/* FIN COMPONENTE: TarjetaObservacion */
+
+/* COMPONENTE: VistaObservaciones */
+function VistaObservaciones() {
+  const o = estado.obs, lista = o.lista || [];
+  const filtradas = lista.filter(x => o.filtro === 'todas' || (o.filtro === 'abiertas' ? x.estado === 'abierta' : x.estado === 'resuelta'));
+  const n = { abiertas: lista.filter(x => x.estado === 'abierta').length, resueltas: lista.filter(x => x.estado === 'resuelta').length, todas: lista.length };
+  const pestaña = (clave, texto) => h('button', { type: 'button', 'aria-pressed': String(o.filtro === clave),
+    class: `rounded-md px-3 py-1.5 text-sm font-medium ${o.filtro === clave ? 'bg-[#1E4E79] text-white dark:bg-[#2F6DA3]' : 'border border-[#C3CBD4] dark:border-[#3A4756]'}`,
+    onClick: () => { estado.obs.filtro = clave; render(); } }, `${texto} (${n[clave]})`);
+  const texto = puede(estado.sesion.rol_id, 'observar')
+    ? 'Las observaciones se registran desde el detalle de cada SKU (clic en su clave, sección Observaciones de calidad). Los ingenieros reciben el aviso y las marcan como resueltas.'
+    : 'Problemas que el auditor de calidad señaló en los SKUs. Corrige el apartado indicado y marca la observación como resuelta, explicando qué se corrigió.';
+  return h('section', { class: 'space-y-5' },
+    EncabezadoVista('Observaciones de calidad', texto, BotonActivarAvisos()),
+    h('div', { class: 'flex flex-wrap gap-2' }, pestaña('abiertas', 'Abiertas'), pestaña('resueltas', 'Resueltas'), pestaña('todas', 'Todas')),
+    !o.lista ? EstadoCargando('Cargando observaciones…', 3)
+      : !filtradas.length ? EstadoVacio({ titulo: o.filtro === 'abiertas' ? 'No hay observaciones abiertas' : 'No hay observaciones', texto: o.filtro === 'abiertas' ? 'Todo lo señalado por calidad está atendido.' : 'Aún no se ha registrado ninguna.', accion: null })
+      : h('ul', { class: 'space-y-3' }, filtradas.map(x => TarjetaObservacion(x))));
+}
+/* FIN COMPONENTE: VistaObservaciones */
+
+/* COMPONENTE: ObservacionesSku — sección del detalle del SKU */
+function ObservacionesSku(s) {
+  const todas = (estado.obs.lista || []).filter(o => o.sku_id === s.id);
+  const abiertas = todas.filter(o => o.estado === 'abierta'), resueltas = todas.filter(o => o.estado === 'resuelta');
+  return h('section', null,
+    h('div', { class: 'mb-2 flex items-center justify-between gap-2' },
+      h('h3', { class: 'flex items-center gap-2 text-sm font-semibold' }, 'Observaciones de calidad',
+        abiertas.length ? h('span', { class: 'rounded bg-[#B42318] px-1.5 text-xs text-white dark:bg-[#C8372B]' }, `${abiertas.length} ${abiertas.length === 1 ? 'abierta' : 'abiertas'}`) : null),
+      puede(estado.sesion.rol_id, 'observar') ? h('button', { type: 'button', class: CLS.btnChico, onClick: () => abrirModalObservacion(s) }, icono('bandera', 'w-3.5 h-3.5'), 'Señalar observación') : null),
+    !todas.length ? h('p', { class: 'text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, 'Sin observaciones.')
+      : h('ul', { class: 'space-y-2' }, abiertas.map(o => TarjetaObservacion(o, { conSku: false }))),
+    resueltas.length ? h('details', { class: 'mt-2' }, h('summary', { class: 'cursor-pointer text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, `${resueltas.length} ${resueltas.length === 1 ? 'resuelta' : 'resueltas'}`),
+      h('ul', { class: 'mt-2 space-y-2' }, resueltas.map(o => TarjetaObservacion(o, { conSku: false })))) : null);
+}
+/* FIN COMPONENTE: ObservacionesSku */
+
+/* COMPONENTE: ModalObservacion — el auditor señala un problema en un apartado */
+function ModalObservacion() {
+  const m = estado.modal;
+  const ents = entregablesActivos(), tipos = DataService.catalogosCorte().tipos.filter(t => t.activo);
+  const [tipo, id] = m.apartado.split(':');
+  const piezas = tipo === 'corte' ? (estado.detalle.documentos || []).filter(d => d.activo && d.tipo_documento_id === Number(id)) : [];
+  return h('form', { novalidate: true, onSubmit: ev => { ev.preventDefault(); guardarObservacion(); } },
+    h('h2', { id: 'titulo-modal', class: 'text-lg font-semibold' }, `Señalar observación en ${m.sku.clave}`),
+    h('p', { class: 'mt-1 text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, 'Los ingenieros recibirán un aviso y deberán marcarla como resuelta, explicando qué corrigieron.'),
+    h('div', { class: 'mt-4 space-y-4' },
+      h('div', null, h('label', { for: 'obs-apartado', class: CLS.etiqueta }, 'Apartado'),
+        h('select', { id: 'obs-apartado', class: CLS.input, value: m.apartado, disabled: m.enviando, onChange: ev => { estado.modal.apartado = ev.target.value; estado.modal.documento_id = ''; render(); } },
+          h('option', { value: 'general' }, 'General del SKU'),
+          h('optgroup', { label: 'Entregables' }, ents.map(e => h('option', { value: `entregable:${e.id}` }, e.nombre))),
+          tipos.length ? h('optgroup', { label: 'Archivos de corte' }, tipos.map(t => h('option', { value: `corte:${t.id}` }, t.nombre))) : null)),
+      piezas.length ? h('div', null, h('label', { for: 'obs-pieza', class: CLS.etiqueta }, 'Pieza (opcional)'),
+        h('select', { id: 'obs-pieza', class: CLS.input, value: m.documento_id, disabled: m.enviando, onChange: ev => { estado.modal.documento_id = ev.target.value; } },
+          h('option', { value: '' }, 'Todo el tipo de archivo'), piezas.map(d => h('option', { value: d.id }, `${d.pieza} (v${d.version_vigente})`)))) : null,
+      h('div', null, h('label', { for: 'obs-texto', class: CLS.etiqueta }, '¿Qué está mal? (obligatorio)'),
+        h('textarea', { id: 'obs-texto', rows: '4', maxlength: '1000', class: CLS.input, disabled: m.enviando, placeholder: 'Por ejemplo: el barreno superior está desfasado 2 mm respecto al plano.', value: m.texto, onInput: ev => { estado.modal.texto = ev.target.value; } }))),
+    ErrorModal(m.error),
+    PieModal('Registrar observación', guardarObservacion, { enviando: m.enviando }));
+}
+/* FIN COMPONENTE: ModalObservacion */
+
+/* COMPONENTE: ModalAtenderObs — resolver (ingeniería) o reabrir (calidad) */
+function ModalAtenderObs() {
+  const m = estado.modal, o = m.obs, resolver = m.accion === 'resolver';
+  return h('form', { novalidate: true, onSubmit: ev => { ev.preventDefault(); guardarAtenderObs(); } },
+    h('h2', { id: 'titulo-modal', class: 'text-lg font-semibold' }, resolver ? 'Marcar observación como resuelta' : 'Reabrir observación'),
+    h('p', { class: 'mt-1 text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, `${o.sku_clave} · ${o.apartado_nombre}`),
+    h('p', { class: 'mt-2 whitespace-pre-line rounded bg-[#F4F6F8] px-3 py-2 text-sm dark:bg-[#1F2833]' }, o.texto),
+    h('div', { class: 'mt-4' }, h('label', { for: 'obs-texto', class: CLS.etiqueta }, resolver ? '¿Qué se corrigió? (obligatorio)' : '¿Por qué se reabre? (obligatorio)'),
+      h('textarea', { id: 'obs-texto', rows: '3', maxlength: '1000', class: CLS.input, disabled: m.enviando,
+        placeholder: resolver ? 'Por ejemplo: se corrigió la posición del barreno y se subió la versión 3 del DXF.' : 'Por ejemplo: la versión nueva sigue con el barreno desfasado.', value: m.texto, onInput: ev => { estado.modal.texto = ev.target.value; } })),
+    ErrorModal(m.error),
+    PieModal(resolver ? 'Marcar como resuelta' : 'Reabrir', guardarAtenderObs, { enviando: m.enviando }));
+}
+/* FIN COMPONENTE: ModalAtenderObs */
+
+/* COMPONENTE: ModalRenombrarPieza — pasar una pieza al formato estándar */
+function ModalRenombrarPieza() {
+  const m = estado.modal, { atributo, codigo } = nomenDeTipo(m.tipoDoc), e = datosNomenValidos(m.datos, atributo);
+  const nuevo = Object.keys(e).length ? '—' : nombreEstandar(m.sku.clave, m.tipoDoc, m.datos);
+  const campo = (k, et, ancho, extra) => h('div', { class: ancho },
+    h('label', { for: `rn-${k}`, class: CLS.etiqueta }, et),
+    h('input', { id: `rn-${k}`, class: e[k] ? CLS.inputError : CLS.input, value: m.datos[k] || '', disabled: m.enviando, ...extra, onInput: ev => { estado.modal.datos = { ...estado.modal.datos, [k]: ev.target.value }; conRetraso('pieza', render, 200); } }),
+    e[k] ? h('p', { class: 'mt-1 text-xs text-[#B42318] dark:text-[#F28B82]' }, e[k]) : null);
+  return h('form', { novalidate: true, onSubmit: ev => { ev.preventDefault(); guardarRenombrar(); } },
+    h('h2', { id: 'titulo-modal', class: 'text-lg font-semibold' }, 'Renombrar pieza'),
+    h('p', { class: 'mt-1 text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, `Nombre actual: ${m.doc.pieza}`),
+    ['espesor', 'calibre', 'medida'].map(k => h('datalist', { id: `sug-${k}` }, SUGERENCIAS_NOMEN[k].map(v => h('option', { value: v })))),
+    h('div', { class: 'mt-4 flex flex-wrap items-start gap-3' },
+      campo('cantidad', 'Piezas', 'w-20', { type: 'number', min: '1', max: '999' }),
+      h('div', { class: 'pt-8 text-sm font-semibold' }, codigo),
+      atributo === 'espesor' ? campo('espesor', 'Espesor (mm)', 'w-28', { list: 'sug-espesor', inputmode: 'decimal' }) : null,
+      atributo === 'tubular' ? campo('medida', 'Tubular', 'w-32', { list: 'sug-medida', placeholder: '2X1' }) : null,
+      atributo === 'calibre' || atributo === 'tubular' ? campo('calibre', 'Calibre', 'w-24', { list: 'sug-calibre', inputmode: 'numeric' }) : null,
+      campo('nombre', 'Nombre de la pieza', 'min-w-[12rem] flex-1', { maxlength: '80' })),
+    h('p', { class: 'mt-4 text-sm' }, 'Nuevo nombre: ', h('code', { class: 'break-all font-semibold' }, nuevo)),
+    h('p', { class: 'mt-1 text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, 'Solo cambia el nombre: el archivo, sus versiones y su historial se conservan.'),
+    ErrorModal(m.error),
+    PieModal('Renombrar', guardarRenombrar, { enviando: m.enviando }));
+}
+/* FIN COMPONENTE: ModalRenombrarPieza */
 
 /* COMPONENTE: ModalConfirmacion */
 function ModalConfirmacion() {
@@ -3239,7 +3658,7 @@ function VistaReporte() {
 function App() {
   if (estado.fase === 'auth') return h('div', null, FormularioAuth(), Avisos());
   if (estado.fase !== 'app' || !estado.sesion) return h('div', null, PantallaInicio(), Avisos());
-  const vistas = { skus: VistaSkus, tablero: VistaTablero, historial: VistaHistorial, admin: VistaAdministracion, corte: estado.sesion.rol_id === ROLES.OPERADOR ? VistaCorteOperador : VistaCorte };
+  const vistas = { observaciones: VistaObservaciones, skus: VistaSkus, tablero: VistaTablero, historial: VistaHistorial, admin: VistaAdministracion, corte: estado.sesion.rol_id === ROLES.OPERADOR ? VistaCorteOperador : VistaCorte };
   const reporte = estado.reporte.abierto && estado.reporte.datos;
   return h('div', null,
     h('div', { class: `flex min-h-screen flex-col ${reporte ? 'print:hidden' : ''}` },
