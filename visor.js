@@ -517,7 +517,11 @@ function ajustarCilindro(pos, nor) { // pos, nor: arreglos planos [x,y,z,...]
     const matMed = new THREE.MeshBasicMaterial({ color: colMed, depthTest: false, transparent: true, opacity: 0.95 });
     const matLinea = new THREE.LineBasicMaterial({ color: colMed, depthTest: false });
     const matCara = new THREE.MeshBasicMaterial({ color: colMed, transparent: true, opacity: 0.28, depthTest: false, side: THREE.DoubleSide });
-    const geoPunto = new THREE.SphereGeometry(radio * 0.006, 12, 8);
+    const texPunto = (() => { const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d');
+      x.fillStyle = '#' + colMed.toString(16).padStart(6, '0'); x.beginPath(); x.arc(32, 32, 26, 0, Math.PI * 2); x.fill();
+      x.lineWidth = 8; x.strokeStyle = esOscuro() ? '#10161D' : '#FFFFFF'; x.stroke(); return new THREE.CanvasTexture(c); })();
+    const matPunto = new THREE.PointsMaterial({ size: 11, sizeAttenuation: false, map: texPunto, transparent: true, depthTest: false, alphaTest: 0.1 });
+    const geoPunto = null;
     const rayo = new THREE.Raycaster(), raton = new THREE.Vector2();
     const V3 = (a) => new THREE.Vector3(a[0], a[1], a[2]);
     // --- datos de la pieza para medir: cilindros (barrenos y radios), caras planas, esquinas y aristas ---
@@ -560,12 +564,13 @@ function ajustarCilindro(pos, nor) { // pos, nor: arreglos planos [x,y,z,...]
       if (h === 'barreno' || h === 'entre') return bordeCercano(mx, my) || (() => { const hit = tocado3d(mx, my); const cl = hit && cilindros.find(x => x.malla === hit.object); return cl ? { tipo: 'barreno', cl, c: cl.bordes[0] } : null; })();
       if (h === 'cara') return med.a ? caraBajo(mx, my) : (bordeCercano(mx, my) || esquinaCercana(mx, my));
       if (h === 'longitud') return aristaCercana(mx, my);
+      if (h === 'vertices') return esquinaCercana(mx, my);
       return null;
     }
     // --- dibujo ---
     function nuevo(obj) { obj.renderOrder = 10; escena.add(obj); return obj; }
     function linea(pts, mat = matLinea) { return nuevo(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), mat)); }
-    function punto(p) { const m = nuevo(new THREE.Mesh(geoPunto, matMed)); m.position.copy(p); return m; }
+    function punto(p) { return nuevo(new THREE.Points(new THREE.BufferGeometry().setFromPoints([p]), matPunto)); } // siempre del mismo tamaño en pantalla
     function figura(r) { // lo que ilumina una referencia
       if (!r) return [];
       if (r.tipo === 'barreno') return [linea(circulo(r.c, r.cl.u, r.cl.w, r.cl.r))];
@@ -602,6 +607,14 @@ function ajustarCilindro(pos, nor) { // pos, nor: arreglos planos [x,y,z,...]
       } else if (h === 'longitud') {
         const ac = aristaCompleta(ref.sg);
         registrar([linea(ac.pts), punto(ac.a), punto(ac.b)], [[ac.a.clone().add(ac.b).multiplyScalar(0.5), `${fmt(ac.largo)} mm`]], `Longitud de la arista: ${fmt(ac.largo)} mm`);
+      } else if (h === 'vertices') {
+        if (!med.a) { med.a = ref; quitar(selObjs); selObjs = figura(ref); resultado.textContent = 'Ahora el segundo vértice.'; return; }
+        const A = med.a.p, B = ref.p, d = A.distanceTo(B);
+        if (d < 1e-6) { resultado.textContent = 'Elige un vértice distinto.'; return; }
+        quitar(selObjs); selObjs = [];
+        registrar([linea([A, B]), punto(A), punto(B)], [[A.clone().add(B).multiplyScalar(0.5), `${fmt(d)} mm`]],
+          `${fmt(d)} mm entre vértices  (ΔX ${fmt(Math.abs(B.x - A.x))}, ΔY ${fmt(Math.abs(B.y - A.y))}, ΔZ ${fmt(Math.abs(B.z - A.z))})`);
+        med.a = null;
       } else if (h === 'entre') {
         if (!med.a) { med.a = ref; quitar(selObjs); selObjs = figura(ref); resultado.textContent = 'Ahora la orilla del segundo barreno.'; return; }
         const A = med.a, B = ref, paralelos = Math.abs(A.cl.eje.dot(B.cl.eje)) > 0.999;
@@ -626,7 +639,7 @@ function ajustarCilindro(pos, nor) { // pos, nor: arreglos planos [x,y,z,...]
     renderer.domElement.addEventListener('pointerup', ev => {
       if (!med.herramienta || !presion || Math.hypot(ev.clientX - presion.x, ev.clientY - presion.y) > 5 || ev.button !== 0) return;
       const r = rect(), ref = referencia(ev.clientX - r.left, ev.clientY - r.top);
-      if (!ref) { resultado.textContent = { barreno: 'Da clic en la orilla de un barreno o en una esquina redondeada.', entre: 'Da clic en la orilla circular de un barreno.', cara: med.a ? 'Da clic sobre una cara plana.' : 'Da clic en la orilla de un barreno o en una esquina de la pieza.', longitud: 'Da clic sobre una arista recta.' }[med.herramienta]; return; }
+      if (!ref) { resultado.textContent = { barreno: 'Da clic en la orilla de un barreno o en una esquina redondeada.', entre: 'Da clic en la orilla circular de un barreno.', cara: med.a ? 'Da clic sobre una cara plana.' : 'Da clic en la orilla de un barreno o en una esquina de la pieza.', vertices: 'Da clic justo sobre un vértice (esquina) de la pieza.', longitud: 'Da clic sobre una arista recta.' }[med.herramienta]; return; }
       medir(ref);
     });
     let pendienteHover = false;
@@ -640,10 +653,11 @@ function ajustarCilindro(pos, nor) { // pos, nor: arreglos planos [x,y,z,...]
       quitar(med.objetos); quitar(selObjs); selObjs = []; med.etiquetas.forEach(e => e.d.remove());
       med.objetos = []; med.etiquetas = []; med.a = null; resultado.textContent = '—';
     }
-    const NOMBRES_3D = { barreno: 'Barreno o radio', entre: 'Distancia entre barrenos', cara: 'Barreno o esquina a una cara', longitud: 'Longitud de una arista' };
+    const NOMBRES_3D = { barreno: 'Barreno o radio', entre: 'Distancia entre barrenos', cara: 'Barreno o esquina a una cara', vertices: 'De un vértice a otro', longitud: 'Longitud de una arista' };
     const AYUDA_3D = { barreno: 'Pasa el cursor por la orilla de un barreno: se ilumina. Da clic para ver su diámetro o radio.',
       entre: 'Clic en la orilla de un barreno y luego en la de otro: da la distancia entre sus ejes.',
       cara: 'Clic en la orilla de un barreno o en una esquina, y luego en una cara plana: da la distancia perpendicular.',
+      vertices: 'Clic en un vértice (esquina) y luego en otro, por ejemplo dos esquinas de una misma cara.',
       longitud: 'Pasa el cursor por una arista recta: se ilumina completa. Da clic para ver su longitud.' };
     const activo = ['ring-2', 'ring-[#D9480F]', 'dark:ring-[#FFB347]'];
     function elegir(h) {
@@ -670,7 +684,7 @@ function ajustarCilindro(pos, nor) { // pos, nor: arreglos planos [x,y,z,...]
     v.limpiar = () => {
       vivo = false; obs.disconnect(); control.dispose();
       grupo.children.forEach(o => o.geometry.dispose()); aristas.children.forEach(o => o.geometry.dispose());
-      borrarMedidas(); quitar(hoverObjs); geoPunto.dispose(); matMed.dispose(); matLinea.dispose(); matCara.dispose();
+      borrarMedidas(); quitar(hoverObjs); matPunto.dispose(); texPunto.dispose(); matMed.dispose(); matLinea.dispose(); matCara.dispose();
       material.dispose(); matArista.dispose(); renderer.dispose();
     };
   }

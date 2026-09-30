@@ -108,8 +108,10 @@ function configurado() { return /^https:\/\/.+\.supabase\.co\/?$/.test(CONFIG.SU
 
 <!-- ===== 3. CAPA DE DATOS (DataService) ===== -->
 <script>
+/* Los mensajes que vienen de la base de datos usan el nombre nuevo del rol */
+function textoRol(t) { return String(t || '').replace(/jefe de ingenier[ií]a/gi, m => m[0] === 'J' ? 'Gerente de ingeniería' : 'gerente de ingeniería').replace(/\bel jefe\b/g, 'el gerente'); }
 class ErrorApi extends Error {
-  constructor(mensaje, { tipo = 'servidor', campos = null } = {}) { super(mensaje); this.tipo = tipo; this.campos = campos; }
+  constructor(mensaje, { tipo = 'servidor', campos = null } = {}) { super(textoRol(mensaje)); this.tipo = tipo; this.campos = campos; }
 }
 const esperar = ms => new Promise(r => setTimeout(r, ms));
 const claveUnica = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
@@ -241,7 +243,7 @@ async function prepararImagen(archivo) {
 }
 /* ---------- Archivos de corte en Google Drive ---------- */
 async function llamarDrive(accion, datos) {
-  if (!driveListo()) throw new ErrorApi('Falta configurar el almacén de archivos. Avisa al jefe de ingeniería (revisar DRIVE_URL en index.html).', { tipo: 'configuracion' });
+  if (!driveListo()) throw new ErrorApi('Falta configurar el almacén de archivos. Avisa al gerente de ingeniería (revisar DRIVE_URL en index.html).', { tipo: 'configuracion' });
   const { data } = await SB.auth.getSession();
   if (!data.session) throw new ErrorApi('Tu sesión expiró. Vuelve a iniciar sesión.', { tipo: 'sesion' });
   let r;
@@ -943,7 +945,7 @@ async function enviarAuth() {
     if (a.pantalla === 'registro') {
       const r = await DataService.registrarse({ nombre: a.nombre.trim(), email, password: a.password });
       if (r.conSesion) { await entrarConSesion(r.usuario); return; }
-      estado.auth = { ...AUTH_INICIAL, pantalla: 'login', email, mensaje: `Listo. Te enviamos un correo a ${email}: abre el enlace para confirmar tu cuenta y después inicia sesión. El jefe de ingeniería tendrá que aprobar tu acceso.` };
+      estado.auth = { ...AUTH_INICIAL, pantalla: 'login', email, mensaje: `Listo. Te enviamos un correo a ${email}: abre el enlace para confirmar tu cuenta y después inicia sesión. El gerente de ingeniería tendrá que aprobar tu acceso.` };
     }
     if (a.pantalla === 'recuperar') {
       await DataService.recuperarPassword(email);
@@ -1842,7 +1844,7 @@ function cerrarModal() { if (estado.modal && estado.modal.enviando) return; esta
 <script>
 const ROLES = { INGENIERO: 1, JEFE: 2, CONSULTA: 3, OPERADOR: 4 };
 const ESTATUS_SKU = { ACTIVO: 1, DESCONTINUADO: 2 };
-const NOMBRES_ROL = { 1: 'Ingeniero', 2: 'Jefe de ingeniería', 3: 'Auditor de calidad', 4: 'Operador' };
+const NOMBRES_ROL = { 1: 'Ingeniero', 2: 'Gerente de ingeniería', 3: 'Auditor de calidad', 4: 'Operador' };
 
 /* Quién puede hacer qué. ver: los tres roles; marcar/desmarcar: ingeniero y jefe; administrar: solo jefe. */
 const PERMISOS = {
@@ -2128,7 +2130,7 @@ function ModalMedidas() {
   const listas = m.lista ? [m.lista] : Object.keys(MEDIDAS_BASE);
   return h('div', null,
     h('h2', { id: 'titulo-modal', class: 'text-lg font-semibold' }, m.lista ? `Agregar a: ${NOMBRES_LISTA[m.lista]}` : 'Medidas de materiales'),
-    h('p', { class: 'mt-1 text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, esJefe ? 'Valores que se pueden elegir al subir piezas. Los ingenieros pueden agregar; solo el jefe puede quitar.' : 'Valores que se pueden elegir al subir piezas. Agrega uno nuevo si no aparece; solo el jefe puede quitarlos.'),
+    h('p', { class: 'mt-1 text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, esJefe ? 'Valores que se pueden elegir al subir piezas. Los ingenieros pueden agregar; solo el gerente puede quitar.' : 'Valores que se pueden elegir al subir piezas. Agrega uno nuevo si no aparece; solo el gerente puede quitarlos.'),
     !cache.medidas ? h('p', { class: 'mt-3 rounded-md bg-[#FFF4DB] p-2 text-sm text-[#5C4410] dark:bg-[#3A2F14] dark:text-[#F0D9A0]' }, 'Falta ejecutar en Supabase el script actualizacion_catalogos_y_medidas.sql; mientras tanto se usan las medidas de siempre.') : null,
     h('div', { class: 'mt-4 space-y-4' }, listas.map(lista => h('div', null,
       h('p', { class: 'text-sm font-semibold' }, NOMBRES_LISTA[lista]),
@@ -2275,7 +2277,7 @@ function EstadoSinPermiso() {
   return h('div', { class: `${CLS.panel} flex flex-col items-center px-6 py-12 text-center` },
     icono('candado', 'w-8 h-8 text-[#5B6675] dark:text-[#9AA7B6]'),
     h('h2', { class: 'mt-3 text-base font-semibold' }, 'Tu rol no tiene acceso a esta sección'),
-    h('p', { class: 'mt-1 max-w-md text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, 'Administración es solo para el jefe de ingeniería. Si necesitas dar de alta un SKU o un usuario, pídeselo a él.'),
+    h('p', { class: 'mt-1 max-w-md text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, 'Administración es solo para el gerente de ingeniería. Si necesitas dar de alta un usuario, pídeselo al gerente de ingeniería.'),
     h('button', { type: 'button', class: `${CLS.btnSecundario} mt-4`, onClick: () => irA('skus') }, 'Ir al avance por SKU'));
 }
 /* FIN COMPONENTE: EstadoSinPermiso */
@@ -2310,7 +2312,7 @@ function PantallaInicio() {
     if (pendiente && estado.confirmacion === 'confirmada') return MarcoAcceso(h('div', { class: `${CLS.panel} p-6 text-center text-sm` },
       h('div', { class: 'mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#E6F2EB] text-[#1F7A4D] dark:bg-[#173526] dark:text-[#5CC48E]' }, icono('check', 'w-8 h-8')),
       h('h1', { class: 'mt-4 text-lg font-semibold' }, '¡Tu cuenta quedó confirmada!'),
-      h('p', { class: 'mt-2 text-[#5B6675] dark:text-[#9AA7B6]' }, `Tu correo ${e.email} ya está verificado. Solo falta un paso: el jefe de ingeniería debe aprobar tu cuenta y asignarte un rol.`),
+      h('p', { class: 'mt-2 text-[#5B6675] dark:text-[#9AA7B6]' }, `Tu correo ${e.email} ya está verificado. Solo falta un paso: el gerente de ingeniería debe aprobar tu cuenta y asignarte un rol.`),
       h('p', { class: 'mt-2 text-[#5B6675] dark:text-[#9AA7B6]' }, 'Avísale que ya te registraste. Cuando te apruebe, presiona "Revisar de nuevo" o vuelve a abrir el aplicativo.'),
       h('div', { class: 'mt-5 flex flex-wrap justify-center gap-2' },
         h('button', { type: 'button', class: CLS.btnPrimario, onClick: revisarAcceso, disabled: e.revisando }, e.revisando ? [Spinner('w-4 h-4 border-white border-t-transparent'), 'Revisando…'] : 'Revisar de nuevo'),
@@ -2318,8 +2320,8 @@ function PantallaInicio() {
     return MarcoAcceso(h('div', { class: `${CLS.panel} p-6 text-sm` },
       h('h1', { class: 'text-base font-semibold' }, pendiente ? 'Tu cuenta está en espera de aprobación' : 'Tu acceso está desactivado'),
       h('p', { class: 'mt-2 text-[#5B6675] dark:text-[#9AA7B6]' }, pendiente
-        ? `Ya creaste tu cuenta (${e.email}). El jefe de ingeniería tiene que aprobarla y asignarte un rol desde Administración. Cuando lo haga, presiona "Revisar de nuevo".`
-        : `La cuenta ${e.email} ya no tiene acceso. Si crees que es un error, pídele al jefe de ingeniería que te lo restaure.`),
+        ? `Ya creaste tu cuenta (${e.email}). El gerente de ingeniería tiene que aprobarla y asignarte un rol desde Administración. Cuando lo haga, presiona "Revisar de nuevo".`
+        : `La cuenta ${e.email} ya no tiene acceso. Si crees que es un error, pídele al gerente de ingeniería que te lo restaure.`),
       h('div', { class: 'mt-4 flex flex-wrap gap-2' },
         h('button', { type: 'button', class: CLS.btnPrimario, onClick: revisarAcceso, disabled: e.revisando }, e.revisando ? [Spinner('w-4 h-4 border-white border-t-transparent'), 'Revisando…'] : 'Revisar de nuevo'),
         h('button', { type: 'button', class: CLS.btnSecundario, onClick: cerrarSesion }, 'Cerrar sesión'))));
@@ -2360,7 +2362,7 @@ function FormularioAuth() {
         a.pantalla === 'login' ? [enlace('¿Olvidaste tu contraseña?', 'recuperar'), enlace('Crear cuenta', 'registro')] : null,
         a.pantalla === 'registro' ? [h('span', { class: 'text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, '¿Ya tienes cuenta?'), enlace('Iniciar sesión', 'login')] : null,
         a.pantalla === 'recuperar' ? enlace('Volver a iniciar sesión', 'login') : null)),
-    a.pantalla === 'registro' ? h('p', { class: 'mt-3 text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, 'Al crear tu cuenta, el jefe de ingeniería tendrá que aprobarla antes de que puedas ver la información.') : null);
+    a.pantalla === 'registro' ? h('p', { class: 'mt-3 text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, 'Al crear tu cuenta, el gerente de ingeniería tendrá que aprobarla antes de que puedas ver la información.') : null);
 }
 /* FIN COMPONENTE: FormularioAuth */
 
@@ -2380,7 +2382,7 @@ function BarraSuperior() {
         h('img', { src: LOGO_LINEA_ITALIA, alt: 'Línea Italia', class: 'h-7 w-auto shrink-0 dark:invert', width: '115', height: '28' }),
         h('span', { class: 'hidden h-7 w-px bg-[#D5DBE2] dark:bg-[#2E3A48] xl:block', 'aria-hidden': 'true' }),
         h('p', { class: 'hidden text-xs font-semibold leading-tight xl:block' }, 'Ingeniería', h('br'), 'de producto')),
-      h('nav', { class: 'order-last -mx-2 flex w-full min-w-0 flex-nowrap overflow-x-auto lg:order-none lg:mx-0 lg:w-auto lg:flex-1', 'aria-label': 'Secciones' },
+      h('nav', { class: 'order-last -mx-2 flex w-full min-w-0 flex-nowrap overflow-x-auto overflow-y-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:order-none lg:mx-0 lg:w-auto lg:flex-1', 'aria-label': 'Secciones' },
         secciones.map(sec => {
           const activa = estado.vista === sec.vista;
           return h('button', {
@@ -2389,9 +2391,9 @@ function BarraSuperior() {
           }, sec.texto);
         })),
       h('div', { class: 'ml-auto flex shrink-0 items-center gap-2 py-2.5' },
-        h('div', { class: 'max-w-[11rem] text-right' },
-          h('p', { class: 'truncate text-sm font-medium leading-tight', title: s.nombre }, s.nombre),
-          h('p', { class: 'truncate text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, esOperador ? (s.maquina ? `${s.maquina.nombre} · ${s.maquina.area}` : 'Operador sin máquina asignada') : s.rol_nombre)),
+        h('div', { class: 'text-right' },
+          h('p', { class: 'whitespace-nowrap text-sm font-medium leading-tight' }, s.nombre),
+          h('p', { class: 'whitespace-nowrap text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, esOperador ? (s.maquina ? `${s.maquina.nombre} · ${s.maquina.area}` : 'Operador sin máquina asignada') : s.rol_nombre)),
         CampanaAvisos(),
         BotonTema(true),
         h('button', { type: 'button', class: CLS.btnChico, onClick: cerrarSesion, title: 'Cerrar sesión' }, 'Salir'))));
@@ -3104,7 +3106,7 @@ function alternarSkuOperador(skuId) {
 }
 function VistaCorteOperador() {
   const c = estado.corte, s = estado.sesion;
-  if (!s.maquina) return h('section', null, EstadoVacio({ titulo: 'Esta cuenta no tiene máquina asignada', texto: 'Pide al jefe de ingeniería que asigne una máquina a esta cuenta en Administración → Usuarios.', accion: null }));
+  if (!s.maquina) return h('section', null, EstadoVacio({ titulo: 'Esta cuenta no tiene máquina asignada', texto: 'Pide al gerente de ingeniería que asigne una máquina a esta cuenta en Administración → Usuarios.', accion: null }));
   const lista = documentosFiltrados();
   // Agrupar las piezas por SKU, y dentro de cada SKU por tipo de archivo
   const porSku = new Map();
