@@ -1358,13 +1358,13 @@ function CampanaAvisos() {
   const noLeidos = avisos.filter(a => !desde || String(a.fecha || '') > desde).length;
   const abierta = !!estado.campanaAbierta;
   const cerrar = () => { estado.campanaAbierta = false; render(); };
-  return h('div', { class: 'relative z-50' },
-    h('button', { type: 'button', id: 'boton-campana', class: `${CLS.btnChico} relative z-50`, 'aria-haspopup': 'true', 'aria-expanded': String(abierta),
+  return h('div', { class: abierta ? 'relative z-[60]' : 'relative' },
+    h('button', { type: 'button', id: 'boton-campana', class: `${CLS.btnChico} relative ${abierta ? 'z-[61]' : ''}`, 'aria-haspopup': 'true', 'aria-expanded': String(abierta),
       'aria-label': noLeidos ? `Notificaciones: ${noLeidos} sin leer` : 'Notificaciones', title: 'Notificaciones', onClick: () => { estado.campanaAbierta = !abierta; render(); } },
       icono('campana', 'w-4 h-4'),
       noLeidos ? h('span', { class: 'absolute -right-1.5 -top-1.5 flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-[#B42318] px-1 text-[11px] font-bold text-white dark:bg-[#C8372B]' }, noLeidos > 99 ? '99+' : String(noLeidos)) : null),
-    abierta ? h('div', { class: 'fixed inset-0 z-40', onClick: cerrar, 'aria-hidden': 'true' }) : null,
-    abierta ? h('div', { class: 'absolute right-0 top-full z-50 mt-2 w-[22rem] max-w-[calc(100vw-2rem)] overflow-hidden rounded-lg border border-[#D5DBE2] bg-white text-left shadow-xl dark:border-[#2E3A48] dark:bg-[#18202A]', role: 'dialog', 'aria-label': 'Notificaciones' },
+    abierta ? h('div', { class: 'fixed inset-0 z-[60]', onClick: cerrar, 'aria-hidden': 'true' }) : null,
+    abierta ? h('div', { class: 'absolute right-0 top-full z-[61] mt-2 w-[22rem] max-w-[calc(100vw-2rem)] overflow-hidden rounded-lg border border-[#D5DBE2] bg-white text-left shadow-xl dark:border-[#2E3A48] dark:bg-[#18202A]', role: 'dialog', 'aria-label': 'Notificaciones' },
       h('div', { class: 'flex items-center justify-between gap-2 border-b border-[#E3E7EC] px-4 py-2.5 dark:border-[#26313D]' },
         h('p', { class: 'text-sm font-semibold' }, 'Notificaciones'),
         avisos.length ? h('button', { type: 'button', class: `${CLS.enlace} text-xs`, onClick: marcarAvisosLeidos }, 'Marcar todo como leído') : null),
@@ -2231,10 +2231,10 @@ function MiniaturaSku(sku, clases = 'h-9 w-9') {
 /* FIN COMPONENTE: MiniaturaSku */
 
 /* COMPONENTE: BotonTema */
-function BotonTema() {
-  const oscuro = estado.tema === 'oscuro';
-  return h('button', { type: 'button', id: 'boton-tema', class: CLS.btnChico, 'aria-pressed': String(oscuro), onClick: alternarTema, title: oscuro ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro' },
-    icono(oscuro ? 'sol' : 'luna', 'w-3.5 h-3.5'), oscuro ? 'Modo claro' : 'Modo oscuro');
+function BotonTema(compacto) {
+  const oscuro = estado.tema === 'oscuro', texto = oscuro ? 'Modo claro' : 'Modo oscuro';
+  return h('button', { type: 'button', id: 'boton-tema', class: CLS.btnChico, 'aria-pressed': String(oscuro), onClick: alternarTema, title: oscuro ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro', 'aria-label': compacto ? texto : null },
+    icono(oscuro ? 'sol' : 'luna', 'w-3.5 h-3.5'), compacto ? h('span', { class: 'hidden 2xl:inline' }, texto) : texto);
 }
 /* FIN COMPONENTE: BotonTema */
 
@@ -2375,26 +2375,26 @@ function BarraSuperior() {
   if (!esOperador && puede(s.rol_id, 'documentos') && DataService.catalogosCorte().tipos.length) secciones.push({ vista: 'corte', texto: 'Archivos de corte' });
   if (puede(s.rol_id, 'administrar')) secciones.push({ vista: 'admin', texto: estado.pendientes ? `Administración (${estado.pendientes})` : 'Administración' });
   return h('header', { class: 'border-b border-[#D5DBE2] dark:border-[#2E3A48] bg-white dark:bg-[#18202A]' },
-    h('div', { class: 'mx-auto flex max-w-[1400px] flex-wrap items-center gap-x-8 gap-y-2 px-4 sm:px-6' },
-      h('div', { class: 'flex items-center gap-4 py-3' },
-        h('img', { src: LOGO_LINEA_ITALIA, alt: 'Línea Italia', class: 'h-9 w-auto shrink-0 dark:invert', width: '148', height: '36' }),
-        h('span', { class: 'h-8 w-px bg-[#D5DBE2] dark:bg-[#2E3A48]', 'aria-hidden': 'true' }),
-        h('p', { class: 'text-sm font-semibold leading-tight' }, 'Ingeniería', h('br'), 'de producto')),
-      h('nav', { class: 'order-last -mx-3 flex w-full flex-wrap gap-1 lg:order-none lg:mx-0 lg:w-auto lg:flex-1', 'aria-label': 'Secciones' },
+    h('div', { class: 'flex w-full flex-wrap items-center gap-x-5 gap-y-1 px-4 lg:flex-nowrap' },
+      h('div', { class: 'flex shrink-0 items-center gap-3 py-2.5' },
+        h('img', { src: LOGO_LINEA_ITALIA, alt: 'Línea Italia', class: 'h-7 w-auto shrink-0 dark:invert', width: '115', height: '28' }),
+        h('span', { class: 'hidden h-7 w-px bg-[#D5DBE2] dark:bg-[#2E3A48] xl:block', 'aria-hidden': 'true' }),
+        h('p', { class: 'hidden text-xs font-semibold leading-tight xl:block' }, 'Ingeniería', h('br'), 'de producto')),
+      h('nav', { class: 'order-last -mx-2 flex w-full min-w-0 flex-nowrap overflow-x-auto lg:order-none lg:mx-0 lg:w-auto lg:flex-1', 'aria-label': 'Secciones' },
         secciones.map(sec => {
           const activa = estado.vista === sec.vista;
           return h('button', {
             type: 'button', id: `nav-${sec.vista}`, 'aria-current': activa ? 'page' : null, onClick: () => irA(sec.vista),
-            class: `-mb-px border-b-2 px-3 py-3 text-sm lg:py-4 font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1E4E79] dark:focus-visible:ring-[#7FB2E5] ${activa ? 'border-[#1E4E79] dark:border-[#7FB2E5] text-[#1E4E79] dark:text-[#7FB2E5]' : 'border-transparent text-[#5B6675] dark:text-[#9AA7B6] hover:text-[#1B2430] dark:hover:text-[#E6EAEF]'}`
+            class: `-mb-px shrink-0 whitespace-nowrap border-b-2 px-2.5 py-3 text-sm lg:py-3.5 font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1E4E79] dark:focus-visible:ring-[#7FB2E5] ${activa ? 'border-[#1E4E79] dark:border-[#7FB2E5] text-[#1E4E79] dark:text-[#7FB2E5]' : 'border-transparent text-[#5B6675] dark:text-[#9AA7B6] hover:text-[#1B2430] dark:hover:text-[#E6EAEF]'}`
           }, sec.texto);
         })),
-      h('div', { class: 'ml-auto flex items-center gap-4 py-3' },
-        h('div', { class: 'text-right' },
-          h('p', { class: 'text-sm font-medium leading-tight' }, s.nombre),
-          h('p', { class: 'text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, esOperador ? (s.maquina ? `${s.maquina.nombre} · ${s.maquina.area}` : 'Operador sin máquina asignada') : s.rol_nombre)),
+      h('div', { class: 'ml-auto flex shrink-0 items-center gap-2 py-2.5' },
+        h('div', { class: 'max-w-[11rem] text-right' },
+          h('p', { class: 'truncate text-sm font-medium leading-tight', title: s.nombre }, s.nombre),
+          h('p', { class: 'truncate text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, esOperador ? (s.maquina ? `${s.maquina.nombre} · ${s.maquina.area}` : 'Operador sin máquina asignada') : s.rol_nombre)),
         CampanaAvisos(),
-        BotonTema(),
-        h('button', { type: 'button', class: CLS.btnChico, onClick: cerrarSesion }, 'Cerrar sesión'))));
+        BotonTema(true),
+        h('button', { type: 'button', class: CLS.btnChico, onClick: cerrarSesion, title: 'Cerrar sesión' }, 'Salir'))));
 }
 /* FIN COMPONENTE: BarraSuperior */
 
@@ -2463,11 +2463,11 @@ function MatrizSkus() {
     h('table', { class: 'min-w-full border-separate border-spacing-0 text-sm' },
       h('caption', { class: 'sr-only' }, 'Entregables de ingeniería por SKU. Cada casilla marcada indica que el entregable está correcto.'),
       h('thead', null, h('tr', null,
-        h('th', { scope: 'col', class: `${CLS.th} sticky left-0 top-0 z-20 min-w-[10rem]` }, 'SKU'),
-        h('th', { scope: 'col', class: `${CLS.th} sticky top-0 z-10 min-w-[16rem]` }, 'Descripción'),
+        h('th', { scope: 'col', class: `${CLS.th} sticky left-0 top-0 z-20 min-w-[8.5rem]` }, 'SKU'),
+        h('th', { scope: 'col', class: `${CLS.th} sticky top-0 z-10 min-w-[12rem] w-[22%]` }, 'Descripción'),
         h('th', { scope: 'col', class: `${CLS.th} sticky top-0 z-10` }, estado.catalogos.lineas.length ? 'Familia / Línea' : 'Familia'),
-        ents.map(e => h('th', { scope: 'col', class: `${CLS.th} sticky top-0 z-10 w-24 min-w-[6rem] border-l border-l-[#E3E7EC] dark:border-l-[#26313D] text-center leading-tight` }, e.nombre)),
-        h('th', { scope: 'col', class: `${CLS.th} sticky top-0 z-10 min-w-[10rem] border-l border-l-[#E3E7EC] dark:border-l-[#26313D]` }, 'Avance'))),
+        ents.map(e => h('th', { scope: 'col', class: `${CLS.th} sticky top-0 z-10 min-w-[4.75rem] border-l border-l-[#E3E7EC] px-1.5 dark:border-l-[#26313D] text-center text-[11px] leading-tight` }, e.nombre)),
+        h('th', { scope: 'col', class: `${CLS.th} sticky top-0 z-10 min-w-[7.5rem] border-l border-l-[#E3E7EC] dark:border-l-[#26313D]` }, 'Avance'))),
       h('tbody', null, estado.skus.datos.map(sku => FilaSku(sku)))));
 }
 function FilaSku(sku) {
@@ -2477,7 +2477,7 @@ function FilaSku(sku) {
     h('td', { class: `${CLS.td} group-hover:bg-[#F7F9FA] dark:group-hover:bg-[#1F2833] ${sku.descontinuado ? 'text-[#5B6675] dark:text-[#9AA7B6]' : ''}` },
       obsAbiertasDe(sku.id).length ? h('span', { class: 'mr-2 inline-flex items-center gap-1 rounded bg-[#FDF3F2] px-1.5 py-0.5 text-xs font-semibold text-[#B42318] dark:bg-[#3A1D1B] dark:text-[#F28B82]', title: 'Observaciones de calidad abiertas' }, icono('bandera', 'w-3 h-3'), String(obsAbiertasDe(sku.id).length)) : null,
       sku.descripcion, sku.descontinuado ? h('span', { class: 'ml-2 inline-block rounded border border-[#C3CBD4] dark:border-[#3A4756] px-1.5 text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, 'Descontinuado') : null),
-    h('td', { class: `${CLS.td} whitespace-nowrap text-[#5B6675] dark:text-[#9AA7B6] group-hover:bg-[#F7F9FA] dark:group-hover:bg-[#1F2833]` }, sku.familia_nombre, estado.catalogos.lineas.length ? h('span', { class: 'block text-xs text-[#7A8594] dark:text-[#7F8B99]' }, sku.linea_nombre) : null),
+    h('td', { class: `${CLS.td} text-xs text-[#5B6675] dark:text-[#9AA7B6] group-hover:bg-[#F7F9FA] dark:group-hover:bg-[#1F2833]` }, sku.familia_nombre, estado.catalogos.lineas.length ? h('span', { class: 'block text-xs text-[#7A8594] dark:text-[#7F8B99]' }, sku.linea_nombre) : null),
     sku.casillas.map(c => CeldaEntregable(sku, c, obsAbiertasDe(sku.id))),
     h('td', { class: `${CLS.td} border-l border-l-[#E3E7EC] dark:border-l-[#26313D] group-hover:bg-[#F7F9FA] dark:group-hover:bg-[#1F2833]` }, AvanceSku(sku)));
 }
@@ -3857,7 +3857,7 @@ function App() {
   return h('div', null,
     h('div', { class: `flex min-h-screen flex-col ${reporte ? 'print:hidden' : ''}` },
       BarraSuperior(),
-      h('main', { class: 'mx-auto w-full max-w-[1400px] flex-1 px-4 py-6 sm:px-6' }, vistas[estado.vista]()),
+      h('main', { class: `mx-auto w-full flex-1 px-4 py-5 ${estado.vista === 'skus' ? '' : 'max-w-[1400px] sm:px-6'}` }, vistas[estado.vista]()),
       estado.detalle.abierto ? PanelDetalleSku() : null),
     reporte ? VistaReporte() : null,
     h('div', { class: 'print:hidden' }, Modal(), Avisos()));
