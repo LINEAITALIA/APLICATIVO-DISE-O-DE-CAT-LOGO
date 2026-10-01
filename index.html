@@ -367,6 +367,15 @@ const DataService = {
       p_drive_id: subida.drive_id, p_nombre_original: archivo.name, p_tamano: archivo.size, p_tamano_guardado: subida.tamano_guardado || comprimido.length, p_sha256: sha }))
       .catch(async e => { llamarDrive('borrar', { drive_ids: [subida.drive_id] }).catch(() => {}); throw e; });
   },
+  async limpiarPrototiposVencidos() { // borra de Drive los archivos de prototipo con más de 30 días
+    try {
+      const { data } = await ejecutar(SB.rpc('ing_archivos_proto_vencidos'));
+      const lista = data || []; if (!lista.length) return 0;
+      await llamarDrive('borrar', { drive_ids: lista.map(x => x.drive_id) });
+      const r = await ejecutar(SB.rpc('ing_marcar_archivos_proto_borrados', { p_ids: lista.map(x => x.id) }));
+      return r.data || 0;
+    } catch (e) { return 0; } // si aún no se instala el borrado automático, o Drive no responde, se intenta la próxima vez
+  },
   async cancelarPrototipo(id) { exigirPermiso('prototipos'); await ejecutar(SB.rpc('ing_cancelar_prototipo', { p_id: id })); },
   async marcarPrototipoCortado(id, nota) { const { data } = await ejecutar(SB.rpc('ing_marcar_prototipo_cortado', { p_prototipo: id, p_nota: String(nota || '').trim() || null })); return data; },
   async bytesPrototipo(a) { const res = await llamarDrive('descargar', { drive_id: a.drive_id }); return pako.ungzip(deBase64(res.contenido)); },
@@ -944,6 +953,10 @@ async function entrarConSesion(usuario) {
       await cargarObservacionesGlobal({ primera: true });
       await cargarSolicitudes({ primera: true });
       await cargarPrototipos({ primera: true });
+      if (puede(estado.sesion.rol_id, 'subir_documentos') && driveListo() && !estado.proto.limpiado) {
+        estado.proto.limpiado = true;
+        DataService.limpiarPrototiposVencidos().then(n => { if (n) cargarPrototipos(); });
+      }
       if (primeraVez || estado.vista === 'corte' && !puede(estado.sesion.rol_id, 'documentos')) estado.vista = [ROLES.INGENIERO, ROLES.CONSULTA].includes(estado.sesion.rol_id) ? 'skus' : 'tablero';
       if (estado.vista === 'tablero' && estado.sesion.rol_id === ROLES.CONSULTA) estado.vista = 'skus';
     }
@@ -1528,7 +1541,9 @@ const nombreArchivoProto = (p, a) => /^PROTO_/i.test(a.pieza)
 async function descargarArchivoProto(p, a) {
   try { guardarArchivo(await DataService.bytesPrototipo(a), nombreArchivoProto(p, a)); } catch (e) { agregarAviso('error', e.message); }
 }
-async function descargarTodoProto(p, archivos) {
+async function descargarTodoProto(p, todos) {
+  const archivos = todos.filter(a => !a.archivo_borrado);
+  if (!archivos.length) { agregarAviso('error', 'Los archivos de este prototipo ya se eliminaron (se conservan 30 días).'); return; }
   if (typeof JSZip === 'undefined') { archivos.forEach(a => descargarArchivoProto(p, a)); return; }
   estado.proto.descargando = p.id; render();
   try {
@@ -1601,12 +1616,16 @@ function EtiquetaProto(estadoP) {
   const e = { pendiente: ['POR CORTAR', 'bg-[#FFF4DB] text-[#B26A00] dark:bg-[#3A2F14] dark:text-[#E0A650]'], cortado: ['CORTADO', 'bg-[#E6F2EB] text-[#1F7A4D] dark:bg-[#173526] dark:text-[#5CC48E]'], cancelado: ['CANCELADO', 'bg-[#EEF1F4] text-[#5B6675] dark:bg-[#243040] dark:text-[#9AA7B6]'] }[estadoP];
   return h('span', { class: `rounded px-1.5 py-0.5 text-xs font-semibold ${e[1]}` }, e[0]);
 }
+const fechaCorta = f => f ? new Date(f).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }) : '';
 function ListaArchivosProto(p, archivos) {
-  return h('ul', { class: 'divide-y divide-[#E3E7EC] rounded-md border border-[#E3E7EC] dark:divide-[#26313D] dark:border-[#26313D]' }, archivos.map(a => h('li', { class: 'flex flex-wrap items-center gap-2 px-3 py-2' },
-    h('div', { class: 'min-w-0 flex-1' }, h('p', { class: 'text-sm font-medium' }, a.pieza), h('p', { class: 'text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, `${a.tipo_nombre} · ${a.nombre_original}`)),
+  return h('ul', { class: 'divide-y divide-[#E3E7EC] rounded-md border border-[#E3E7EC] dark:divide-[#26313D] dark:border-[#26313D]' }, archivos.map(a => h('li', { class: `flex flex-wrap items-center gap-2 px-3 py-2 ${a.archivo_borrado ? 'opacity-70' : ''}` },
+    h('div', { class: 'min-w-0 flex-1' }, h('p', { class: 'text-sm font-medium' }, a.pieza),
+      h('p', { class: 'text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, `${a.tipo_nombre} · ${a.nombre_original}`,
+        a.archivo_borrado ? h('span', { class: 'ml-1 font-medium text-[#B42318] dark:text-[#F28B82]' }, `· Archivo eliminado el ${fechaCorta(a.borrado_en)} (se conservan 30 días)`)
+          : a.se_borra_en ? h('span', { class: 'ml-1' }, `· Se elimina el ${fechaCorta(a.se_borra_en)}`) : null)),
     h('span', { class: 'rounded-md bg-[#EEF3F8] px-2 py-0.5 text-sm font-semibold tabular-nums text-[#1E4E79] dark:bg-[#1C2A3A] dark:text-[#7FB2E5]', title: 'Piezas a cortar' }, `× ${a.cantidad}`),
-    window.VisorCorte && window.VisorCorte.puedeVer(a.nombre_original) ? h('button', { type: 'button', class: CLS.btnChico, onClick: () => verArchivoProto(p, a) }, icono('ojo', 'w-3.5 h-3.5'), 'Ver pieza') : null,
-    h('button', { type: 'button', class: CLS.btnChico, onClick: () => descargarArchivoProto(p, a) }, icono('descarga', 'w-3.5 h-3.5'), 'Descargar'))));
+    !a.archivo_borrado && window.VisorCorte && window.VisorCorte.puedeVer(a.nombre_original) ? h('button', { type: 'button', class: CLS.btnChico, onClick: () => verArchivoProto(p, a) }, icono('ojo', 'w-3.5 h-3.5'), 'Ver pieza') : null,
+    !a.archivo_borrado ? h('button', { type: 'button', class: CLS.btnChico, onClick: () => descargarArchivoProto(p, a) }, icono('descarga', 'w-3.5 h-3.5'), 'Descargar') : null)));
 }
 /* Ingenieros: pestaña Prototipos */
 function VistaPrototipos() {
@@ -1676,7 +1695,7 @@ function ModalPrototipo() {
   const setF = (i, k, v) => { estado.modal.filas[i][k] = v; };
   return h('form', { novalidate: true, onSubmit: ev => { ev.preventDefault(); guardarPrototipo(); } },
     h('h2', { id: 'titulo-modal', class: 'text-lg font-semibold' }, 'Mandar a cortar un prototipo'),
-    h('p', { class: 'mt-1 text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, 'Cada archivo llega a las máquinas del área de su material. Te avisaremos cuando cada área lo corte.'),
+    h('p', { class: 'mt-1 text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, 'Cada archivo llega a las máquinas del área de su material. Te avisaremos cuando cada área lo corte. Los archivos se eliminan solos 30 días después de subirlos, para no llenar el almacenamiento; el registro del prototipo se conserva.'),
     h('div', { class: 'mt-4 grid gap-4 sm:grid-cols-3' },
       h('div', { class: 'sm:col-span-2' }, h('label', { for: 'pr-nombre', class: CLS.etiqueta }, 'Nombre del prototipo'),
         h('input', { id: 'pr-nombre', class: CLS.input, maxlength: '120', placeholder: 'Ej. Escritorio elevable v1', value: m.nombre, onInput: ev => { estado.modal.nombre = ev.target.value; } })),
