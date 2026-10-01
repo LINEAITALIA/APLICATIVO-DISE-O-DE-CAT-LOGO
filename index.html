@@ -1522,7 +1522,9 @@ async function cargarPrototipos({ primera = false } = {}) {
   estado.proto.conocidos = claves; estado.proto.lista = lista;
   render();
 }
-const nombreArchivoProto = (p, a) => `PROTOTIPO_${limpiarNombrePieza(p.nombre)}_${a.cantidad}${a.cantidad === 1 ? 'PZA' : 'PZAS'}_${limpiarNombrePieza(a.pieza)}.${extensionDe(a.nombre_original) || 'dat'}`;
+const nombreArchivoProto = (p, a) => /^PROTO_/i.test(a.pieza)
+  ? `PROTOTIPO_${limpiarNombrePieza(p.nombre)}_${String(a.pieza).replace(/^PROTO_/i, '')}.${extensionDe(a.nombre_original) || 'dat'}`
+  : `PROTOTIPO_${limpiarNombrePieza(p.nombre)}_${a.cantidad}${a.cantidad === 1 ? 'PZA' : 'PZAS'}_${limpiarNombrePieza(a.pieza)}.${extensionDe(a.nombre_original) || 'dat'}`;
 async function descargarArchivoProto(p, a) {
   try { guardarArchivo(await DataService.bytesPrototipo(a), nombreArchivoProto(p, a)); } catch (e) { agregarAviso('error', e.message); }
 }
@@ -1540,6 +1542,10 @@ function verArchivoProto(p, a) {
   if (!window.VisorCorte) return;
   window.VisorCorte.abrir({ nombre: nombreArchivoProto(p, a), subtitulo: `Prototipo ${p.nombre} · ${a.tipo_nombre} · ${a.cantidad} ${a.cantidad === 1 ? 'pieza' : 'piezas'}`, obtenerBytes: () => DataService.bytesPrototipo(a) });
 }
+function erroresFilaProto(f) {
+  const tipo = DataService.catalogosCorte().tipos.find(t => t.id === Number(f.tipo_id)), { atributo } = nomenDeTipo(tipo);
+  return { ...datosNomenValidos(f.datos || {}, atributo), ...fueraDeLista(f.datos || {}, atributo) };
+}
 function tipoPorExtension(nombre) { const ext = extensionDe(nombre); return DataService.catalogosCorte().tipos.filter(t => t.activo && String(t.extensiones || '').split(/[,\s]+/).includes(ext)); }
 function abrirModalPrototipo() {
   estado.modal = { tipo: 'prototipo', nombre: '', descripcion: '', fecha: '', filas: [], fase: 'datos', hecho: 0, total: 0, errores: [], error: null, enviando: false, arrastrando: false };
@@ -1550,8 +1556,7 @@ function agregarArchivosProto(lista) {
   for (const f of [...lista]) {
     const tipos = tipoPorExtension(f.name);
     if (!tipos.length || f.size > LIMITE_DOCUMENTO_MB * 1024 * 1024) { descartados++; continue; }
-    const base = f.name.replace(/\.[^.]+$/, ''), cant = /(\d{1,3})\s*-?\s*PZ(?:AS|A|S)?\b/i.exec(base);
-    m.filas.push({ archivo: f, tipo_id: String(tipos[0].id), cantidad: cant ? cant[1] : '1', pieza: limpiarNombrePieza(base.replace(/(\d{1,3})\s*-?\s*PZ(?:AS|A|S)?\b/i, '')) || limpiarNombrePieza(base) });
+    m.filas.push({ archivo: f, tipo_id: String(tipos[0].id), datos: datosDesdeArchivo(f.name, '', tipos[0]) });
   }
   m.descartados = descartados; m.arrastrando = false; render();
 }
@@ -1559,13 +1564,14 @@ async function guardarPrototipo() {
   const m = estado.modal;
   if (String(m.nombre).trim().length < 3) { m.error = 'Escribe el nombre del prototipo (mínimo 3 caracteres).'; render(); return; }
   if (!m.filas.length) { m.error = 'Agrega al menos un archivo de corte.'; render(); return; }
-  if (m.filas.some(f => !limpiarNombrePieza(f.pieza) || !(Number(f.cantidad) >= 1))) { m.error = 'Revisa el nombre y la cantidad de cada pieza.'; render(); return; }
+  if (m.filas.some(f => Object.keys(erroresFilaProto(f)).length)) { m.error = 'Completa los datos marcados en rojo de cada pieza.'; render(); return; }
   m.enviando = true; m.error = null; m.fase = 'subiendo'; m.hecho = 0; m.total = m.filas.length; m.errores = []; render();
   try {
     const id = await DataService.crearPrototipo(m.nombre, m.descripcion, m.fecha);
     const proto = { id, nombre: String(m.nombre).trim() }, tipos = DataService.catalogosCorte().tipos;
     for (const f of m.filas) {
-      try { await DataService.subirArchivoPrototipo(proto, tipos.find(t => t.id === Number(f.tipo_id)), f.archivo, limpiarNombrePieza(f.pieza), Number(f.cantidad)); }
+      const tipo = tipos.find(t => t.id === Number(f.tipo_id));
+      try { await DataService.subirArchivoPrototipo(proto, tipo, f.archivo, nombreEstandar('PROTO', tipo, f.datos), Number(f.datos.cantidad)); }
       catch (e) { m.errores.push(`${f.archivo.name}: ${e.message}`); }
       m.hecho++; render();
     }
@@ -1679,17 +1685,38 @@ function ModalPrototipo() {
       h('div', { class: 'sm:col-span-3' }, h('label', { for: 'pr-desc', class: CLS.etiqueta }, 'Indicaciones para el operador (opcional)'),
         h('textarea', { id: 'pr-desc', rows: '2', maxlength: '1000', class: CLS.input, placeholder: 'Ej. Cortar con prioridad; es para la revisión del viernes.', value: m.descripcion, onInput: ev => { estado.modal.descripcion = ev.target.value; } }))),
     h('div', { class: 'mt-4' }, zona),
-    m.filas.length ? h('div', { 'data-scroll-id': 'proto-filas', class: 'mt-3 max-h-72 space-y-2 overflow-y-auto rounded-md border border-[#D5DBE2] p-2 dark:border-[#2E3A48]' }, m.filas.map((f, i) => {
+    m.filas.length ? h('div', { 'data-scroll-id': 'proto-filas', class: 'mt-3 max-h-80 space-y-2 overflow-y-auto rounded-md border border-[#D5DBE2] p-2 dark:border-[#2E3A48]' }, m.filas.map((f, i) => {
       const opciones = tipos.filter(t => String(t.extensiones || '').split(/[,\s]+/).includes(extensionDe(f.archivo.name)));
-      return h('div', { class: 'flex flex-wrap items-end gap-2 rounded-md border border-[#E3E7EC] p-2 dark:border-[#26313D]' },
-        h('p', { class: 'w-full text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, `Archivo: ${f.archivo.name}`),
-        h('div', { class: 'w-44' }, h('label', { for: `pr-tipo-${i}`, class: 'block text-[11px] font-medium text-[#5B6675] dark:text-[#9AA7B6]' }, 'Material'),
-          h('select', { id: `pr-tipo-${i}`, class: `${CLS.input} py-1 text-sm`, value: f.tipo_id, onChange: ev => setF(i, 'tipo_id', ev.target.value) }, opciones.map(t => h('option', { value: t.id }, t.nombre)))),
-        h('div', { class: 'w-16' }, h('label', { for: `pr-cant-${i}`, class: 'block text-[11px] font-medium text-[#5B6675] dark:text-[#9AA7B6]' }, 'Piezas'),
-          h('input', { id: `pr-cant-${i}`, type: 'number', min: '1', max: '999', class: `${CLS.input} py-1 text-sm`, value: f.cantidad, onInput: ev => setF(i, 'cantidad', ev.target.value) })),
-        h('div', { class: 'min-w-[10rem] flex-1' }, h('label', { for: `pr-pieza-${i}`, class: 'block text-[11px] font-medium text-[#5B6675] dark:text-[#9AA7B6]' }, 'Nombre de la pieza'),
-          h('input', { id: `pr-pieza-${i}`, class: `${CLS.input} py-1 text-sm`, maxlength: '80', value: f.pieza, onInput: ev => setF(i, 'pieza', ev.target.value) })),
-        h('button', { type: 'button', class: CLS.btnChico, 'aria-label': `Quitar ${f.archivo.name}`, onClick: () => { estado.modal.filas.splice(i, 1); render(); } }, icono('x', 'w-3.5 h-3.5')));
+      const tipo = tipos.find(t => t.id === Number(f.tipo_id)), { atributo, codigo } = nomenDeTipo(tipo), e = erroresFilaProto(f);
+      const nombre = Object.keys(e).length ? '' : nombreEstandar('PROTO', tipo, f.datos);
+      const et = (id, t) => h('label', { for: id, class: 'block text-[11px] font-medium text-[#5B6675] dark:text-[#9AA7B6]' }, t);
+      const texto = (k, t, ancho, extra) => h('div', { class: ancho }, et(`pr-${k}-${i}`, t),
+        h('input', { id: `pr-${k}-${i}`, class: `${e[k] ? CLS.inputError : CLS.input} py-1 text-sm`, value: (f.datos || {})[k] || '', title: e[k] || '', ...extra,
+          onInput: ev => { estado.modal.filas[i].datos = { ...estado.modal.filas[i].datos, [k]: ev.target.value }; conRetraso('proto', render, 250); } }));
+      const menu = (k, t) => h('div', { class: 'w-32' }, et(`pr-${k}-${i}`, t),
+        SelectorMedida({ id: `pr-${k}-${i}`, k, atributo, valor: (f.datos || {})[k], clase: `${e[k] ? CLS.inputError : CLS.input} py-1 text-sm`,
+          onElegir: v => { estado.modal.filas[i].datos = { ...estado.modal.filas[i].datos, [k]: v }; render(); },
+          alAgregar: () => { const volver = estado.modal; abrirModalMedidas({ lista: listaDeCampo(k, atributo), volver, alVolver: v => { volver.filas[i].datos = { ...volver.filas[i].datos, [k]: v }; } }); } }),
+        e[k] ? h('p', { class: 'mt-0.5 max-w-[12rem] text-[11px] text-[#B42318] dark:text-[#F28B82]' }, e[k]) : null);
+      return h('div', { class: 'rounded-md border border-[#E3E7EC] p-2 dark:border-[#26313D]' },
+        h('div', { class: 'flex items-center justify-between gap-2' },
+          h('p', { class: 'text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, `Archivo: ${f.archivo.name}`),
+          h('button', { type: 'button', class: CLS.btnChico, 'aria-label': `Quitar ${f.archivo.name}`, onClick: () => { estado.modal.filas.splice(i, 1); render(); } }, icono('x', 'w-3.5 h-3.5'))),
+        h('div', { class: 'mt-1 flex flex-wrap items-end gap-2' },
+          h('div', { class: 'w-44' }, et(`pr-tipo-${i}`, 'Material'),
+            h('select', { id: `pr-tipo-${i}`, class: `${CLS.input} py-1 text-sm`, value: f.tipo_id,
+              onChange: ev => { const nt = tipos.find(t => t.id === Number(ev.target.value)); const prop = datosDesdeArchivo(f.archivo.name, '', nt);
+                estado.modal.filas[i].tipo_id = ev.target.value; estado.modal.filas[i].datos = { ...prop, cantidad: f.datos.cantidad || prop.cantidad, nombre: f.datos.nombre || prop.nombre }; render(); } },
+              opciones.map(t => h('option', { value: t.id }, t.nombre)))),
+          texto('cantidad', 'Piezas', 'w-16', { type: 'number', min: '1', max: '999', inputmode: 'numeric' }),
+          h('div', { class: 'pb-1.5 text-sm font-semibold text-[#5B6675] dark:text-[#9AA7B6]' }, codigo),
+          atributo === 'espesor' ? menu('espesor', 'Espesor') : null,
+          atributo === 'tubular' ? menu('medida', 'Tubular') : null,
+          atributo === 'calibre' || atributo === 'tubular' ? menu('calibre', 'Calibre') : null,
+          texto('nombre', 'Nombre de la pieza', 'min-w-[10rem] flex-1', { maxlength: '80', placeholder: 'CUBIERTA' })),
+        h('div', { class: 'mt-1.5 flex flex-wrap items-center justify-between gap-2' },
+          h('code', { class: 'break-all text-xs font-semibold' }, nombre || '—'),
+          Object.keys(e).length ? h('span', { class: 'text-xs font-medium text-[#B42318] dark:text-[#F28B82]' }, 'Completa los datos marcados.') : null));
     })) : null,
     ErrorModal(m.error),
     PieModal(m.filas.length ? `Mandar a cortar (${m.filas.length} ${m.filas.length === 1 ? 'archivo' : 'archivos'})` : 'Mandar a cortar', guardarPrototipo, { enviando: m.enviando }));
