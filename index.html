@@ -127,11 +127,44 @@ function errorDe(error) {
   if (/fetch|network|load failed/i.test(msg)) return new ErrorApi('No se pudo conectar con el servidor. Revisa tu conexión a internet.', { tipo: 'conexion' });
   return new ErrorApi(msg || 'Ocurrió un error inesperado.');
 }
+/* ---------- Sesión continua ----------
+   La llave de cada sesión dura 1 hora y se renueva sola. Si la computadora estuvo suspendida,
+   el aplicativo minimizado mucho tiempo o el reloj de la computadora desfasado, puede salir vencida:
+   en ese caso se pide una nueva y se reintenta, sin sacar a la persona del aplicativo. */
+let renovandoSesion = null;
+function renovarSesion() { // una sola renovación a la vez, aunque varias peticiones la pidan juntas
+  if (!renovandoSesion) renovandoSesion = SB.auth.refreshSession()
+    .then(r => !r.error && !!(r.data && r.data.session)).catch(() => false)
+    .finally(() => setTimeout(() => { renovandoSesion = null; }, 0));
+  return renovandoSesion;
+}
+async function sesionVigente() { // la sesión, con al menos 5 minutos de vida por delante
+  let { data } = await SB.auth.getSession();
+  let s = data.session; if (!s) return null;
+  if (!s.expires_at || s.expires_at * 1000 - Date.now() < 5 * 60 * 1000) {
+    if (await renovarSesion()) ({ data } = await SB.auth.getSession()), s = data.session || s;
+  }
+  return s;
+}
+/* Toda petición a la base de datos pasa por aquí: si regresa "llave vencida", se renueva y se repite con la llave nueva */
+async function fetchConRenovacion(url, opciones = {}) {
+  let r = await fetch(url, opciones);
+  if (r.status === 401 && !/\/auth\/v1\//.test(String(url))) {
+    let cuerpo = ''; try { cuerpo = await r.clone().text(); } catch (e) { /* sin cuerpo */ }
+    if (/jwt|expired|PGRST301|token/i.test(cuerpo) && await renovarSesion()) {
+      const { data } = await SB.auth.getSession();
+      const encabezados = new Headers(opciones.headers || {});
+      if (data.session) encabezados.set('Authorization', `Bearer ${data.session.access_token}`);
+      r = await fetch(url, { ...opciones, headers: encabezados });
+    }
+  }
+  return r;
+}
 async function ejecutar(consulta) {
   let r;
   try { r = await consulta; } catch (e) { throw errorDe(e); }
   const err = errorDe(r.error);
-  if (err) { if (err.tipo === 'sesion') setTimeout(() => cerrarSesion(), 0); throw err; }
+  if (err) { if (err.tipo === 'sesion') setTimeout(() => cerrarSesion(), 0); throw err; } // solo si ni renovando se pudo
   return r;
 }
 /* Supabase regresa máximo 1000 filas por consulta: se piden por páginas. */
@@ -242,17 +275,21 @@ async function prepararImagen(archivo) {
   return { completa, miniatura: redimensionar(img, 96, 0.8) };
 }
 /* ---------- Archivos de corte en Google Drive ---------- */
-async function llamarDrive(accion, datos) {
+async function llamarDrive(accion, datos, reintento = true) {
   if (!driveListo()) throw new ErrorApi('Falta configurar el almacén de archivos. Avisa al gerente de ingeniería (revisar DRIVE_URL en index.html).', { tipo: 'configuracion' });
-  const { data } = await SB.auth.getSession();
-  if (!data.session) throw new ErrorApi('Tu sesión expiró. Vuelve a iniciar sesión.', { tipo: 'sesion' });
+  const sesion = await sesionVigente();
+  if (!sesion) throw new ErrorApi('Tu sesión expiró. Vuelve a iniciar sesión.', { tipo: 'sesion' });
   let r;
   try {
     r = await fetch(CONFIG.DRIVE_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ accion, token: data.session.access_token, ...datos }) });
+      body: JSON.stringify({ accion, token: sesion.access_token, ...datos }) });
   } catch (e) { throw new ErrorApi('No se pudo conectar con el almacén de archivos. Revisa tu conexión a internet.', { tipo: 'conexion' }); }
   if (!r.ok) throw new ErrorApi('El almacén de archivos no respondió. Intenta de nuevo en unos minutos.', { tipo: 'conexion' });
   const res = await r.json();
+  if (res.error && /sesi[oó]n expir/i.test(res.error)) { // la llave venció en el camino: se renueva y se reintenta una vez
+    if (reintento && await renovarSesion()) return llamarDrive(accion, datos, false);
+    throw new ErrorApi('Tu sesión expiró y no se pudo renovar. Presiona Salir y vuelve a entrar.', { tipo: 'sesion' });
+  }
   if (res.error) throw new ErrorApi(res.error, { tipo: /permiso|vigente/i.test(res.error) ? 'permiso' : 'servidor' });
   return res;
 }
@@ -901,7 +938,12 @@ async function arrancar() {
   if (!window.supabase || typeof window.supabase.createClient !== 'function') { estado.fase = 'error'; estado.errorFatal = 'No se pudo cargar la conexión con el servidor. Revisa tu conexión a internet y recarga la página.'; render(); return; }
   const enlace = leerEnlaceCorreo();
   const esRecuperacion = enlace.tipo === 'recovery';
-  SB = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
+  SB = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY, { auth: { autoRefreshToken: true, persistSession: true }, global: { fetch: (u, o) => fetchConRenovacion(u, o) } });
+  const revisarSesion = () => { if (estado.sesion) sesionVigente().catch(() => {}); };
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') revisarSesion(); });
+  window.addEventListener('focus', revisarSesion);
+  window.addEventListener('online', revisarSesion);
+  setInterval(revisarSesion, 10 * 60 * 1000);
   SB.auth.onAuthStateChange(evento => {
     if (evento === 'PASSWORD_RECOVERY') setTimeout(() => { estado.fase = 'auth'; estado.auth = { ...AUTH_INICIAL, pantalla: 'nueva_password' }; render(); }, 0);
   });
@@ -1107,8 +1149,10 @@ function reemplazarSkuEnLista(sku) {
   if (estado.skus.datos) estado.skus.datos = estado.skus.datos.map(s => s.id === sku.id ? sku : s);
   if (estado.admin.skus) estado.admin.skus = estado.admin.skus.map(s => s.id === sku.id ? sku : s);
 }
+/* Casillas que se marcan solas según los archivos de corte (las ligadas a un tipo de documento) */
+function esCasillaAuto(entregableId) { return DataService.catalogosCorte().tipos.some(t => t.activo && Number(t.entregable_id) === Number(entregableId)); }
 async function alternarCasilla(sku, casilla) {
-  if (!puede(estado.sesion.rol_id, 'marcar') || estado.skus.celdaGuardando || casilla.no_aplica) return;
+  if (!puede(estado.sesion.rol_id, 'marcar') || estado.skus.celdaGuardando || casilla.no_aplica || esCasillaAuto(casilla.entregable_id)) return;
   if (casilla.completado) { abrirModalDesmarcar(sku, casilla); return; }
   estado.skus.celdaGuardando = `${sku.id}-${casilla.entregable_id}`; render();
   try {
@@ -1591,6 +1635,7 @@ async function guardarPrototipo() {
       m.hecho++; render();
     }
     m.fase = 'listo'; m.enviando = false;
+    if (!m.errores.length) setTimeout(() => { if (estado.modal === m) { estado.modal = null; render(); } }, 1900);
     agregarAviso(m.errores.length ? 'error' : 'exito', m.errores.length ? `Prototipo creado, pero ${m.errores.length} archivos no se subieron.` : `Prototipo ${proto.nombre} enviado a corte. Los operadores de cada área recibirán el aviso.`);
     await cargarPrototipos();
   } catch (e) { m.error = e.message; m.enviando = false; m.fase = 'datos'; }
@@ -1677,6 +1722,9 @@ function PrototiposOperador() {
 }
 function ModalPrototipo() {
   const m = estado.modal, tipos = DataService.catalogosCorte().tipos.filter(t => t.activo);
+  if (m.fase === 'listo' && !m.errores.length) return h('div', null,
+    h('h2', { id: 'titulo-modal', class: 'text-lg font-semibold' }, `Prototipo ${m.nombre}`),
+    PalomitaExito(`¡Listo! Se mandaron a cortar ${m.total === 1 ? 'la pieza' : `las ${m.total} piezas`}`, 'Los operadores de cada área recibirán el aviso. Esta ventana se cierra sola.'));
   if (m.fase !== 'datos') return h('div', null,
     h('h2', { id: 'titulo-modal', class: 'text-lg font-semibold' }, `Prototipo ${m.nombre}`),
     h('p', { class: 'mt-2 text-sm', role: 'status' }, m.fase === 'listo' ? `Listo: se subieron ${m.total - m.errores.length} de ${m.total} archivos.` : `Subiendo ${m.hecho} de ${m.total} archivos…`),
@@ -1777,11 +1825,36 @@ function tiposParaSolicitar() {
   if (s.rol_id === ROLES.OPERADOR && s.maquina) { const m = cache.maquinas[String(s.maquina_id)]; return tipos.filter(t => !m || t.area_id === m.area_id); }
   return tipos;
 }
+function buscarSkusSolicitud(q) {
+  const m = estado.modal, t = String(q || '').trim();
+  m.skuElegido = null;
+  if (!t) { m.sugerencias = []; render(); return; }
+  conRetraso('solsku', async () => {
+    let res = [];
+    if (cache.skus && cache.skus.size) {
+      const n = normalizarTexto(t);
+      res = [...cache.skus.values()].filter(s => normalizarTexto(`${s.clave} ${s.descripcion}`).includes(n))
+        .sort((a, b) => (normalizarTexto(a.clave).startsWith(n) ? 0 : 1) - (normalizarTexto(b.clave).startsWith(n) ? 0 : 1) || compararNatural(a.clave, b.clave)).slice(0, 8);
+    } else {
+      try {
+        const pat = `%${t.replace(/[%_,()*]/g, ' ').trim()}%`;
+        const { data } = await ejecutar(SB.from('ing_skus').select('id,clave,descripcion,miniatura').is('deleted_at', null).or(`clave.ilike.${pat},descripcion.ilike.${pat}`).order('clave').limit(8));
+        res = data || [];
+      } catch (e) { res = []; }
+    }
+    if (estado.modal === m) { m.sugerencias = res; m.buscado = t; render(); }
+  }, 200);
+}
+function elegirSkuSolicitud(sk) {
+  const m = estado.modal; m.clave = sk.clave; m.skuElegido = sk; m.sugerencias = [];
+  enfocarDespues = 'sol-detalle'; render();
+}
 function abrirModalSolicitud(clave) {
   const tipos = tiposParaSolicitar();
   if (!tipos.length) { agregarAviso('error', 'No hay tipos de archivo disponibles para tu área. Avisa al gerente de ingeniería.'); return; }
-  estado.modal = { tipo: 'solicitud', clave: clave || '', tipo_id: String(tipos[0].id), detalle: '', error: null, enviando: false };
-  enfocarDespues = clave ? 'sol-detalle' : 'sol-clave'; render();
+  estado.modal = { tipo: 'solicitud', clave: clave || '', tipo_id: String(tipos[0].id), detalle: '', sugerencias: [], skuElegido: null, error: null, enviando: false };
+  enfocarDespues = 'sol-clave'; render();
+  if (clave) buscarSkusSolicitud(clave);
 }
 async function guardarSolicitud() {
   const m = estado.modal;
@@ -1861,8 +1934,16 @@ function ModalSolicitud() {
     h('h2', { id: 'titulo-modal', class: 'text-lg font-semibold' }, 'Solicitar un archivo de corte'),
     h('p', { class: 'mt-1 text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, 'Ingeniería recibirá tu solicitud y te avisará cuando suba el archivo.'),
     h('div', { class: 'mt-4 space-y-4' },
-      h('div', null, h('label', { for: 'sol-clave', class: CLS.etiqueta }, 'Clave del SKU'),
-        h('input', { id: 'sol-clave', class: `${CLS.input} uppercase`, maxlength: '60', placeholder: 'Ej. 1000', value: m.clave, disabled: m.enviando, onInput: ev => { estado.modal.clave = ev.target.value; } })),
+      h('div', null, h('label', { for: 'sol-clave', class: CLS.etiqueta }, 'SKU'),
+        h('div', { class: 'relative' }, h('span', { class: 'pointer-events-none absolute inset-y-0 left-3 flex items-center text-[#7A8594]' }, icono('buscar')),
+          h('input', { id: 'sol-clave', type: 'search', autocomplete: 'off', class: `${CLS.input} pl-9`, maxlength: '60', placeholder: 'Clave o descripción, ej. 1000 o escritorio', value: m.clave, disabled: m.enviando,
+            'aria-autocomplete': 'list', 'aria-controls': 'sol-sugerencias', onInput: ev => { estado.modal.clave = ev.target.value; buscarSkusSolicitud(ev.target.value); } })),
+        m.skuElegido ? h('p', { class: 'mt-1.5 flex items-center gap-2 text-sm text-[#1F7A4D] dark:text-[#5CC48E]' }, icono('check', 'w-4 h-4'), h('span', null, h('span', { class: 'font-semibold' }, m.skuElegido.clave), ` · ${m.skuElegido.descripcion}`))
+        : m.sugerencias && m.sugerencias.length ? h('ul', { id: 'sol-sugerencias', role: 'listbox', class: 'mt-1 max-h-64 divide-y divide-[#E3E7EC] overflow-y-auto rounded-md border border-[#D5DBE2] bg-white shadow-sm dark:divide-[#26313D] dark:border-[#2E3A48] dark:bg-[#18202A]' },
+            m.sugerencias.map(sk => h('li', { role: 'option' }, h('button', { type: 'button', class: 'flex w-full items-center gap-3 px-3 py-2 text-left hover:bg-[#F4F6F8] focus:bg-[#F4F6F8] focus:outline-none dark:hover:bg-[#1F2833] dark:focus:bg-[#1F2833]', onClick: () => elegirSkuSolicitud(sk) },
+              MiniaturaSku({ miniatura: sk.miniatura, clave: sk.clave }, 'h-10 w-10'),
+              h('span', { class: 'min-w-0' }, h('span', { class: 'block text-sm font-semibold tabular-nums' }, sk.clave), h('span', { class: 'block truncate text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, sk.descripcion))))))
+        : m.clave && m.buscado === String(m.clave).trim() ? h('p', { class: 'mt-1.5 text-xs text-[#B26A00] dark:text-[#E0A650]' }, 'Ningún SKU coincide. Revisa la clave o busca por la descripción.') : null),
       h('div', null, h('label', { for: 'sol-tipo', class: CLS.etiqueta }, 'Tipo de archivo'),
         h('select', { id: 'sol-tipo', class: CLS.input, value: m.tipo_id, disabled: m.enviando, onChange: ev => { estado.modal.tipo_id = ev.target.value; } }, tipos.map(t => h('option', { value: t.id }, t.nombre)))),
       h('div', null, h('label', { for: 'sol-detalle', class: CLS.etiqueta }, '¿Qué pieza necesitas? (obligatorio)'),
@@ -2071,7 +2152,8 @@ async function guardarDocumento() {
     m.hecho++; render();
   }
   m.fase = 'terminado'; m.enviando = false; render();
-  cargarDocumentosDetalle(m.sku.id);
+  cargarDocumentosDetalle(m.sku.id); programarRecarga(0);
+  if (!m.errores.length) setTimeout(() => { if (estado.modal === m) { estado.modal = null; render(); } }, 1900); // se cierra sola tras la palomita
 }
 function pedirRetirarDocumento(doc) {
   estado.modal = { tipo: 'retirarDocumento', doc, motivo: '', error: null, enviando: false };
@@ -2944,15 +3026,19 @@ function CeldaEntregable(sku, c, obs) {
     h('div', { class: 'flex h-11 w-full items-center justify-center bg-[#EEF1F4] text-[11px] font-semibold text-[#9AA5B1] dark:bg-[#1C232C] dark:text-[#5F6C7B]',
       title: 'No aplica: este SKU no lleva este archivo. No cuenta en el avance. Para habilitarla, quita el "No aplica" en el detalle del SKU.',
       role: 'img', 'aria-label': `${c.nombre} de ${sku.clave}: no aplica, no cuenta en el avance` }, 'N/A'));
-  const editable = puede(estado.sesion.rol_id, 'marcar');
+  const auto = esCasillaAuto(c.entregable_id);
+  const editable = puede(estado.sesion.rol_id, 'marcar') && !auto;
   const guardando = estado.skus.celdaGuardando === `${sku.id}-${c.entregable_id}`;
-  const detalle = c.completado ? `Correcto. Marcado por ${c.completado_por_nombre}, ${formatearFechaHora(c.completado_en)}` : 'Pendiente';
+  const detalle = auto
+    ? (c.completado ? `Completa: los archivos de corte están cargados${c.completado_en ? ` (${formatearFechaHora(c.completado_en)})` : ''}. Se marca sola.` : 'Se marca sola cuando los archivos de corte del SKU estén completos: piezas configuradas y cargadas, o "No aplica".')
+    : c.completado ? `Correcto. Marcado por ${c.completado_por_nombre}, ${formatearFechaHora(c.completado_en)}` : 'Pendiente';
   const accion = editable ? (c.completado ? '. Clic para desmarcar' : '. Clic para marcar como correcto') : '';
   const contenido = guardando ? Spinner('w-4 h-4')
     : c.completado ? icono('check', 'w-5 h-5')
     : h('span', { class: 'block h-4 w-4 rounded-sm border-2 border-[#9AA5B1] dark:border-[#5F6C7B]', 'aria-hidden': 'true' });
   const color = c.completado ? `bg-[#E6F2EB] dark:bg-[#173526] text-[#1F7A4D] dark:text-[#5CC48E] ${editable ? 'hover:bg-[#D3E8DB] dark:hover:bg-[#1D422F]' : ''}` : `bg-white dark:bg-[#18202A] ${editable ? 'hover:bg-[#EEF3F8] dark:hover:bg-[#22303F]' : ''}`;
   return h('td', { class: 'relative border-b border-l border-[#E3E7EC] dark:border-[#26313D] p-0' },
+    auto ? h('span', { class: 'pointer-events-none absolute bottom-0.5 right-1 text-[8px] font-bold tracking-wide text-[#7A8594] dark:text-[#7F8B99]', 'aria-hidden': 'true' }, 'AUTO') : null,
     h('button', {
       type: 'button', id: `celda-${sku.id}-${c.entregable_id}`, title: detalle,
       'aria-label': `${c.nombre} de ${sku.clave}: ${detalle}${accion}`, 'aria-pressed': String(c.completado),
@@ -3009,8 +3095,11 @@ function PanelDetalleSku() {
             h('span', { class: c.completado ? 'text-[#1F7A4D] dark:text-[#5CC48E]' : 'text-[#9AA5B1] dark:text-[#5F6C7B]' }, c.completado ? icono('check', 'w-5 h-5') : h('span', { class: 'block h-4 w-4 rounded-sm border-2 border-current', 'aria-hidden': 'true' })),
             h('div', { class: 'min-w-0 flex-1' },
               h('p', { class: 'text-sm font-medium' }, c.nombre),
-              h('p', { class: 'text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, c.completado ? `Correcto. ${c.completado_por_nombre}, ${formatearFechaHora(c.completado_en)}` : 'Pendiente')),
-            editable ? h('button', {
+              h('p', { class: 'text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, esCasillaAuto(c.entregable_id)
+                ? (c.completado ? `Completa: archivos de corte cargados${c.completado_en ? ` · ${formatearFechaHora(c.completado_en)}` : ''}` : 'Se marca sola cuando los archivos de corte estén completos')
+                : c.completado ? `Correcto. ${c.completado_por_nombre}, ${formatearFechaHora(c.completado_en)}` : 'Pendiente')),
+            esCasillaAuto(c.entregable_id) ? h('span', { class: 'rounded bg-[#EEF1F4] px-1.5 py-0.5 text-[11px] font-semibold text-[#5B6675] dark:bg-[#243040] dark:text-[#9AA7B6]' }, 'Automática')
+            : editable ? h('button', {
               type: 'button', class: CLS.btnChico, disabled: !!estado.skus.celdaGuardando,
               onClick: () => alternarCasilla(s, c)
             }, c.completado ? [icono('deshacer', 'w-3.5 h-3.5'), 'Desmarcar'] : [icono('check', 'w-3.5 h-3.5'), 'Marcar correcto']) : null)))),
@@ -3780,6 +3869,8 @@ function ModalDocumento() {
   const ext = tipo ? tipo.extensiones.split(',').map(x => '.' + x).join(',') : '';
   const titulo = h('h2', { id: 'titulo-modal', class: 'text-lg font-semibold' }, m.doc ? `Nueva versión de ${m.doc.pieza}` : `Subir piezas a ${m.sku.clave}`);
 
+  if (m.fase === 'terminado' && !m.errores.length) return h('div', null, titulo,
+    PalomitaExito(m.total === 1 ? '¡Listo! Se subió la pieza' : `¡Listo! Se subieron las ${m.total} piezas`, 'Esta ventana se cierra sola.'));
   if (m.fase === 'subiendo' || m.fase === 'terminado') {
     const pct = calcularPorcentaje(m.hecho, m.total);
     return h('div', null, titulo,
@@ -4333,6 +4424,23 @@ let graficas = [];
 let enfocarDespues = null;
 window.addEventListener('dragover', ev => ev.preventDefault());
 window.addEventListener('drop', ev => ev.preventDefault());
+(() => { // animación de la palomita de éxito
+  const st = document.createElement('style');
+  st.textContent = '@keyframes ing-circulo{to{stroke-dashoffset:0}}@keyframes ing-trazo{to{stroke-dashoffset:0}}@keyframes ing-pop{0%{transform:scale(.6);opacity:0}60%{transform:scale(1.08);opacity:1}100%{transform:scale(1);opacity:1}}'
+    + '.ing-exito{animation:ing-pop .45s ease-out both}.ing-exito circle{stroke-dasharray:166;stroke-dashoffset:166;animation:ing-circulo .6s ease-out forwards}.ing-exito path{stroke-dasharray:48;stroke-dashoffset:48;animation:ing-trazo .35s .5s ease-out forwards}'
+    + '@media (prefers-reduced-motion:reduce){.ing-exito,.ing-exito circle,.ing-exito path{animation:none;stroke-dashoffset:0}}';
+  document.head.appendChild(st);
+})();
+function PalomitaExito(texto, subtexto) {
+  const ns = 'http://www.w3.org/2000/svg', svg = document.createElementNS(ns, 'svg');
+  svg.setAttribute('viewBox', '0 0 56 56'); svg.setAttribute('class', 'ing-exito h-20 w-20 text-[#1F7A4D] dark:text-[#5CC48E]'); svg.setAttribute('aria-hidden', 'true');
+  const c = document.createElementNS(ns, 'circle'); [['cx', 28], ['cy', 28], ['r', 26], ['fill', 'none'], ['stroke', 'currentColor'], ['stroke-width', 3]].forEach(([k, v]) => c.setAttribute(k, v));
+  const p = document.createElementNS(ns, 'path'); [['d', 'M16 29l8 8 16-17'], ['fill', 'none'], ['stroke', 'currentColor'], ['stroke-width', 4], ['stroke-linecap', 'round'], ['stroke-linejoin', 'round']].forEach(([k, v]) => p.setAttribute(k, v));
+  svg.append(c, p);
+  return h('div', { class: 'flex flex-col items-center gap-2 py-6 text-center', role: 'status' }, svg,
+    h('p', { class: 'text-base font-semibold text-[#1F7A4D] dark:text-[#5CC48E]' }, texto),
+    subtexto ? h('p', { class: 'text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, subtexto) : null);
+}
 function render() {
   const activo = document.activeElement;
   const idFoco = activo && activo.id ? activo.id : null;
