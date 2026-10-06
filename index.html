@@ -2534,11 +2534,9 @@ function guardarArchivo(bytes, nombre) {
   const a = document.createElement('a'); a.href = url; a.download = nombre; document.body.append(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
-/* Carpetas en Drive: Familia / SKU / Tipo de archivo; nombre: PIEZA vN (fecha).ext */
+/* Carpetas en Drive: SKU / Tipo de archivo (los prototipos van aparte, en Prototipos); nombre: PIEZA vN (fecha).ext */
 function carpetasDrive(skuId, skuClave, tipoNombre) {
-  const sku = cache.skus.get(Number(skuId));
-  const fam = sku ? cache.familias[String(sku.familia_id)] : null;
-  return [fam ? fam.nombre : 'Sin familia', skuClave, tipoNombre];
+  return [skuClave, tipoNombre];
 }
 function nombreDrive(pieza, version, nombreOriginal, fecha) {
   const ext = extensionDe(nombreOriginal) || 'dat';
@@ -4020,7 +4018,7 @@ function AdminCorte() {
     driveListo() ? h('div', { class: `${CLS.panel} flex flex-wrap items-center gap-3 p-5` },
       h('div', { class: 'min-w-0 flex-1' },
         h('h2', { class: 'text-base font-semibold' }, 'Carpetas en Google Drive'),
-        h('p', { class: 'text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, 'Los archivos nuevos se guardan solos en Familia / SKU / Tipo de archivo. Usa este botón una vez para acomodar los que se subieron antes, o si cambiaste la familia o la clave de un SKU.')),
+        h('p', { class: 'text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, 'Los archivos nuevos se guardan solos en SKU / Tipo de archivo. Usa este botón una vez para acomodar los que se subieron antes, o si cambiaste la clave de un SKU.')),
       h('button', { type: 'button', class: CLS.btnSecundario, disabled: !!estado.corte.organizando, onClick: organizarArchivosDrive },
         estado.corte.organizando ? [Spinner('w-4 h-4'), estado.corte.organizando.total ? `Acomodando ${estado.corte.organizando.hecho} de ${estado.corte.organizando.total}…` : 'Preparando…'] : 'Acomodar archivos en carpetas')) : null,
     bloque('Máquinas', 'Cada máquina tiene su cuenta de Operador; solo ve los documentos de su área. Asigna la cuenta en Usuarios.',
