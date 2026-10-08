@@ -62,6 +62,8 @@
 <script src="https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="visor.js" defer></script>
+<!-- Configuración (C1): las llaves viven en config.js, que se sube una sola vez. Si falta, se usan las de abajo. -->
+<script src="config.js"></script>
 <style media="print">
   /* Reporte: hoja en horizontal, con los colores de las barras incluidos */
   @page { size: landscape; margin: 10mm; }
@@ -89,19 +91,21 @@
 /* Supabase → Project Settings → API. Copia "Project URL" y la llave "anon public".
    La llave anon es pública por diseño: la seguridad la ponen las reglas de supabase.sql.
    NUNCA pongas aquí la llave "service_role". */
-const CONFIG = {
-  SUPABASE_URL: 'https://myrsbijwtovmnpwdhixc.supabase.co',
-  SUPABASE_ANON_KEY: 'sb_publishable_TANKRU3V5wExp5HoTsxRuA_m6tv_eX2',
-  /* Dirección del intermediario de Google Drive (ver intermediario_drive.gs y su guía).
-     Déjala como está si todavía no usas los archivos de corte. */
-  DRIVE_URL: 'https://script.google.com/macros/s/AKfycbyKS2y9XWIg37UQlcIWClqLD-xYpvxN9AIo--eeVHrAmlzBvkv3KTYEXP1N7pwAMlWy/exec'
-};
+/* Las llaves se toman de config.js (window.CONFIG_APLICATIVO). Ya no hace falta pegarlas aquí en cada actualización;
+   los valores de abajo solo se usan si config.js no existe. */
+const CONFIG = Object.assign({
+  SUPABASE_URL: 'https://TU-PROYECTO.supabase.co',
+  SUPABASE_ANON_KEY: 'PEGA-AQUI-TU-LLAVE-ANON',
+  DRIVE_URL: 'PEGA-AQUI-LA-DIRECCION-DEL-INTERMEDIARIO'
+}, (typeof window !== 'undefined' && window.CONFIG_APLICATIVO) || {});
+/* C2. Versión del aplicativo: cambia con cada actualización */
+const VERSION_APP = '2026.10.08';
 const BUCKET_IMAGENES = 'ing-imagenes';
 const driveListo = () => /^https:\/\/script\.google\.com\//.test(CONFIG.DRIVE_URL);
 const LOGO_LINEA_ITALIA = 'data:image/png;base64,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'; // logo completo en negro; en modo oscuro se invierte a blanco
 let SB = null;      // cliente de Supabase
 let canal = null;   // canal de tiempo real
-const cache = { medidas: null, skus: new Map(), familias: {}, lineas: {}, entregables: {}, estatus: {}, perfiles: {}, areasCorte: {}, tiposDocumento: {}, maquinas: {}, entregablesNA: new Map() };
+const cache = { medidas: null, miniaturas: new Map(), skus: new Map(), familias: {}, lineas: {}, entregables: {}, estatus: {}, perfiles: {}, areasCorte: {}, tiposDocumento: {}, maquinas: {}, entregablesNA: new Map() };
 const urlsFirmadas = new Map(); // ruta → { url, vence }
 function configurado() { return /^https:\/\/.+\.supabase\.co\/?$/.test(CONFIG.SUPABASE_URL) && !CONFIG.SUPABASE_URL.includes('TU-PROYECTO') && CONFIG.SUPABASE_ANON_KEY.length > 30; }
 </script>
@@ -572,6 +576,20 @@ const DataService = {
     const { data } = await ejecutar(SB.from('ing_v_descargas').select('*').order('fecha', { ascending: false }).range(0, limite - 1));
     return data || [];
   },
+  /* C4. Estado del sistema: cada revisión se hace por separado, para que una falla no oculte las demás */
+  async estadoSistema() {
+    exigirPermiso('administrar');
+    const medir = async f => { const t0 = performance.now(); try { const r = await f(); return { ok: true, ms: Math.round(performance.now() - t0), datos: r }; } catch (e) { return { ok: false, ms: Math.round(performance.now() - t0), error: e.message }; } };
+    const [bd, drive, espacio] = await Promise.all([
+      medir(async () => (await ejecutar(SB.rpc('ing_estado_sistema'))).data),
+      driveListo() ? medir(() => llamarDrive('ping', {})) : Promise.resolve({ ok: false, error: 'Falta configurar DRIVE_URL.' }),
+      medir(() => DataService.espacioDocumentos())]);
+    return { bd, drive, espacio, revisado: new Date().toISOString() };
+  },
+  /* E4. Indicadores */
+  async indicadores() {
+    try { return (await ejecutar(SB.rpc('ing_indicadores'))).data; } catch (e) { return null; } // si aún no se instala el script, no se muestran
+  },
   async espacioDocumentos() {
     try {
       const { data } = await ejecutar(SB.from('ing_v_espacio').select('*').maybeSingle());
@@ -601,13 +619,13 @@ const DataService = {
     await DataService.recargarCatalogosCorte();
   },
   /* ---------- Carga general ---------- */
-  async recargarTodo() {
+  async recargarTodo({ conSkus = true } = {}) {
     const [fam, ent, est, per, skus] = await Promise.all([
       leerTodo(() => SB.from('ing_familias').select('id,nombre,activa').is('deleted_at', null).order('id')),
       leerTodo(() => SB.from('ing_entregables').select('id,nombre,orden,activo').is('deleted_at', null).order('id')),
       leerTodo(() => SB.from('ing_estatus_sku').select('id,nombre').is('deleted_at', null).order('id')),
       leerTodo(() => SB.from('ing_perfiles').select('id,nombre,email,rol_id,activo').is('deleted_at', null).order('id')),
-      leerTodo(() => SB.from('ing_v_skus').select('*').order('id'))
+      conSkus ? leerTodo(() => SB.from('ing_v_skus').select('id,clave,descripcion,familia_id,estatus_sku_id,observaciones,imagen_ruta,casillas,linea_id').order('id')) : Promise.resolve(null)
     ]);
     cache.familias = porId(fam); cache.entregables = porId(ent); cache.estatus = porId(est);
     try { cache.lineas = porId(await leerTodo(() => SB.from('ing_lineas').select('id,nombre,activa').is('deleted_at', null).order('id'))); }
@@ -620,7 +638,46 @@ const DataService = {
       for (const x of na) { const k = Number(x.sku_id); if (!m.has(k)) m.set(k, new Set()); m.get(k).add(Number(x.entregable_id)); }
       cache.entregablesNA = m;
     } catch (e) { cache.entregablesNA = new Map(); } // la actualización de "No aplica" aún no se ejecuta
-    cache.skus = new Map(skus.map(f => { const s = normalizarSku(f); return [s.id, s]; }));
+    if (!skus) return; // recarga solo de catálogos: los SKUs se quedan como están
+    await DataService.cargarMiniaturas(skus.map(f => Number(f.id)));
+    cache.skus = new Map(skus.map(f => { const s = normalizarSku(f); s.miniatura = cache.miniaturas.get(s.id) || null; return [s.id, s]; }));
+  },
+  /* B2. Miniaturas: se guardan en el navegador y solo se descargan las que cambiaron */
+  async cargarMiniaturas(ids) {
+    const CLAVE = 'ing-miniaturas-v1';
+    let guardadas = {};
+    try { guardadas = JSON.parse(localStorage.getItem(CLAVE) || '{}'); } catch (e) { guardadas = {}; }
+    let fechas = [];
+    try { fechas = await leerTodo(() => SB.from('ing_skus').select('id,updated_at').is('deleted_at', null).order('id')); } catch (e) { fechas = []; }
+    const porBajar = fechas.filter(f => !guardadas[f.id] || guardadas[f.id][0] !== f.updated_at).map(f => f.id);
+    for (let i = 0; i < porBajar.length; i += 150) {
+      try {
+        const { data } = await ejecutar(SB.from('ing_skus').select('id,updated_at,miniatura').in('id', porBajar.slice(i, i + 150)));
+        for (const f of data || []) guardadas[f.id] = [f.updated_at, f.miniatura || null];
+      } catch (e) { /* se intenta en la siguiente carga */ }
+    }
+    const vivos = new Set(fechas.map(f => String(f.id)));
+    for (const k of Object.keys(guardadas)) if (fechas.length && !vivos.has(k)) delete guardadas[k];
+    if (porBajar.length) { try { localStorage.setItem(CLAVE, JSON.stringify(guardadas)); } catch (e) { /* sin espacio: se usan en memoria */ } }
+    cache.miniaturas = new Map(Object.entries(guardadas).map(([k, v]) => [Number(k), v[1]]));
+    return porBajar.length;
+  },
+  /* B1. Recarga parcial: solo los SKUs que cambiaron */
+  async recargarSkus(ids) {
+    const lista = [...new Set(ids.map(Number).filter(Boolean))]; if (!lista.length) return;
+    const [{ data: filas }, { data: na }, { data: minis }] = await Promise.all([
+      ejecutar(SB.from('ing_v_skus').select('id,clave,descripcion,familia_id,estatus_sku_id,observaciones,imagen_ruta,casillas,linea_id').in('id', lista)),
+      ejecutar(SB.from('ing_v_entregables_na').select('*').in('sku_id', lista)).catch(() => ({ data: null })),
+      ejecutar(SB.from('ing_skus').select('id,miniatura').in('id', lista))]);
+    const vistos = new Set();
+    for (const f of filas || []) {
+      const s = normalizarSku(f); vistos.add(s.id);
+      const m = (minis || []).find(x => Number(x.id) === s.id); s.miniatura = m ? m.miniatura : (cache.miniaturas.get(s.id) || null);
+      if (m) cache.miniaturas.set(s.id, m.miniatura);
+      cache.skus.set(s.id, s);
+    }
+    for (const id of lista) if (!vistos.has(id)) cache.skus.delete(id); // eliminado
+    if (na) { for (const id of lista) cache.entregablesNA.delete(id); for (const x of na) { const k = Number(x.sku_id); if (!cache.entregablesNA.has(k)) cache.entregablesNA.set(k, new Set()); cache.entregablesNA.get(k).add(Number(x.entregable_id)); } }
   },
 
   /* ---------- SKUs ---------- */
@@ -1086,9 +1143,46 @@ function suscribirCambios() {
   if (canal) SB.removeChannel(canal);
   canal = SB.channel('ing-cambios');
   for (const tabla of ['ing_sku_entregables', 'ing_skus', 'ing_familias', 'ing_lineas', 'ing_entregables', 'ing_perfiles', 'ing_documentos_corte', 'ing_versiones_documento', 'ing_maquinas', 'ing_tipos_documento', 'ing_areas_corte', 'ing_sku_tipo_na', 'ing_sku_tipo_piezas', 'ing_observaciones', 'ing_medidas', 'ing_solicitudes', 'ing_prototipos', 'ing_prototipo_archivos', 'ing_prototipo_cortes']) {
-    canal.on('postgres_changes', { event: '*', schema: 'public', table: tabla }, () => programarRecarga());
+    canal.on('postgres_changes', { event: '*', schema: 'public', table: tabla }, cambio => atenderCambio(tabla, cambio));
   }
   canal.subscribe();
+}
+/* B1. Antes, cualquier cambio recargaba el catálogo completo en todas las pantallas.
+   Ahora: un cambio de casillas o archivos actualiza solo ese SKU; los catálogos pequeños se recargan sin los SKUs. */
+const pendientes = { skus: new Set(), catalogos: false, corte: false, obs: false, solicitudes: false, prototipos: false };
+const TABLAS_SKU = ['ing_sku_entregables', 'ing_skus', 'ing_documentos_corte', 'ing_sku_tipo_na', 'ing_sku_tipo_piezas'];
+const TABLAS_CATALOGO = ['ing_familias', 'ing_lineas', 'ing_entregables', 'ing_perfiles', 'ing_maquinas', 'ing_tipos_documento', 'ing_areas_corte', 'ing_medidas'];
+function atenderCambio(tabla, cambio) {
+  if (!estado.sesion) return;
+  if (estado.sesion.rol_id === ROLES.OPERADOR) { programarRecarga(); return; } // la pantalla del operador ya es ligera
+  const fila = (cambio && (cambio.new && Object.keys(cambio.new).length ? cambio.new : cambio.old)) || {};
+  if (TABLAS_SKU.includes(tabla)) {
+    const id = tabla === 'ing_skus' ? fila.id : fila.sku_id;
+    if (id) pendientes.skus.add(Number(id)); else pendientes.catalogos = true; // sin dato del SKU: recarga sin catálogo de SKUs
+    if (tabla !== 'ing_sku_entregables' && tabla !== 'ing_skus') pendientes.corte = true;
+  } else if (TABLAS_CATALOGO.includes(tabla)) pendientes.catalogos = true;
+  else if (tabla === 'ing_versiones_documento') pendientes.corte = true;
+  else if (tabla === 'ing_observaciones') pendientes.obs = true;
+  else if (tabla === 'ing_solicitudes') pendientes.solicitudes = true;
+  else if (tabla.startsWith('ing_prototipo')) pendientes.prototipos = true;
+  else pendientes.catalogos = true;
+  conRetraso('parcial', aplicarPendientes, 500);
+}
+async function aplicarPendientes() {
+  if (estado.fase !== 'app') return;
+  const p = { skus: [...pendientes.skus], catalogos: pendientes.catalogos, corte: pendientes.corte, obs: pendientes.obs, solicitudes: pendientes.solicitudes, prototipos: pendientes.prototipos };
+  pendientes.skus.clear(); pendientes.catalogos = pendientes.corte = pendientes.obs = pendientes.solicitudes = pendientes.prototipos = false;
+  try {
+    if (p.catalogos) { await DataService.recargarTodo({ conSkus: false }); await cargarCatalogos(); }
+    if (p.skus.length) await DataService.recargarSkus(p.skus);
+  } catch (e) { programarRecarga(); return; } // si algo falla, recarga completa
+  if (p.obs) cargarObservacionesGlobal();
+  if (p.solicitudes) cargarSolicitudes();
+  if (p.prototipos) cargarPrototipos();
+  if (estado.detalle.abierto && p.skus.includes(Number(estado.detalle.sku_id))) { cargarDetalle(); }
+  else if (estado.detalle.abierto && p.corte && puede(estado.sesion.rol_id, 'documentos')) cargarDocumentosDetalle(estado.detalle.sku_id);
+  if (p.skus.length || p.catalogos || (p.corte && estado.vista === 'corte')) refrescarVistas();
+  render();
 }
 function programarRecarga(ms = 700) { conRetraso('recarga', recargarYRefrescar, ms); }
 async function recargarYRefrescar() {
@@ -1116,7 +1210,21 @@ function refrescarVistas() {
 
 /* ---------- Avisos ---------- */
 let siguienteAviso = 1;
+/* C4. Los errores que ve la gente quedan registrados para diagnosticarlos en Administración → Estado */
+const erroresRecientes = new Map();
+function registrarError(mensaje, contexto) {
+  try {
+    if (!SB || !estado.sesion) return;
+    const m = String(mensaje || '').slice(0, 500), ahora = Date.now();
+    if (!m || (erroresRecientes.get(m) || 0) > ahora - 60000) return; // el mismo error, una vez por minuto
+    erroresRecientes.set(m, ahora);
+    SB.rpc('ing_registrar_error', { p_mensaje: m, p_contexto: contexto || estado.vista || '', p_version: VERSION_APP, p_navegador: navigator.userAgent.slice(0, 200) }).then(() => {}, () => {});
+  } catch (e) { /* registrar nunca debe causar otro error */ }
+}
+window.addEventListener('error', ev => registrarError(ev.message, 'error de página'));
+window.addEventListener('unhandledrejection', ev => registrarError(ev.reason && ev.reason.message || String(ev.reason), 'promesa'));
 function agregarAviso(tipo, texto) {
+  if (tipo === 'error') registrarError(texto, `aviso · ${estado.vista || ''}`);
   const id = siguienteAviso++;
   estado.avisos.push({ id, tipo, texto }); render();
   setTimeout(() => cerrarAviso(id), tipo === 'error' ? 7000 : 4000);
@@ -1130,7 +1238,7 @@ function cargarVista() {
   else if (estado.vista === 'tablero') cargarTablero();
   else if (estado.vista === 'historial') cargarHistorial();
   else if (estado.vista === 'corte') cargarCorte();
-  else if (estado.vista === 'observaciones') cargarObservacionesGlobal();
+  else if (estado.vista === 'observaciones') { cargarObservacionesGlobal(); DataService.indicadores().then(d => { estado.indicadores = d; render(); }); }
   else if (estado.vista === 'prototipos') cargarPrototipos();
   else if (estado.vista === 'admin') { if (puede(estado.sesion.rol_id, 'administrar')) cargarAdmin(); else render(); }
 }
@@ -1290,7 +1398,7 @@ function pedirQuitarImagen(sku) {
 /* ---------- Tablero ---------- */
 async function cargarTablero({ silencioso = false } = {}) {
   if (!silencioso) { estado.tablero.cargando = true; estado.tablero.error = null; render(); }
-  try { estado.tablero.datos = await DataService.obtenerTablero(); estado.tablero.error = null; }
+  try { estado.tablero.datos = await DataService.obtenerTablero(); estado.tablero.error = null; DataService.indicadores().then(d => { estado.indicadores = d; render(); }); }
   catch (e) { estado.tablero.error = e.message; }
   finally { estado.tablero.cargando = false; render(); }
 }
@@ -1359,6 +1467,7 @@ async function recargarAdmin() {
   if (p === 'lineas') estado.admin.lineas = await DataService.listarLineas({ incluir_inactivas: true });
   if (p === 'corte') { await DataService.recargarCatalogosCorte(); estado.admin.corte = DataService.catalogosCorte(); estado.corte.espacio = await DataService.espacioDocumentos(); }
   if (p === 'entregables') estado.admin.entregables = await DataService.listarEntregables({ incluir_inactivos: true });
+  if (p === 'estado') { await revisarVersionNueva(); estado.admin.estado = await DataService.estadoSistema(); }
 }
 async function recargarAdminSilencioso() { try { await recargarAdmin(); } catch (e) { agregarAviso('error', e.message); } render(); }
 
@@ -3192,7 +3301,7 @@ function VistaTablero() {
   if (t.error) contenido = EstadoError(t.error, cargarTablero);
   else if (!t.datos) contenido = EstadoCargando('Cargando tablero…', 6);
   else if (!t.datos.total) contenido = EstadoVacio({ titulo: 'Aún no hay SKUs activos que medir', texto: 'El tablero se llena en cuanto haya SKUs activos dados de alta.', accion: null });
-  else contenido = h('div', { class: 'space-y-5' }, ResumenTablero(), h('div', { class: 'grid gap-5 lg:grid-cols-5' }, GraficaAvanceGlobal(), GraficaAvancePorEntregable()), h('div', { class: t.datos.por_linea.length ? 'grid gap-5 xl:grid-cols-2' : '' }, AvancePorFamilia(), t.datos.por_linea.length ? AvancePorLinea() : null));
+  else contenido = h('div', { class: 'space-y-5' }, ResumenTablero(), h('div', { class: 'grid gap-5 lg:grid-cols-5' }, GraficaAvanceGlobal(), GraficaAvancePorEntregable()), h('div', { class: t.datos.por_linea.length ? 'grid gap-5 xl:grid-cols-2' : '' }, AvancePorFamilia(), t.datos.por_linea.length ? AvancePorLinea() : null), IndicadoresCalidad());
   return h('section', null,
     EncabezadoVista('Tablero de avance', 'Solo cuentan los SKUs activos. Un SKU está completo cuando todos sus entregables están marcados como correctos.',
       [t.datos && t.cargando ? h('span', { class: 'flex items-center gap-2 text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, Spinner(), 'Actualizando') : null,
@@ -3325,12 +3434,12 @@ function VistaAdministracion() {
   if (!puede(estado.sesion.rol_id, 'administrar')) return h('section', null, EncabezadoVista('Administración', null, null), EstadoSinPermiso());
   const a = estado.admin;
   const pendientes = estado.pendientes;
-  const pestanas = [['skus', 'SKUs'], ['usuarios', pendientes ? `Usuarios (${pendientes} por aprobar)` : 'Usuarios'], ['familias', 'Familias'], ['lineas', 'Líneas'], ['entregables', 'Entregables'], ['corte', 'Corte']];
-  const datos = { skus: a.skus, usuarios: a.usuarios, familias: a.familias, lineas: a.lineas, entregables: a.entregables, corte: a.corte ? [a.corte] : null }[a.pestana];
+  const pestanas = [['skus', 'SKUs'], ['usuarios', pendientes ? `Usuarios (${pendientes} por aprobar)` : 'Usuarios'], ['familias', 'Familias'], ['lineas', 'Líneas'], ['entregables', 'Entregables'], ['corte', 'Corte'], ['estado', 'Estado del sistema']];
+  const datos = { skus: a.skus, usuarios: a.usuarios, familias: a.familias, lineas: a.lineas, entregables: a.entregables, corte: a.corte ? [a.corte] : null, estado: a.estado ? [a.estado] : null }[a.pestana];
   let contenido;
   if (a.error) contenido = EstadoError(a.error, cargarAdmin);
   else if (!datos || (a.cargando && !datos.length)) contenido = EstadoCargando('Cargando…', 6);
-  else contenido = { skus: AdminSkus, usuarios: AdminUsuarios, familias: AdminFamilias, lineas: AdminLineas, entregables: AdminEntregables, corte: AdminCorte }[a.pestana]();
+  else contenido = { skus: AdminSkus, usuarios: AdminUsuarios, familias: AdminFamilias, lineas: AdminLineas, entregables: AdminEntregables, corte: AdminCorte, estado: AdminEstado }[a.pestana]();
   return h('section', null,
     EncabezadoVista('Administración', 'Alta de SKUs, acceso de las personas y catálogos del aplicativo.', null),
     h('div', { class: 'mb-4 flex gap-1 border-b border-[#D5DBE2] dark:border-[#2E3A48]', role: 'tablist' }, pestanas.map(([id, t]) => h('button', {
@@ -3466,10 +3575,10 @@ function AdminEntregables() {
 function Modal() {
   const m = estado.modal;
   if (!m) return null;
-  const contenido = { desmarcar: ModalDesmarcar, sku: ModalSku, catalogo: ModalCatalogo, aprobar: ModalAprobar, reporte: ModalReporte, importarImagenes: ModalImportarImagenes, documento: ModalDocumento, retirarDocumento: ModalRetirarDocumento, versionesDocumento: ModalVersionesDocumento, corteCatalogo: ModalCorteCatalogo, noAplica: ModalNoAplica, solicitud: ModalSolicitud, prototipo: ModalPrototipo, protoCortado: ModalProtoCortado, atenderSolicitud: ModalAtenderSolicitud, renombrarPieza: ModalRenombrarPieza, medidas: ModalMedidas, observacion: ModalObservacion, atenderObs: ModalAtenderObs, confirmar: ModalConfirmacion }[m.tipo]();
+  const contenido = { desmarcar: ModalDesmarcar, sku: ModalSku, catalogo: ModalCatalogo, aprobar: ModalAprobar, reporte: ModalReporte, importarImagenes: ModalImportarImagenes, documento: ModalDocumento, retirarDocumento: ModalRetirarDocumento, versionesDocumento: ModalVersionesDocumento, corteCatalogo: ModalCorteCatalogo, noAplica: ModalNoAplica, solicitud: ModalSolicitud, cargaMasiva: ModalCargaMasiva, prototipo: ModalPrototipo, protoCortado: ModalProtoCortado, atenderSolicitud: ModalAtenderSolicitud, renombrarPieza: ModalRenombrarPieza, medidas: ModalMedidas, observacion: ModalObservacion, atenderObs: ModalAtenderObs, confirmar: ModalConfirmacion }[m.tipo]();
   return h('div', { class: 'fixed inset-0 z-50 flex items-center justify-center p-4' },
     h('button', { type: 'button', class: 'absolute inset-0 h-full w-full cursor-default bg-[#1B2430]/40 dark:bg-[#000000]/40', 'aria-label': 'Cerrar diálogo', tabindex: '-1', onClick: cerrarModal }),
-    h('div', { 'data-scroll-id': `modal-${m.tipo}`, class: `relative max-h-[90vh] w-full ${m.tipo === 'documento' || m.tipo === 'prototipo' ? 'max-w-3xl' : m.tipo === 'renombrarPieza' ? 'max-w-xl' : 'max-w-md'} overflow-y-auto rounded-lg bg-white dark:bg-[#18202A] p-6 shadow-xl`, role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'titulo-modal' }, contenido));
+    h('div', { 'data-scroll-id': `modal-${m.tipo}`, class: `relative max-h-[90vh] w-full ${m.tipo === 'documento' || m.tipo === 'prototipo' || m.tipo === 'cargaMasiva' ? 'max-w-3xl' : m.tipo === 'renombrarPieza' ? 'max-w-xl' : 'max-w-md'} overflow-y-auto rounded-lg bg-white dark:bg-[#18202A] p-6 shadow-xl`, role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'titulo-modal' }, contenido));
 }
 function PieModal(textoBoton, onConfirmar, { peligro = false, enviando = false, textoEnviando = 'Guardando…' } = {}) {
   return h('div', { class: 'mt-6 flex flex-wrap justify-end gap-2' },
@@ -3802,7 +3911,8 @@ function VistaCorte() {
         h('td', { class: CLS.td }, x.pieza),
         h('td', { class: `${CLS.td} whitespace-nowrap` }, `v${x.version}`, x.vigente ? null : h('span', { class: 'ml-2 text-xs font-medium text-[#B42318] dark:text-[#F28B82]' }, 'Obsoleta'))))))) : null;
   return h('section', { class: 'space-y-5' },
-    EncabezadoVista('Archivos de corte', 'Piezas vigentes de todos los SKUs. Para subir o cambiar archivos, abre el SKU.', null),
+    EncabezadoVista('Archivos de corte', 'Piezas vigentes de todos los SKUs. Para subir o cambiar archivos, abre el SKU, o usa la carga masiva para muchos SKUs a la vez.',
+      puede(estado.sesion.rol_id, 'subir_documentos') && driveListo() ? h('button', { type: 'button', class: CLS.btnPrimario, onClick: abrirModalCargaMasiva }, icono('subir'), 'Carga masiva') : null),
     driveListo() ? null : AvisoDriveSinConfigurar(),
     SolicitudesIngenieria(),
     VerificadorArchivo(),
@@ -4012,6 +4122,195 @@ function ModalRetirarDocumento() {
 /* FIN COMPONENTE: ModalRetirarDocumento */
 
 /* COMPONENTE: ModalVersionesDocumento */
+
+/* ---------- E5. Carga masiva de archivos de corte ----------
+   Una carpeta con una subcarpeta por SKU (con su clave). Dentro, los archivos sueltos o en subcarpetas por tipo. */
+function leerCarpetaArrastrada(items) { // DataTransferItemList → [{ archivo, ruta }]
+  const salida = [];
+  const leerEntrada = (entrada, ruta) => new Promise(res => {
+    if (entrada.isFile) entrada.file(f => { salida.push({ archivo: f, ruta: ruta + f.name }); res(); }, () => res());
+    else if (entrada.isDirectory) {
+      const lector = entrada.createReader(), todas = [];
+      const leer = () => lector.readEntries(async ents => {
+        if (!ents.length) { for (const e of todas) await leerEntrada(e, ruta + entrada.name + '/'); res(); }
+        else { todas.push(...ents); leer(); }
+      }, () => res());
+      leer();
+    } else res();
+  });
+  const entradas = [...items].map(it => it.webkitGetAsEntry && it.webkitGetAsEntry()).filter(Boolean);
+  return entradas.reduce((p, e) => p.then(() => leerEntrada(e, '')), Promise.resolve()).then(() => salida);
+}
+const claveSkuNorm = t => normalizarTexto(t).replace(/\s+/g, '');
+function clasificarArchivoMasivo(ruta, skusPorClave, tipos) {
+  const partes = String(ruta).split('/').filter(Boolean), nombre = partes.pop(), ext = extensionDe(nombre);
+  const candidatos = tipos.filter(t => String(t.extensiones || '').split(/[,\s]+/).includes(ext));
+  if (!candidatos.length) return { ignorar: true };
+  let sku = null, idx = -1;
+  partes.forEach((p, i) => { const x = skusPorClave.get(claveSkuNorm(p)); if (x && !sku) { sku = x; idx = i; } });
+  if (!sku) { const m = /^([^_\s]+)[_\s]/.exec(nombre); if (m) sku = skusPorClave.get(claveSkuNorm(m[1])) || null; } // o al inicio del nombre: 1000_...
+  let tipo = null;
+  for (const c of partes.slice(idx + 1).map(normalizarTexto)) {
+    tipo = candidatos.find(t => normalizarTexto(t.nombre) === c || c.includes(normalizarTexto(nomenDeTipo(t).codigo))) || null;
+    if (tipo) break;
+  }
+  if (!tipo && candidatos.length === 1) tipo = candidatos[0];
+  if (!tipo) { // varios tipos DXF: se deduce por el nombre del archivo
+    const n = normalizarTexto(nombre);
+    for (const [re, clave] of [[/\blp\b|melamina|laminado|\d\s*mm/, 'melamina'], [/lamina|\bcal\b/, 'lamina'], [/tela/, 'tela'], [/panel|acust/, 'panel']]) {
+      if (re.test(n)) { tipo = candidatos.find(t => normalizarTexto(t.nombre).includes(clave)) || null; if (tipo) break; }
+    }
+  }
+  return { sku, tipo, candidatos };
+}
+async function abrirModalCargaMasiva() {
+  estado.modal = { tipo: 'cargaMasiva', filas: [], cambios: '', soloRevisar: false, fase: 'elegir', existentes: null, arrastrando: false, ignorados: 0,
+    hecho: 0, total: 0, errores: [], fallidas: [], error: null, enviando: false, cancelar: false };
+  render();
+  try {
+    const docs = await DataService.listarDocumentos({});
+    if (estado.modal && estado.modal.tipo === 'cargaMasiva') { estado.modal.existentes = new Map(docs.filter(d => d.activo).map(d => [`${d.sku_id}|${d.tipo_documento_id}|${normalizarTexto(d.pieza)}`, d])); render(); }
+  } catch (e) { if (estado.modal) { estado.modal.error = e.message; render(); } }
+}
+function agregarArchivosMasivos(lista) { // lista: [{ archivo, ruta }]
+  const m = estado.modal, tipos = DataService.catalogosCorte().tipos.filter(t => t.activo);
+  const skusPorClave = new Map([...cache.skus.values()].map(x => [claveSkuNorm(x.clave), x]));
+  let ignorados = 0;
+  for (const { archivo, ruta } of lista) {
+    if (m.filas.length >= 500) { ignorados++; continue; }
+    const c = clasificarArchivoMasivo(ruta || archivo.webkitRelativePath || archivo.name, skusPorClave, tipos);
+    if (c.ignorar || archivo.size > LIMITE_DOCUMENTO_MB * 1024 * 1024) { ignorados++; continue; }
+    m.filas.push({ archivo, ruta: ruta || archivo.webkitRelativePath || archivo.name, sku: c.sku, tipo_id: c.tipo ? String(c.tipo.id) : '',
+      candidatos: c.candidatos.map(t => t.id), datos: datosDesdeArchivo(archivo.name, c.sku ? c.sku.clave : '', c.tipo || c.candidatos[0]) });
+  }
+  m.filas.sort((a, b) => compararNatural(a.sku ? a.sku.clave : 'zzz', b.sku ? b.sku.clave : 'zzz') || a.archivo.name.localeCompare(b.archivo.name));
+  m.ignorados += ignorados; m.arrastrando = false; render();
+}
+function planMasivo() {
+  const m = estado.modal, tipos = DataService.catalogosCorte().tipos;
+  const filas = m.filas.map(f => {
+    const tipo = tipos.find(t => t.id === Number(f.tipo_id)), { atributo } = nomenDeTipo(tipo);
+    const errores = tipo ? { ...datosNomenValidos(f.datos, atributo), ...fueraDeLista(f.datos, atributo) } : {};
+    const pieza = f.sku && tipo && !Object.keys(errores).length ? nombreEstandar(f.sku.clave, tipo, f.datos) : '';
+    const previa = pieza && m.existentes ? m.existentes.get(`${f.sku.id}|${tipo.id}|${normalizarTexto(pieza)}`) : null;
+    const error = !f.sku ? 'No se encontró el SKU: la carpeta o el nombre del archivo debe empezar con su clave.'
+      : !tipo ? 'Elige el material.' : Object.keys(errores).length ? 'Completa los datos marcados.' : validarNombrePieza(pieza);
+    return { ...f, tipo, atributo, errores, pieza, previa, esPrimera: !previa, error };
+  });
+  const vistas = new Map();
+  filas.forEach(x => { if (!x.error) { const k = `${x.sku.id}|${normalizarTexto(x.pieza)}`; if (vistas.has(k)) { x.error = 'Hay dos archivos con el mismo nombre de pieza.'; vistas.get(k).error = x.error; } else vistas.set(k, x); } });
+  const ok = filas.filter(x => !x.error);
+  return { filas, nuevas: ok.filter(x => x.esPrimera).length, versiones: ok.filter(x => !x.esPrimera).length, conError: filas.length - ok.length, skus: new Set(ok.map(x => x.sku.id)).size };
+}
+async function subirMasivo() {
+  const m = estado.modal, plan = planMasivo(), lista = plan.filas.filter(x => !x.error);
+  if (!lista.length) { m.error = 'No hay archivos listos para subir.'; render(); return; }
+  if (plan.versiones && String(m.cambios).trim().length < 5) { m.error = `${plan.versiones === 1 ? 'Una pieza ya existe y se subirá' : `${plan.versiones} piezas ya existen y se subirán`} como nueva versión: escribe qué cambió (mínimo 5 caracteres).`; render(); return; }
+  m.fase = 'subiendo'; m.enviando = true; m.error = null; m.total = lista.length; m.hecho = 0; m.errores = []; m.fallidas = []; m.cancelar = false; render();
+  for (const f of lista) {
+    if (m.cancelar) break;
+    try {
+      await DataService.subirDocumento({ sku: { id: f.sku.id, clave: f.sku.clave }, tipo: f.tipo, pieza: f.pieza, archivo: f.archivo, cambios: m.cambios, esPrimera: f.esPrimera });
+      await DataService.guardarNomenclatura(f.sku.id, f.tipo.id, f.pieza, f.datos, f.atributo);
+    } catch (e) { m.errores.push(`${f.pieza}: ${e.message}`); m.fallidas.push(f); }
+    m.hecho++; render();
+  }
+  m.fase = 'terminado'; m.enviando = false; render();
+  programarRecarga(0); if (estado.vista === 'corte') cargarCorte({ silencioso: true });
+  if (!m.errores.length && !m.cancelar) setTimeout(() => { if (estado.modal === m) { estado.modal = null; render(); } }, 1900);
+}
+function reintentarMasivo() {
+  const m = estado.modal; m.filas = m.fallidas.map(f => ({ archivo: f.archivo, ruta: f.ruta, sku: f.sku, tipo_id: f.tipo_id, candidatos: f.candidatos, datos: f.datos }));
+  m.fallidas = []; m.fase = 'elegir'; m.existentes = null;
+  DataService.listarDocumentos({}).then(docs => { m.existentes = new Map(docs.filter(d => d.activo).map(d => [`${d.sku_id}|${d.tipo_documento_id}|${normalizarTexto(d.pieza)}`, d])); subirMasivo(); });
+}
+function ModalCargaMasiva() {
+  const m = estado.modal, tipos = DataService.catalogosCorte().tipos;
+  const titulo = h('h2', { id: 'titulo-modal', class: 'text-lg font-semibold' }, 'Carga masiva de archivos de corte');
+  if (m.fase === 'terminado' && !m.errores.length && !m.cancelar) return h('div', null, titulo, PalomitaExito(`¡Listo! Se subieron ${m.total === 1 ? 'la pieza' : `las ${m.total} piezas`}`, 'Esta ventana se cierra sola.'));
+  if (m.fase !== 'elegir') {
+    const pct = calcularPorcentaje(m.hecho, m.total);
+    return h('div', null, titulo,
+      h('p', { class: 'mt-2 text-sm', role: 'status' }, m.fase === 'subiendo' ? `Subiendo ${m.hecho} de ${m.total} piezas…` : `Listo: se subieron ${m.hecho - m.errores.length} de ${m.total} piezas.`),
+      h('div', { class: 'mt-3 h-2 overflow-hidden rounded-full bg-[#E3E7EC] dark:bg-[#26313D]' }, h('div', { class: 'h-full bg-[#1F7A4D] dark:bg-[#5CC48E]', style: `width:${pct}%` })),
+      m.fase === 'subiendo' ? h('p', { class: 'mt-2 text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, 'No cierres ni recargues la página hasta que termine.') : null,
+      m.errores.length ? h('div', { class: 'mt-3 max-h-40 overflow-y-auto rounded-md border border-[#E7B4AE] bg-[#FDF3F2] p-2 text-xs text-[#8F1C13] dark:border-[#6B2E29] dark:bg-[#3A1D1B] dark:text-[#F5B3AC]' },
+        h('p', { class: 'font-medium' }, `${m.errores.length} no se pudieron subir:`), m.errores.slice(0, 60).map(e => h('p', null, e))) : null,
+      h('div', { class: 'mt-6 flex justify-end gap-2' },
+        m.fase === 'subiendo' ? h('button', { type: 'button', class: CLS.btnSecundario, disabled: m.cancelar, onClick: () => { estado.modal.cancelar = true; render(); } }, m.cancelar ? 'Deteniendo…' : 'Detener')
+          : [h('button', { type: 'button', class: CLS.btnSecundario, onClick: cerrarModal }, 'Cerrar'),
+             m.fallidas.length ? h('button', { type: 'button', class: CLS.btnPrimario, onClick: reintentarMasivo }, icono('subir', 'w-4 h-4'), `Reintentar ${m.fallidas.length === 1 ? 'la que falló' : `las ${m.fallidas.length} que fallaron`}`) : null]));
+  }
+  const plan = planMasivo(), mostrar = plan.filas.map((f, i) => [f, i]).filter(([f]) => !m.soloRevisar || f.error);
+  const zona = h('div', { class: `flex flex-col items-center justify-center gap-2 rounded-md border-2 border-dashed px-4 py-5 text-center ${m.arrastrando ? 'border-[#1E4E79] bg-[#EEF3F8] dark:border-[#7FB2E5] dark:bg-[#1C2A3A]' : 'border-[#C3CBD4] dark:border-[#3A4756]'}`,
+      onDragenter: ev => { ev.preventDefault(); if (!estado.modal.arrastrando) { estado.modal.arrastrando = true; render(); } },
+      onDragover: ev => { ev.preventDefault(); ev.dataTransfer.dropEffect = 'copy'; },
+      onDragleave: ev => { if (!ev.currentTarget.contains(ev.relatedTarget)) { estado.modal.arrastrando = false; render(); } },
+      onDrop: ev => { ev.preventDefault(); const items = ev.dataTransfer.items; if (items && items.length && items[0].webkitGetAsEntry) leerCarpetaArrastrada(items).then(agregarArchivosMasivos);
+        else agregarArchivosMasivos([...(ev.dataTransfer.files || [])].map(f => ({ archivo: f, ruta: f.name }))); } },
+    h('span', { class: 'text-[#5B6675] dark:text-[#9AA7B6]', 'aria-hidden': 'true' }, icono('subir', 'w-6 h-6')),
+    h('p', { class: 'text-sm font-medium' }, m.arrastrando ? 'Suelta la carpeta aquí' : 'Arrastra aquí la carpeta con los archivos'),
+    h('input', { id: 'masiva-carpeta', type: 'file', webkitdirectory: true, multiple: true, class: 'sr-only', tabindex: '-1', 'aria-hidden': 'true', onChange: ev => { agregarArchivosMasivos([...ev.target.files].map(f => ({ archivo: f, ruta: f.webkitRelativePath || f.name }))); ev.target.value = ''; } }),
+    h('input', { id: 'masiva-archivos', type: 'file', multiple: true, accept: '.dxf,.igs,.iges', class: 'sr-only', tabindex: '-1', 'aria-hidden': 'true', onChange: ev => { agregarArchivosMasivos([...ev.target.files].map(f => ({ archivo: f, ruta: f.name }))); ev.target.value = ''; } }),
+    h('div', { class: 'flex flex-wrap justify-center gap-2' },
+      h('button', { type: 'button', class: CLS.btnSecundario, onClick: () => document.getElementById('masiva-carpeta').click() }, 'Elegir carpeta'),
+      h('button', { type: 'button', class: CLS.btnSecundario, onClick: () => document.getElementById('masiva-archivos').click() }, 'Elegir archivos')),
+    h('p', { class: 'text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, 'Una subcarpeta por SKU con el nombre de su clave (1000, 105…). Dentro, los archivos sueltos o en subcarpetas por tipo (DXF de melamina, IGES de tubular…). Si eliges archivos sueltos, su nombre debe empezar con la clave del SKU.'));
+  const et = (id, t) => h('label', { for: id, class: 'block text-[11px] font-medium text-[#5B6675] dark:text-[#9AA7B6]' }, t);
+  const setD = (i, k, v) => { estado.modal.filas[i].datos = { ...estado.modal.filas[i].datos, [k]: v }; };
+  const fila = ([f, i]) => {
+    const opciones = tipos.filter(t => f.candidatos.includes(t.id)), e = f.errores || {};
+    const texto = (k, t, ancho, extra) => h('div', { class: ancho }, et(`mv-${k}-${i}`, t),
+      h('input', { id: `mv-${k}-${i}`, class: `${e[k] ? CLS.inputError : CLS.input} py-1 text-sm`, value: f.datos[k] || '', title: e[k] || '', ...extra, onInput: ev => { setD(i, k, ev.target.value); conRetraso('masiva', render, 300); } }));
+    const menu = (k, t) => h('div', { class: 'w-28' }, et(`mv-${k}-${i}`, t),
+      SelectorMedida({ id: `mv-${k}-${i}`, k, atributo: f.atributo, valor: f.datos[k], clase: `${e[k] ? CLS.inputError : CLS.input} py-1 text-sm`, onElegir: v => { setD(i, k, v); render(); },
+        alAgregar: () => { const volver = estado.modal; abrirModalMedidas({ lista: listaDeCampo(k, f.atributo), volver, alVolver: v => { volver.filas[i].datos = { ...volver.filas[i].datos, [k]: v }; } }); } }));
+    const etiqueta = f.error ? h('span', { class: 'text-xs font-medium text-[#B42318] dark:text-[#F28B82]' }, f.error)
+      : f.esPrimera ? h('span', { class: 'rounded bg-[#E6F2EB] px-1.5 py-0.5 text-[11px] font-semibold text-[#1F7A4D] dark:bg-[#173526] dark:text-[#5CC48E]' }, 'NUEVA')
+      : h('span', { class: 'rounded bg-[#FFF4DB] px-1.5 py-0.5 text-[11px] font-semibold text-[#B26A00] dark:bg-[#3A2F14] dark:text-[#E0A650]' }, `NUEVA VERSIÓN (v${(f.previa.version_vigente || 1) + 1})`);
+    return h('div', { class: `rounded-md border p-2 ${f.error ? 'border-[#E7B4AE] dark:border-[#6B2E29]' : 'border-[#E3E7EC] dark:border-[#26313D]'}` },
+      h('div', { class: 'flex items-center justify-between gap-2' },
+        h('p', { class: 'min-w-0 truncate text-xs text-[#5B6675] dark:text-[#9AA7B6]', title: f.ruta }, h('span', { class: 'font-semibold text-[#1B2430] dark:text-[#E6EAEF]' }, f.sku ? f.sku.clave : '¿SKU?'), ` · ${f.ruta}`),
+        h('button', { type: 'button', class: CLS.btnChico, 'aria-label': `Quitar ${f.archivo.name}`, onClick: () => { estado.modal.filas.splice(i, 1); render(); } }, icono('x', 'w-3.5 h-3.5'))),
+      f.sku ? h('div', { class: 'mt-1 flex flex-wrap items-end gap-2' },
+        h('div', { class: 'w-44' }, et(`mv-tipo-${i}`, 'Material'),
+          h('select', { id: `mv-tipo-${i}`, class: `${f.tipo ? CLS.input : CLS.inputError} py-1 text-sm`, value: f.tipo_id,
+            onChange: ev => { const nt = tipos.find(t => t.id === Number(ev.target.value)); const prop = datosDesdeArchivo(f.archivo.name, f.sku.clave, nt);
+              estado.modal.filas[i].tipo_id = ev.target.value; estado.modal.filas[i].datos = { ...prop, cantidad: f.datos.cantidad || prop.cantidad, nombre: f.datos.nombre || prop.nombre }; render(); } },
+            f.tipo ? null : h('option', { value: '' }, 'Elige…'), opciones.map(t => h('option', { value: t.id }, t.nombre)))),
+        f.tipo ? [texto('cantidad', 'Piezas', 'w-16', { type: 'number', min: '1', max: '999' }),
+          f.atributo === 'espesor' ? menu('espesor', 'Espesor') : null, f.atributo === 'tubular' ? menu('medida', 'Tubular') : null,
+          f.atributo === 'calibre' || f.atributo === 'tubular' ? menu('calibre', 'Calibre') : null,
+          texto('nombre', 'Nombre de la pieza', 'min-w-[10rem] flex-1', { maxlength: '80' })] : null) : null,
+      h('div', { class: 'mt-1.5 flex flex-wrap items-center justify-between gap-2' }, h('code', { class: 'break-all text-xs font-semibold' }, f.pieza || '—'), etiqueta));
+  };
+  return h('form', { novalidate: true, onSubmit: ev => { ev.preventDefault(); subirMasivo(); } },
+    titulo,
+    h('p', { class: 'mt-1 text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, 'Sube los archivos de muchos SKUs a la vez. El aplicativo propone los datos de cada pieza leyendo su nombre; revisa los marcados en rojo antes de subir.'),
+    h('div', { class: 'mt-4' }, zona),
+    m.ignorados ? h('p', { class: 'mt-2 text-xs text-[#B26A00] dark:text-[#E0A650]' }, `Se ${m.ignorados === 1 ? 'omitió 1 archivo' : `omitieron ${m.ignorados} archivos`} que no son DXF ni IGES, pasan del tamaño máximo o exceden 500 archivos.`) : null,
+    !m.existentes && !m.error ? h('p', { class: 'mt-2 flex items-center gap-2 text-xs', role: 'status' }, Spinner('w-3.5 h-3.5'), 'Revisando las piezas que ya existen…') : null,
+    m.filas.length ? [
+      h('div', { class: 'mt-3 flex flex-wrap items-center gap-2 text-xs' },
+        h('span', { class: 'rounded bg-[#EEF3F8] px-2 py-1 font-medium dark:bg-[#1C2A3A]' }, `${m.filas.length} archivos · ${plan.skus} SKUs`),
+        h('span', { class: 'rounded bg-[#E6F2EB] px-2 py-1 font-medium text-[#1F7A4D] dark:bg-[#173526] dark:text-[#5CC48E]' }, `${plan.nuevas} ${plan.nuevas === 1 ? 'nueva' : 'nuevas'}`),
+        h('span', { class: 'rounded bg-[#FFF4DB] px-2 py-1 font-medium text-[#B26A00] dark:bg-[#3A2F14] dark:text-[#E0A650]' }, `${plan.versiones} ${plan.versiones === 1 ? 'nueva versión' : 'nuevas versiones'}`),
+        plan.conError ? h('span', { class: 'rounded bg-[#FDF3F2] px-2 py-1 font-medium text-[#B42318] dark:bg-[#3A1D1B] dark:text-[#F28B82]' }, `${plan.conError} por revisar`) : null,
+        h('label', { class: 'ml-auto flex items-center gap-1.5' }, h('input', { type: 'checkbox', checked: m.soloRevisar, onChange: ev => { estado.modal.soloRevisar = ev.target.checked; render(); } }), 'Mostrar solo las que hay que revisar')),
+      h('div', { 'data-scroll-id': 'masiva-filas', class: 'mt-2 max-h-[45vh] space-y-2 overflow-y-auto rounded-md border border-[#D5DBE2] p-2 dark:border-[#2E3A48]' },
+        mostrar.length ? mostrar.map(fila) : h('p', { class: 'p-3 text-sm text-[#5B6675]' }, 'No hay archivos por revisar.')),
+      plan.versiones ? h('div', { class: 'mt-3' }, h('label', { for: 'masiva-cambios', class: CLS.etiqueta }, plan.versiones === 1 ? 'Qué cambió en la nueva versión (obligatorio)' : `Qué cambió en las ${plan.versiones} nuevas versiones (obligatorio)`),
+        h('textarea', { id: 'masiva-cambios', rows: '2', maxlength: '500', class: CLS.input, value: m.cambios, onInput: ev => { estado.modal.cambios = ev.target.value; } })) : null,
+      plan.conError ? h('p', { class: 'mt-2 text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, plan.conError === 1 ? 'La marcada en rojo no se subirá hasta corregirla (o puedes quitarla con la ✕).' : `Las ${plan.conError} marcadas en rojo no se subirán hasta corregirlas (o puedes quitarlas con la ✕).`) : null] : null,
+    ErrorModal(m.error),
+    PieModal(`Subir ${plan.nuevas + plan.versiones} ${plan.nuevas + plan.versiones === 1 ? 'pieza' : 'piezas'}`, subirMasivo, { enviando: m.enviando || (!m.existentes && !m.error), textoEnviando: m.enviando ? 'Subiendo…' : 'Revisando…' }));
+}
+
+function compararVersiones(doc, anterior, vigente) {
+  const bytes = async x => pako.ungzip(deBase64((await llamarDrive('descargar', { drive_id: x.drive_id })).contenido));
+  window.VisorCorte.comparar({ nombre: `${doc.pieza}.${extensionDe(vigente.nombre_original) || 'dxf'}`, subtitulo: `${doc.sku_clave} · ${doc.tipo_nombre} · Comparación de versiones`,
+    etiquetaA: `v${anterior.version}`, etiquetaB: `v${vigente.version}`, obtenerA: () => bytes(anterior), obtenerB: () => bytes(vigente) });
+}
 function ModalVersionesDocumento() {
   const m = estado.modal;
   return h('div', null,
@@ -4023,7 +4322,12 @@ function ModalVersionesDocumento() {
             v.vigente ? h('span', { class: 'rounded bg-[#E6F2EB] px-1.5 text-xs font-semibold text-[#1F7A4D] dark:bg-[#173526] dark:text-[#5CC48E]' }, 'Vigente') : h('span', { class: 'rounded bg-[#FDF3F2] px-1.5 text-xs font-semibold text-[#B42318] dark:bg-[#3A1D1B] dark:text-[#F28B82]' }, 'Obsoleta'),
             h('span', { class: 'ml-auto' }, v.archivo_borrado ? h('span', { class: 'text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, 'Solo registro') : h('button', { type: 'button', class: CLS.btnChico, disabled: !!estado.corte.descargando, onClick: () => descargarDocumento({ ...v, version_id: v.id, sku_clave: m.doc.sku_clave, pieza: m.doc.pieza }), 'aria-label': `Descargar versión ${v.version}` }, icono('descarga', 'w-3.5 h-3.5')))),
           h('p', { class: 'text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, `${v.subida_por_nombre || '—'}, ${formatearFechaHora(v.created_at)} · ${v.nombre_original} · ${Number(v.descargas) === 1 ? '1 descarga' : `${v.descargas} descargas`}`),
-          v.cambios ? h('p', { class: 'mt-1 text-xs' }, `Cambios: ${v.cambios}`) : null))),
+          v.cambios ? h('p', { class: 'mt-1 text-xs' }, `Cambios: ${v.cambios}`) : null,
+          (() => { // E2. comparar esta versión con la vigente
+            const vig = m.versiones.find(x => x.vigente);
+            if (v.vigente || v.archivo_borrado || !vig || vig.archivo_borrado || !window.VisorCorte || !window.VisorCorte.comparar || !window.VisorCorte.puedeVer(v.nombre_original)) return null;
+            return h('button', { type: 'button', class: `${CLS.btnChico} mt-2`, onClick: () => compararVersiones(m.doc, v, vig) }, icono('ojo', 'w-3.5 h-3.5'), `Comparar con la vigente (v${vig.version})`);
+          })()))),
     h('div', { class: 'mt-6 flex justify-end' }, h('button', { type: 'button', id: 'confirmar-cancelar', class: CLS.btnSecundario, onClick: cerrarModal }, 'Cerrar')));
 }
 /* FIN COMPONENTE: ModalVersionesDocumento */
@@ -4194,6 +4498,118 @@ function TarjetaObservacion(o, { conSku = true } = {}) {
 }
 /* FIN COMPONENTE: TarjetaObservacion */
 
+
+/* COMPONENTE: AdminEstado (C4) — salud del aplicativo de un vistazo */
+function Semaforo(nivel) { // 'ok' | 'aviso' | 'falla'
+  const c = { ok: ['bg-[#1F7A4D]', 'Bien'], aviso: ['bg-[#C98A1B]', 'Revisar'], falla: ['bg-[#B42318]', 'Falla'] }[nivel];
+  return h('span', { class: 'inline-flex items-center gap-1.5 text-xs font-semibold' }, h('span', { class: `h-2.5 w-2.5 rounded-full ${c[0]}`, 'aria-hidden': 'true' }), c[1]);
+}
+function TarjetaEstado(titulo, nivel, valor, detalle) {
+  return h('div', { class: `${CLS.panel} p-4` },
+    h('div', { class: 'flex items-center justify-between gap-2' }, h('p', { class: 'text-sm font-semibold' }, titulo), Semaforo(nivel)),
+    h('p', { class: 'mt-2 text-xl font-semibold tabular-nums' }, valor),
+    detalle ? h('p', { class: 'mt-1 text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, detalle) : null);
+}
+const MB = b => `${(Number(b || 0) / 1024 / 1024).toFixed(1)} MB`;
+function AdminEstado() {
+  const e = estado.admin.estado; if (!e) return EstadoCargando('Revisando…', 4);
+  const d = (e.bd.ok && e.bd.datos) || {};
+  const sinScript = !e.bd.ok && /ing_estado_sistema|function|no existe|does not exist|schema cache/i.test(e.bd.error || '');
+  const resp = d.ultimo_respaldo, diasResp = resp ? Math.floor((Date.now() - new Date(resp.created_at).getTime()) / 86400000) : null;
+  const nivelResp = !resp ? 'falla' : resp.resultado !== 'ok' ? 'falla' : diasResp <= 8 ? 'ok' : diasResp <= 15 ? 'aviso' : 'falla';
+  const bdBytes = Number(d.bd_bytes || 0), bdPct = Math.round(bdBytes / (500 * 1024 * 1024) * 100);
+  const esp = e.espacio.ok && e.espacio.datos && e.espacio.datos.cuenta ? e.espacio.datos.cuenta : null;
+  const espPct = esp ? Math.round(Number(esp.bytes || 0) / (15 * 1024 ** 3) * 100) : null;
+  const ref = (/^https:\/\/([a-z0-9]+)\.supabase\.co/i.exec(CONFIG.SUPABASE_URL) || [])[1];
+  const errores = d.errores || [];
+  return h('div', { class: 'space-y-5' },
+    h('div', { class: 'flex flex-wrap items-center justify-between gap-3' },
+      h('p', { class: 'text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, `Revisado ${formatearFechaHora(e.revisado)}. Si algo falla, aquí ves qué parte es.`),
+      h('button', { type: 'button', class: CLS.btnSecundario, disabled: estado.admin.cargando, onClick: cargarAdmin }, estado.admin.cargando ? [Spinner('w-4 h-4'), 'Revisando…'] : 'Revisar de nuevo')),
+    sinScript ? h('p', { class: 'rounded-md bg-[#FFF4DB] p-3 text-sm text-[#5C4410] dark:bg-[#3A2F14] dark:text-[#F0D9A0]' }, 'Falta ejecutar en Supabase el script actualizacion_mejoras_fase1.sql para ver el estado completo.') : null,
+    h('div', { class: 'grid gap-4 sm:grid-cols-2 xl:grid-cols-3' },
+      TarjetaEstado('Base de datos (Supabase)', e.bd.ok ? (bdPct >= 80 ? 'aviso' : 'ok') : 'falla', e.bd.ok ? `Responde en ${e.bd.ms} ms` : 'Sin respuesta',
+        e.bd.ok ? `Tamaño: ${MB(bdBytes)} de 500 MB del plan gratuito (${bdPct} %).` : e.bd.error),
+      TarjetaEstado('Almacén de archivos (Google Drive)', e.drive.ok ? 'ok' : 'falla', e.drive.ok ? `Responde en ${e.drive.ms} ms` : 'Sin respuesta',
+        e.drive.ok ? `Intermediario versión ${e.drive.datos && e.drive.datos.version || '—'}${(e.drive.datos && e.drive.datos.version) < 4 ? ' · actualízalo para el resumen diario por correo' : ''}.` : e.drive.error),
+      TarjetaEstado('Espacio en Google Drive', esp ? (espPct >= 80 ? 'aviso' : 'ok') : 'aviso', esp ? `${MB(esp.bytes)} (${espPct} %)` : 'Sin datos',
+        esp ? `${esp.archivos} archivos de 15 GB gratuitos.` : 'No se pudo consultar el espacio de Drive.'),
+      TarjetaEstado('Último respaldo', nivelResp, resp ? (diasResp === 0 ? 'Hoy' : `Hace ${diasResp} ${diasResp === 1 ? 'día' : 'días'}`) : 'Ninguno',
+        resp ? `${formatearFechaHora(resp.created_at)} · ${resp.resultado === 'ok' ? `correcto (${MB(resp.tamano)})` : `con error: ${resp.detalle || ''}`}. Se respalda cada lunes.` : 'Todavía no se registra ningún respaldo automático. Revisa la tarea "Respaldo semanal" en GitHub.'),
+      TarjetaEstado('Versión del aplicativo', estado.versionNueva ? 'aviso' : 'ok', VERSION_APP, estado.versionNueva ? 'Hay una versión más nueva publicada: presiona "Actualizar ahora" en el aviso azul.' : 'Es la versión publicada más reciente.'),
+      TarjetaEstado('Errores (últimas 24 horas)', (d.errores_24h || 0) === 0 ? 'ok' : d.errores_24h < 10 ? 'aviso' : 'falla', String(d.errores_24h ?? '—'), 'Avisos de error que vio alguna persona. El detalle está abajo.')),
+    e.bd.ok ? h('div', { class: `${CLS.panel} p-4` },
+      h('p', { class: 'text-sm font-semibold' }, 'Contenido'),
+      h('p', { class: 'mt-1 text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, `${d.skus} SKUs · ${d.piezas} piezas de corte · ${d.versiones} versiones · ${d.archivos_drive} archivos en Drive · ${d.usuarios} usuarios con acceso · ${d.respaldos_ok} respaldos correctos registrados`),
+      h('p', { class: 'mt-2 text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, 'La transferencia de datos del mes (límite del plan gratuito) se revisa en Supabase → Usage', ref ? [': ', h('a', { class: CLS.enlace, href: `https://supabase.com/dashboard/project/${ref}/usage`, target: '_blank', rel: 'noopener' }, 'abrir el consumo de este proyecto'), '.'] : '.')) : null,
+    h('div', { class: `${CLS.panel} overflow-hidden` },
+      h('p', { class: 'border-b border-[#E3E7EC] px-4 py-2.5 text-sm font-semibold dark:border-[#26313D]' }, 'Errores recientes'),
+      !errores.length ? h('p', { class: 'px-4 py-4 text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, 'Sin errores registrados.')
+        : h('div', { class: 'max-h-96 overflow-auto' }, h('table', { class: 'w-full text-left text-sm' },
+            h('thead', null, h('tr', null, ['Fecha', 'Persona', 'Mensaje', 'Dónde', 'Versión'].map(t => h('th', { scope: 'col', class: CLS.th }, t)))),
+            h('tbody', null, errores.map(x => h('tr', null,
+              h('td', { class: `${CLS.td} whitespace-nowrap` }, formatearFechaHora(x.created_at)), h('td', { class: CLS.td }, x.usuario),
+              h('td', { class: CLS.td }, x.mensaje), h('td', { class: `${CLS.td} text-xs` }, x.contexto || ''), h('td', { class: `${CLS.td} text-xs` }, x.version || '')))))))); 
+}
+/* FIN COMPONENTE: AdminEstado */
+
+/* COMPONENTE: IndicadoresCalidad (E4) */
+function Indicador(valor, etiqueta, nota) {
+  return h('div', { class: 'rounded-md border border-[#E3E7EC] p-3 dark:border-[#26313D]' },
+    h('p', { class: 'text-2xl font-semibold tabular-nums' }, valor ?? '—'),
+    h('p', { class: 'text-xs font-medium' }, etiqueta),
+    nota ? h('p', { class: 'text-[11px] text-[#7A8594]' }, nota) : null);
+}
+function IndicadoresCalidad({ compacto = false } = {}) {
+  const d = estado.indicadores; if (!d) return null;
+  const o = d.observaciones || {}, a = d.archivos || {}, so = d.solicitudes || {}, pr = d.prototipos || {};
+  if (compacto) return h('div', { class: 'grid gap-3 sm:grid-cols-4' },
+    Indicador(o.abiertas, 'Abiertas'), Indicador(o.resueltas_mes, 'Resueltas este mes'),
+    Indicador(o.dias_resolucion != null ? `${o.dias_resolucion} d` : '—', 'Tiempo promedio para resolver', 'últimos 90 días'),
+    Indicador(o.reabiertas, 'Reabiertas', 'últimos 90 días'));
+  const meses = o.por_mes || [], max = Math.max(1, ...meses.map(m => Math.max(m.creadas, m.resueltas)));
+  const nombreMes = m => new Date(`${m}-15`).toLocaleDateString('es-MX', { month: 'short' });
+  const pct = (x, t) => t ? Math.round(100 * x / t) : 0;
+  return h('section', { class: `${CLS.panel} p-5` },
+    h('h2', { class: 'text-base font-semibold' }, 'Indicadores de calidad y archivos de corte'),
+    h('p', { class: 'text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, 'Mes en curso, salvo donde se indica otro periodo.'),
+    h('h3', { class: 'mt-4 text-sm font-semibold' }, 'Archivos de corte'),
+    h('div', { class: 'mt-2 grid gap-3 sm:grid-cols-3 lg:grid-cols-6' },
+      Indicador(a.skus_corte_completo, 'SKUs con archivos completos', `${pct(a.skus_corte_completo, a.skus_activos)} % de ${a.skus_activos} activos`),
+      Indicador(a.skus_sin_configurar, 'SKUs sin piezas configuradas', 'tienen archivos, pero falta indicar cuántas piezas lleva algún tipo'),
+      Indicador(a.piezas_nuevas_mes, 'Piezas nuevas'), Indicador(a.correcciones_mes, 'Correcciones (versiones nuevas)'),
+      Indicador(a.descargas_mes, 'Descargas en máquinas'),
+      Indicador(a.obsoletos_detectados_mes, 'Archivos obsoletos detectados', `al verificar · ${a.obsoletos_detectados_total} en total; cada uno es un posible rechazo evitado`)),
+    h('h3', { class: 'mt-5 text-sm font-semibold' }, 'Observaciones de calidad'),
+    h('div', { class: 'mt-2 grid gap-3 sm:grid-cols-3 lg:grid-cols-5' },
+      Indicador(o.abiertas, 'Abiertas', o.abierta_mas_antigua_dias != null ? `la más antigua tiene ${o.abierta_mas_antigua_dias} días` : null),
+      Indicador(o.creadas_mes, 'Señaladas'), Indicador(o.resueltas_mes, 'Resueltas'),
+      Indicador(o.dias_resolucion != null ? `${o.dias_resolucion} d` : '—', 'Tiempo promedio para resolver', 'últimos 90 días'),
+      Indicador(o.reabiertas, 'Reabiertas', 'últimos 90 días')),
+    h('div', { class: 'mt-4 grid gap-5 lg:grid-cols-2' },
+      h('div', null, h('p', { class: 'text-xs font-semibold text-[#5B6675] dark:text-[#9AA7B6]' }, 'Señaladas y resueltas por mes'),
+        h('div', { class: 'mt-2 flex h-32 items-end gap-3', role: 'img', 'aria-label': meses.map(m => `${nombreMes(m.mes)}: ${m.creadas} señaladas, ${m.resueltas} resueltas`).join('; ') },
+          meses.map(m => h('div', { class: 'flex flex-1 flex-col items-center gap-1' },
+            h('div', { class: 'flex h-24 w-full items-end justify-center gap-0.5' },
+              h('div', { class: 'w-1/3 rounded-t bg-[#B42318] dark:bg-[#F28B82]', style: `height:${Math.round(m.creadas / max * 100)}%`, title: `${m.creadas} señaladas` }),
+              h('div', { class: 'w-1/3 rounded-t bg-[#1F7A4D] dark:bg-[#5CC48E]', style: `height:${Math.round(m.resueltas / max * 100)}%`, title: `${m.resueltas} resueltas` })),
+            h('span', { class: 'text-[11px] text-[#7A8594]' }, nombreMes(m.mes))))),
+        h('p', { class: 'mt-1 flex gap-4 text-[11px] text-[#5B6675] dark:text-[#9AA7B6]' }, h('span', null, '■ ', h('span', { class: 'text-[#B42318] dark:text-[#F28B82]' }, 'señaladas')), h('span', null, '■ ', h('span', { class: 'text-[#1F7A4D] dark:text-[#5CC48E]' }, 'resueltas')))),
+      h('div', null, h('p', { class: 'text-xs font-semibold text-[#5B6675] dark:text-[#9AA7B6]' }, 'Apartados con más observaciones (90 días)'),
+        (o.por_apartado || []).length ? h('ul', { class: 'mt-2 space-y-1.5' }, o.por_apartado.map(x => h('li', { class: 'flex items-center gap-2 text-sm' },
+          h('span', { class: 'w-40 truncate' }, x.apartado),
+          h('span', { class: 'h-2 rounded bg-[#1E4E79] dark:bg-[#7FB2E5]', style: `width:${Math.round(x.total / Math.max(...o.por_apartado.map(y => y.total)) * 60)}%` }),
+          h('span', { class: 'text-xs tabular-nums' }, x.total))))
+        : h('p', { class: 'mt-2 text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, 'Sin observaciones en los últimos 90 días.'))),
+    h('h3', { class: 'mt-5 text-sm font-semibold' }, 'Solicitudes y prototipos'),
+    h('div', { class: 'mt-2 grid gap-3 sm:grid-cols-3 lg:grid-cols-6' },
+      Indicador(so.pendientes, 'Solicitudes pendientes'), Indicador(so.atendidas_mes, 'Solicitudes atendidas'),
+      Indicador(so.horas_atencion != null ? `${so.horas_atencion} h` : '—', 'Tiempo promedio de atención', 'últimos 90 días'),
+      Indicador(pr.enviados_mes, 'Prototipos enviados'), Indicador(pr.cortados_mes, 'Prototipos cortados'),
+      Indicador(pr.horas_corte != null ? `${pr.horas_corte} h` : '—', 'Tiempo promedio hasta el corte', 'últimos 90 días')));
+}
+/* FIN COMPONENTE: IndicadoresCalidad */
+
 /* COMPONENTE: VistaObservaciones */
 function VistaObservaciones() {
   const o = estado.obs, lista = o.lista || [];
@@ -4209,6 +4625,7 @@ function VistaObservaciones() {
     : 'Problemas que el auditor de calidad señaló en los SKUs. Corrige el apartado indicado y marca la observación como resuelta, explicando qué se corrigió.';
   return h('section', { class: 'space-y-5' },
     EncabezadoVista('Observaciones de calidad', texto, BotonActivarAvisos()),
+    IndicadoresCalidad({ compacto: true }),
     h('div', { class: 'flex flex-wrap items-center gap-2' }, pestaña('abiertas', 'Abiertas'), pestaña('resueltas', 'Resueltas'), pestaña('todas', 'Todas'),
       h('div', { class: 'relative w-full sm:ml-auto sm:w-80' }, h('span', { class: 'pointer-events-none absolute inset-y-0 left-3 flex items-center text-[#7A8594]' }, icono('buscar')),
         h('label', { for: 'obs-busqueda', class: 'sr-only' }, 'Buscar observaciones'),
@@ -4438,6 +4855,35 @@ function VistaReporte() {
 }
 /* FIN COMPONENTE: VistaReporte */
 
+/* ---------- C2. Aviso de versión nueva ----------
+   Cada 5 minutos (y al volver a la pestaña) se pregunta al servidor si el index.html cambió. */
+const versionServidor = { firma: null };
+async function firmaIndex() {
+  try {
+    const r = await fetch(location.href.split('#')[0].split('?')[0], { method: 'HEAD', cache: 'no-store' });
+    if (!r.ok) return null;
+    return r.headers.get('etag') || r.headers.get('last-modified') || null;
+  } catch (e) { return null; }
+}
+async function revisarVersionNueva() {
+  if (!/^https?:/.test(location.protocol)) return;
+  const f = await firmaIndex(); if (!f) return;
+  if (!versionServidor.firma) { versionServidor.firma = f; return; }
+  if (f !== versionServidor.firma && !estado.versionNueva) { estado.versionNueva = true; render(); }
+}
+async function actualizarAhora() {
+  try { await fetch(location.href.split('#')[0], { cache: 'reload' }); await fetch('visor.js', { cache: 'reload' }); } catch (e) { /* se recarga de todos modos */ }
+  location.reload();
+}
+revisarVersionNueva();
+setInterval(revisarVersionNueva, 5 * 60 * 1000);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') revisarVersionNueva(); });
+function AvisoVersionNueva() {
+  if (!estado.versionNueva) return null;
+  return h('div', { class: 'flex flex-wrap items-center justify-center gap-3 bg-[#1E4E79] px-4 py-2 text-sm text-white print:hidden', role: 'status' },
+    h('span', null, '🔄 Hay una versión nueva del aplicativo.'),
+    h('button', { type: 'button', class: 'rounded-md bg-white px-3 py-1 text-sm font-semibold text-[#1E4E79] hover:bg-[#EEF3F8]', onClick: actualizarAhora }, 'Actualizar ahora'));
+}
 /* COMPONENTE: App (raíz) */
 function App() {
   if (estado.fase === 'auth') return h('div', null, FormularioAuth(), Avisos());
@@ -4446,8 +4892,10 @@ function App() {
   const reporte = estado.reporte.abierto && estado.reporte.datos;
   return h('div', null,
     h('div', { class: `flex min-h-screen flex-col ${reporte ? 'print:hidden' : ''}` },
+      AvisoVersionNueva(),
       BarraSuperior(),
       h('main', { class: `mx-auto w-full flex-1 px-4 py-5 ${estado.vista === 'skus' ? '' : 'max-w-[1400px] sm:px-6'}` }, vistas[estado.vista]()),
+      h('footer', { class: 'px-4 pb-3 text-right text-[11px] text-[#7A8594] print:hidden' }, `Ingeniería de producto · versión ${VERSION_APP}`),
       estado.detalle.abierto ? PanelDetalleSku() : null),
     reporte ? VistaReporte() : null,
     h('div', { class: 'print:hidden' }, Modal(), Avisos()));

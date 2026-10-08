@@ -689,6 +689,134 @@ function ajustarCilindro(pos, nor) { // pos, nor: arreglos planos [x,y,z,...]
     };
   }
 
+
+  /* ---------- E2. Comparador de versiones ----------
+     Dibuja las dos versiones encimadas: gris lo que no cambió, rojo lo que se quitó y verde lo que se agregó. */
+  const COL_QUITADO = '#D92D20', COL_AGREGADO = '#12B76A';
+  function claveSeg(p, q, dec) { // un tramo, sin importar su sentido, redondeado a 0.01
+    const a = p.map(x => Math.round(x * dec)), b = q.map(x => Math.round(x * dec));
+    return a.join(',') < b.join(',') ? `${a}|${b}` : `${b}|${a}`;
+  }
+  function diferencias(segsA, segsB) {
+    const iguales = [], quitados = [], agregados = [];
+    for (const [k, s] of segsB) (segsA.has(k) ? iguales : agregados).push(s);
+    for (const [k, s] of segsA) if (!segsB.has(k)) quitados.push(s);
+    return { iguales, quitados, agregados };
+  }
+  function leyendaComparar(v, etA, etB, dif, unidad, cajaA, cajaB, dim) {
+    v.pie.innerHTML = '';
+    const resumen = !dif.quitados.length && !dif.agregados.length ? 'Sin diferencias en la geometría' : 'Hay diferencias en la geometría';
+    const p = el('span', 'font-semibold text-[#1B2430] dark:text-[#E6EAEF]', resumen); v.pie.append(p);
+    const leyenda = (color, texto) => { const s = el('span', 'inline-flex items-center gap-1.5'); const c = el('span', 'inline-block h-0.5 w-5'); c.style.background = color; s.append(c, el('span', '', texto)); v.pie.append(s); };
+    leyenda(COL_QUITADO, `Se quitó (solo en ${etA})`); leyenda(COL_AGREGADO, `Se agregó (solo en ${etB})`); leyenda('#98A2B3', 'Sin cambio');
+    if ((dif.quitados.length || dif.agregados.length) && dim.length === 2) leyenda('rgba(250, 176, 5, 0.9)', 'Zona con cambios');
+    const med = c => dim.map(k => fmt(c[k + '1'] - c[k + '0'])).join(' × ');
+    datoPie(v, `Medidas ${etA}:`, `${med(cajaA)} ${unidad}`); datoPie(v, `${etB}:`, `${med(cajaB)} ${unidad}`);
+  }
+  async function compararDxf(v, bA, bB, etA, etB) {
+    await cargarScript(CDN.dxf);
+    const leer = b => { const dxf = new window.DxfParser().parseSync(new TextDecoder('latin1').decode(b)); return { dxf, g: geometriaDxf(dxf) }; };
+    const A = leer(bA), B = leer(bB);
+    if (!A.g.caja || !B.g.caja) throw new Error('Alguna de las dos versiones no tiene líneas que dibujar.');
+    const uni = UNIDADES[B.dxf.header && B.dxf.header.$INSUNITS] || 'mm';
+    const segs = g => { const m = new Map(); for (const t of g.trazos) for (let i = 1; i < t.length; i++) { const k = claveSeg(t[i - 1], t[i], 100); if (!m.has(k)) m.set(k, [t[i - 1], t[i]]); } return m; };
+    const dif = diferencias(segs(A.g), segs(B.g));
+    const c = { x0: Math.min(A.g.caja.x0, B.g.caja.x0), y0: Math.min(A.g.caja.y0, B.g.caja.y0), x1: Math.max(A.g.caja.x1, B.g.caja.x1), y1: Math.max(A.g.caja.y1, B.g.caja.y1) };
+    v.lienzo.innerHTML = '';
+    const canvas = el('canvas', 'absolute inset-0 h-full w-full cursor-grab touch-none'); v.lienzo.append(canvas);
+    canvas.setAttribute('role', 'img'); canvas.setAttribute('aria-label', `Comparación de ${etA} contra ${etB}`);
+    const ctx = canvas.getContext('2d'), vista = { s: 1, ox: 0, oy: 0 }, W = () => canvas.clientWidth, H = () => canvas.clientHeight;
+    let modo = 'cambios';
+    function trazar(lista, color, ancho) {
+      ctx.strokeStyle = color; ctx.lineWidth = ancho; ctx.beginPath();
+      for (const [p, q] of lista) { ctx.moveTo(p[0] * vista.s + vista.ox, -p[1] * vista.s + vista.oy); ctx.lineTo(q[0] * vista.s + vista.ox, -q[1] * vista.s + vista.oy); }
+      ctx.stroke();
+    }
+    function dibujar() {
+      const dpr = window.devicePixelRatio || 1, col = colores();
+      if (canvas.width !== Math.round(W() * dpr) || canvas.height !== Math.round(H() * dpr)) { canvas.width = Math.round(W() * dpr); canvas.height = Math.round(H() * dpr); }
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.fillStyle = col.fondo; ctx.fillRect(0, 0, W(), H()); ctx.lineCap = 'round';
+      if (modo === 'cambios') {
+        // halo alrededor de cada zona con cambios, para encontrarlas aunque sean pequeñas
+        const zonas = new Map();
+        for (const [p, q] of [...dif.quitados, ...dif.agregados]) {
+          const x = ((p[0] + q[0]) / 2) * vista.s + vista.ox, y = -((p[1] + q[1]) / 2) * vista.s + vista.oy, k = `${Math.round(x / 30)},${Math.round(y / 30)}`;
+          if (!zonas.has(k)) zonas.set(k, [x, y]);
+        }
+        ctx.fillStyle = 'rgba(250, 176, 5, 0.22)'; ctx.strokeStyle = 'rgba(250, 176, 5, 0.9)'; ctx.lineWidth = 1.5;
+        for (const [x, y] of zonas.values()) { ctx.beginPath(); ctx.arc(x, y, 18, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); }
+        trazar(dif.iguales, '#98A2B3', 1.1); trazar(dif.quitados, COL_QUITADO, 2.2); trazar(dif.agregados, COL_AGREGADO, 2.2);
+      }
+      else if (modo === 'anterior') trazar([...dif.iguales, ...dif.quitados], col.tinta, 1.3);
+      else trazar([...dif.iguales, ...dif.agregados], col.tinta, 1.3);
+    }
+    function ajustar() {
+      const w = Math.max(c.x1 - c.x0, 1e-6), hh = Math.max(c.y1 - c.y0, 1e-6);
+      vista.s = Math.min((W() - 60) / w, (H() - 60) / hh);
+      vista.ox = W() / 2 - (c.x0 + w / 2) * vista.s; vista.oy = H() / 2 + (c.y0 + hh / 2) * vista.s; dibujar();
+    }
+    let arrastre = null;
+    canvas.addEventListener('pointerdown', ev => { arrastre = { x: ev.clientX, y: ev.clientY, ox: vista.ox, oy: vista.oy }; canvas.setPointerCapture(ev.pointerId); });
+    canvas.addEventListener('pointermove', ev => { if (!arrastre) return; vista.ox = arrastre.ox + ev.clientX - arrastre.x; vista.oy = arrastre.oy + ev.clientY - arrastre.y; dibujar(); });
+    canvas.addEventListener('pointerup', () => { arrastre = null; });
+    canvas.addEventListener('wheel', ev => { ev.preventDefault(); const r = canvas.getBoundingClientRect(), mx = ev.clientX - r.left, my = ev.clientY - r.top, f = ev.deltaY < 0 ? 1.15 : 1 / 1.15;
+      vista.ox = mx - (mx - vista.ox) * f; vista.oy = my - (my - vista.oy) * f; vista.s *= f; dibujar(); }, { passive: false });
+    const ro = new ResizeObserver(() => dibujar()); ro.observe(canvas);
+    const botones = {};
+    const elegir = m => { modo = m; for (const [k, b] of Object.entries(botones)) b.setAttribute('aria-pressed', String(k === m)); dibujar(); };
+    botones.cambios = boton('Cambios', () => elegir('cambios')); botones.anterior = boton(`Solo ${etA}`, () => elegir('anterior')); botones.vigente = boton(`Solo ${etB}`, () => elegir('vigente'));
+    v.herramientas.append(botones.cambios, botones.anterior, botones.vigente, boton('Ver completa', ajustar));
+    botones.cambios.setAttribute('aria-pressed', 'true');
+    leyendaComparar(v, etA, etB, dif, uni, A.g.caja, B.g.caja, ['x', 'y']);
+    v.limpiar = () => ro.disconnect(); v.cancelar = () => {};
+    v.__comparacion = { quitados: dif.quitados.length, agregados: dif.agregados.length, iguales: dif.iguales.length };
+    requestAnimationFrame(ajustar);
+  }
+  async function compararIges(v, bA, bB, etA, etB) {
+    mensaje(v, 'Preparando el visor 3D…');
+    await cargarScript(CDN.three); await cargarScript(CDN.orbit);
+    const occt = await motorOcct(); if (actual !== v) return;
+    mensaje(v, 'Leyendo las dos versiones…'); await new Promise(r => setTimeout(r, 30));
+    const leer = b => { const r = occt.ReadIgesFile(b, null); if (!r || !r.success || !r.meshes.length) throw new Error('No se pudo leer alguna de las dos versiones.'); return r.meshes; };
+    const mA = leer(bA), mB = leer(bB), THREE = window.THREE, col = colores();
+    const geos = ms => ms.map(m => { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(m.attributes.position.array, 3)); g.setIndex(Array.from(m.index.array)); g.computeVertexNormals(); return g; });
+    const gA = geos(mA), gB = geos(mB);
+    const segs = gs => { const m = new Map(); for (const g of gs) { const p = new THREE.EdgesGeometry(g, 25).attributes.position.array;
+      for (let i = 0; i < p.length; i += 6) { const a = [p[i], p[i + 1], p[i + 2]], b = [p[i + 3], p[i + 4], p[i + 5]], k = claveSeg(a, b, 20); if (!m.has(k)) m.set(k, [a, b]); } } return m; };
+    const dif = diferencias(segs(gA), segs(gB));
+    const caja = gs => { const bb = new THREE.Box3(); for (const g of gs) { g.computeBoundingBox(); bb.union(g.boundingBox); } return { x0: bb.min.x, x1: bb.max.x, y0: bb.min.y, y1: bb.max.y, z0: bb.min.z, z1: bb.max.z, bb }; };
+    const cA = caja(gA), cB = caja(gB), total = cA.bb.clone().union(cB.bb);
+    v.lienzo.innerHTML = '';
+    const renderer = new THREE.WebGLRenderer({ antialias: true }); renderer.setPixelRatio(window.devicePixelRatio || 1);
+    renderer.domElement.className = 'absolute inset-0 h-full w-full'; v.lienzo.append(renderer.domElement);
+    const escena = new THREE.Scene(); escena.background = new THREE.Color(col.fondo);
+    escena.add(new THREE.HemisphereLight(0xffffff, 0x445566, 0.9)); const luz = new THREE.DirectionalLight(0xffffff, 0.6); escena.add(luz);
+    const matPieza = new THREE.MeshStandardMaterial({ color: col.pieza, metalness: 0.2, roughness: 0.7, transparent: true, opacity: 0.35, side: THREE.DoubleSide, depthWrite: false });
+    const piezaB = new THREE.Group(); gB.forEach(g => piezaB.add(new THREE.Mesh(g, matPieza))); escena.add(piezaB);
+    const lineas = (lista, color) => { const arr = new Float32Array(lista.length * 6); lista.forEach(([a, b], i) => arr.set([...a, ...b], i * 6));
+      const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(arr, 3)); return new THREE.LineSegments(g, new THREE.LineBasicMaterial({ color })); };
+    const lIg = lineas(dif.iguales, 0x98A2B3), lQu = lineas(dif.quitados, 0xD92D20), lAg = lineas(dif.agregados, 0x12B76A);
+    escena.add(lIg, lQu, lAg);
+    const centro = total.getCenter(new THREE.Vector3()), radio = Math.max(total.getSize(new THREE.Vector3()).length() / 2, 1);
+    const camara = new THREE.PerspectiveCamera(40, 1, radio / 100, radio * 100);
+    const control = new THREE.OrbitControls(camara, renderer.domElement); control.target.copy(centro);
+    const ajustar = () => { camara.position.copy(centro).add(new THREE.Vector3(1, 0.8, 1.2).normalize().multiplyScalar(radio * 2.6)); camara.up.set(0, 1, 0); control.update(); };
+    const tam = () => { const w = v.lienzo.clientWidth, h = v.lienzo.clientHeight; renderer.setSize(w, h, false); camara.aspect = w / Math.max(h, 1); camara.updateProjectionMatrix(); };
+    const ro = new ResizeObserver(tam); ro.observe(v.lienzo); tam(); ajustar();
+    let vivo = true; (function ciclo() { if (!vivo) return; luz.position.copy(camara.position); renderer.render(escena, camara); requestAnimationFrame(ciclo); })();
+    const botones = {};
+    const elegir = m => { lIg.visible = true; lQu.visible = m !== 'vigente'; lAg.visible = m !== 'anterior';
+      lIg.material.color.set(m === 'cambios' ? 0x98A2B3 : col.arista); for (const [k, b] of Object.entries(botones)) b.setAttribute('aria-pressed', String(k === m)); };
+    botones.cambios = boton('Cambios', () => elegir('cambios')); botones.anterior = boton(`Solo ${etA}`, () => elegir('anterior')); botones.vigente = boton(`Solo ${etB}`, () => elegir('vigente'));
+    const btnPieza = boton('Pieza', () => { piezaB.visible = !piezaB.visible; btnPieza.setAttribute('aria-pressed', String(piezaB.visible)); }); btnPieza.setAttribute('aria-pressed', 'true');
+    v.herramientas.append(botones.cambios, botones.anterior, botones.vigente, btnPieza, boton('Ver completa', ajustar));
+    botones.cambios.setAttribute('aria-pressed', 'true');
+    leyendaComparar(v, etA, etB, dif, 'mm', cA, cB, ['x', 'y', 'z']);
+    v.cancelar = () => {};
+    v.__comparacion = { quitados: dif.quitados.length, agregados: dif.agregados.length, iguales: dif.iguales.length };
+    v.limpiar = () => { vivo = false; ro.disconnect(); control.dispose(); renderer.dispose(); [...gA, ...gB].forEach(g => g.dispose()); };
+  }
+
   /* ---------- Funciones públicas ---------- */
   const tipoDe = n => ((/\.([a-z0-9]+)$/i.exec(n || '') || [])[1] || '').toLowerCase();
   window.VisorCorte = {
@@ -704,6 +832,19 @@ function ajustarCilindro(pos, nor) { // pos, nor: arreglos planos [x,y,z,...]
         if (tipo === 'dxf') { mensaje(v, 'Dibujando la pieza…'); await verDxf(v, datos); }
         else if (tipo === 'igs' || tipo === 'iges') await verIges(v, datos);
         else throw new Error('Este visor solo abre archivos DXF e IGES.');
+      } catch (e) { if (actual === v) mensaje(v, e.message || String(e), true); }
+    },
+    /* E2. Compara dos versiones de la misma pieza */
+    async comparar({ nombre, subtitulo, etiquetaA, etiquetaB, obtenerA, obtenerB }) {
+      const v = armarVentana(nombre, subtitulo);
+      mensaje(v, 'Descargando las dos versiones…');
+      try {
+        const [bA, bB] = await Promise.all([obtenerA(), obtenerB()]);
+        if (actual !== v) return;
+        const tipo = tipoDe(nombre);
+        if (tipo === 'dxf') { mensaje(v, 'Comparando…'); await compararDxf(v, bA, bB, etiquetaA, etiquetaB); }
+        else if (tipo === 'igs' || tipo === 'iges') await compararIges(v, bA, bB, etiquetaA, etiquetaB);
+        else throw new Error('Solo se pueden comparar archivos DXF e IGES.');
       } catch (e) { if (actual === v) mensaje(v, e.message || String(e), true); }
     },
     cerrar
