@@ -1,0 +1,159 @@
+# Restaurar los ARCHIVOS DE CORTE desde el respaldo semanal. Solo se corre a mano.
+# Va en el repositorio de GitHub en la ruta:  .github/workflows/restaurar-archivos.yml
+#
+# Qué hace:
+#   1. Toma el respaldo de archivos más reciente (o el de la ejecución que indiques).
+#   2. Revisa en Google Drive cuáles archivos de la base de datos ya no existen.
+#   3. Modo "revisar": solo dice cuáles faltan y si el respaldo los tiene. No cambia nada.
+#      Modo "restaurar": vuelve a subir a Drive los que faltan, en sus mismas carpetas,
+#      y actualiza la base de datos para que el aplicativo los encuentre.
+# Nunca borra ni reemplaza un archivo que sí existe.
+#
+# Si cambiaste de cuenta de Google, primero instala el intermediario en la cuenta nueva
+# y pon su dirección en el config.js del repositorio; después corre esta tarea.
+#
+# Versión 2 (14/10/2026): piezas compartidas entre SKUs (un archivo, varios SKUs).
+
+name: Restaurar archivos de corte
+
+on:
+  workflow_dispatch:
+    inputs:
+      modo:
+        description: 'revisar = solo informa · restaurar = sube a Drive lo que falta'
+        type: choice
+        options: [revisar, restaurar]
+        default: revisar
+      ejecucion:
+        description: 'Número de la ejecución del respaldo a usar (vacío = el más reciente)'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  restaurar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Descargar el aplicativo (para leer config.js)
+        uses: actions/checkout@v4
+
+      - name: Preparar y descargar el respaldo
+        env:
+          DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          CLAVE: ${{ secrets.RESPALDO_CLAVE }}
+          GH_TOKEN: ${{ github.token }}
+          EJECUCION: ${{ inputs.ejecucion }}
+        run: |
+          set -euo pipefail
+          DRIVE_URL=$(node -e "const vm=require('vm');const c={window:{}};vm.runInNewContext(require('fs').readFileSync('config.js','utf8'),c);process.stdout.write(String((c.window.CONFIG_APLICATIVO||{}).DRIVE_URL||''))" 2>/dev/null || true)
+          case "$DRIVE_URL" in https://script.google.com/*) ;; *) echo "::error::No se encontró la dirección del intermediario (DRIVE_URL) en el config.js del repositorio."; exit 1;; esac
+          echo "::add-mask::${DRIVE_URL}"
+          echo "DRIVE_URL=${DRIVE_URL}" >> "$GITHUB_ENV"
+
+          VER=$(docker run --rm -e DB_URL postgres:17 sh -c 'psql "$DB_URL" -tAc "show server_version_num"' | tr -d '[:space:]')
+          MAYOR=$(( VER / 10000 )); [ "$MAYOR" -lt 17 ] && MAYOR=17
+          echo "IMG=postgres:${MAYOR}" >> "$GITHUB_ENV"
+          pg() { docker run --rm -i -e DB_URL "postgres:${MAYOR}" sh -c 'psql "$DB_URL" -tA -v ON_ERROR_STOP=1'; }
+          CLAVE_ARCH=$(echo "select valor from public.ing_config where clave = 'archivos_clave';" | pg | tr -d '[:space:]')
+          [ -n "$CLAVE_ARCH" ] || { echo "::error::Falta ejecutar actualizacion_respaldo_archivos.sql en Supabase."; exit 1; }
+          echo "::add-mask::${CLAVE_ARCH}"
+          echo "CLAVE_ARCHIVOS=${CLAVE_ARCH}" >> "$GITHUB_ENV"
+          echo "select public.ing_manifiesto_archivos();" | pg > lista_actual.json
+
+          if [ -z "${EJECUCION}" ]; then
+            EJECUCION=$(gh run list -R "$GITHUB_REPOSITORY" --workflow respaldo-archivos.yml --status success -L 1 --json databaseId -q '.[0].databaseId')
+          fi
+          [ -n "${EJECUCION}" ] || { echo "::error::No hay ningún respaldo de archivos correcto."; exit 1; }
+          echo "Respaldo usado: ejecución ${EJECUCION}"
+          gh run download "${EJECUCION}" -R "$GITHUB_REPOSITORY" -D descarga
+          ARCH=$(find descarga -name 'archivos-*.tar.gz.gpg' | head -1)
+          [ -n "$ARCH" ] || { echo "::error::Esa ejecución no tiene un respaldo de archivos."; exit 1; }
+          gpg --batch --yes --pinentry-mode loopback --passphrase "${CLAVE}" -d "$ARCH" > archivos.tar.gz \
+            || { echo "::error::No se pudo abrir el respaldo: revisa que RESPALDO_CLAVE sea la misma con la que se hizo."; exit 1; }
+          mkdir -p respaldo && tar xzf archivos.tar.gz -C respaldo && rm -rf descarga archivos.tar.gz
+          echo "RESPALDO_DE=$(basename "$ARCH" | sed 's/archivos-//; s/.tar.gz.gpg//')" >> "$GITHUB_ENV"
+
+      - name: Revisar y restaurar
+        env:
+          MODO: ${{ inputs.modo }}
+        run: |
+          node - <<'JS'
+          const fs = require('fs'), path = require('path');
+          const URL_DRIVE = process.env.DRIVE_URL, CLAVE = process.env.CLAVE_ARCHIVOS, RESTAURAR = process.env.MODO === 'restaurar';
+          const actual = JSON.parse(fs.readFileSync('lista_actual.json', 'utf8'));
+          const respaldo = JSON.parse(fs.readFileSync('respaldo/manifiesto.json', 'utf8')).archivos.filter(x => x.estado === 'ok' && x.ruta);
+          const espera = ms => new Promise(r => setTimeout(r, ms));
+          async function llamar(cuerpo) {
+            for (let intento = 1; ; intento++) {
+              try {
+                const r = await fetch(URL_DRIVE, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(cuerpo), redirect: 'follow' });
+                const t = await r.text(); let j;
+                try { j = JSON.parse(t); } catch (e) { throw new Error('El intermediario no respondió bien (¿está publicada la versión 5?): ' + t.slice(0, 150)); }
+                if (j.error) { const e = new Error(j.error); e.definitivo = /clave|acción/i.test(j.error); throw e; }
+                return j;
+              } catch (e) {
+                if (e.definitivo || intento >= 4) throw e;
+                console.log(`Reintento ${intento}: ${e.message}`); await espera(5000 * intento);
+              }
+            }
+          }
+          const sql = s => "'" + String(s).replace(/'/g, "''") + "'";
+          (async () => {
+            // 1. ¿Cuáles archivos de la base ya no están en Drive?
+            const faltantes = new Set();
+            for (let i = 0; i < actual.length; i += 200) {
+              const r = await llamar({ accion: 'existe', clave: CLAVE, drive_ids: actual.slice(i, i + 200).map(x => x.drive_id) });
+              (r.faltantes || []).forEach(id => faltantes.add(id));
+            }
+            // 2. Buscar cada faltante en el respaldo por su contenido (huella sha256); si no la tiene, por pieza y versión
+            const porHuella = new Map(respaldo.filter(x => x.sha256).map(x => [x.sha256.trim(), x]));
+            const enRespaldo = new Map(respaldo.map(x => [`${x.tabla}:${x.id}`, x]));
+            const porRestaurar = [], sinCopia = [];
+            for (const x of actual.filter(x => faltantes.has(x.drive_id))) {
+              const c = (x.sha256 && porHuella.get(x.sha256.trim())) || enRespaldo.get(`${x.tabla}:${x.id}`);
+              if (c && (!x.sha256 || !c.sha256 || x.sha256.trim() === c.sha256.trim())) porRestaurar.push({ ...x, ruta: c.ruta });
+              else sinCopia.push(`${x.carpetas.join(' / ')} / ${x.nombre}`);
+            }
+            let texto = `**Respaldo del ${process.env.RESPALDO_DE}** · modo **${RESTAURAR ? 'restaurar' : 'revisar'}**\n\n` +
+              `- Archivos registrados en el aplicativo: ${actual.length}\n- Están en Drive: ${actual.length - faltantes.size}\n` +
+              `- Faltan en Drive y el respaldo los tiene: ${porRestaurar.length}\n- Faltan en Drive y el respaldo NO los tiene: ${sinCopia.length}\n`;
+            if (sinCopia.length) texto += `\nSin copia (se subieron después del respaldo; hay que volver a subirlos desde el aplicativo):\n` + sinCopia.slice(0, 100).map(f => `- ${f}`).join('\n') + '\n';
+            // 3. Restaurar (solo en modo restaurar)
+            const cambios = [];
+            if (RESTAURAR && porRestaurar.length) {
+              let lote = [], peso = 0;
+              const enviar = async () => {
+                const r = await llamar({ accion: 'restaurar', clave: CLAVE, archivos: lote.map((x, k) => ({ clave: k, carpetas: x.carpetas, nombre: x.nombre, contenido: fs.readFileSync(path.join('respaldo', x.ruta)).toString('base64') })) });
+                // Se actualizan todas las piezas que usaban ese archivo (una pieza compartida está en varios SKUs)
+                for (const a of r.archivos || []) if (a.drive_id) { const x = lote[a.clave]; cambios.push(`update public.ing_versiones_documento set drive_id = ${sql(a.drive_id)} where drive_id = ${sql(x.drive_id)}; update public.ing_prototipo_archivos set drive_id = ${sql(a.drive_id)} where drive_id = ${sql(x.drive_id)};`); }
+                console.log(`Restaurados ${cambios.length} de ${porRestaurar.length}`); lote = []; peso = 0;
+              };
+              for (const x of porRestaurar) {
+                const t = fs.statSync(path.join('respaldo', x.ruta)).size;
+                if (lote.length && (lote.length >= 80 || peso + t > 5e6)) await enviar();
+                lote.push(x); peso += t;
+              }
+              if (lote.length) await enviar();
+              fs.writeFileSync('cambios.sql', 'begin;\n' + cambios.join('\n') + '\ncommit;\n');
+              texto += `\n**Se volvieron a subir a Drive: ${cambios.length}**` + (cambios.length < porRestaurar.length ? ` (fallaron ${porRestaurar.length - cambios.length}; vuelve a correr la tarea para reintentarlos)` : '') + '\n';
+            } else if (!RESTAURAR && porRestaurar.length) texto += `\nPara recuperarlos, vuelve a correr esta tarea en modo **restaurar**.\n`;
+            fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, texto);
+            console.log(texto);
+          })().catch(e => { console.log('::error::' + e.message); process.exit(1); });
+          JS
+
+      - name: Actualizar la base de datos con los archivos restaurados
+        if: inputs.modo == 'restaurar'
+        env:
+          DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          if [ -s cambios.sql ]; then
+            docker run --rm -i -e DB_URL "${IMG}" sh -c 'psql "$DB_URL" -v ON_ERROR_STOP=1 -q' < cambios.sql
+            echo "Base de datos actualizada: $(grep -c '^update' cambios.sql) archivos." | tee -a "$GITHUB_STEP_SUMMARY"
+          else
+            echo "No hubo nada que actualizar."
+          fi
