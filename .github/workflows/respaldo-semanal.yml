@@ -1,0 +1,126 @@
+# Respaldo semanal de la base de datos del aplicativo de Ingeniería de producto.
+# Va en el repositorio de GitHub en la ruta:  .github/workflows/respaldo-semanal.yml
+#
+# Necesita dos secretos del repositorio (Settings → Secrets and variables → Actions):
+#   SUPABASE_DB_URL  cadena de conexión "Session pooler" de Supabase (con la contraseña de la base)
+#   RESPALDO_CLAVE   contraseña con la que se cifra el respaldo. Guárdala en un lugar seguro:
+#                    sin ella el respaldo no se puede abrir.
+#
+# Cada lunes a las 3:00 a. m. (hora del centro de México) respalda la base, la cifra y la guarda
+# 90 días en GitHub (pestaña Actions). También se puede correr a mano con "Run workflow".
+#
+# El respaldo trae todo lo necesario para restaurar el aplicativo en un proyecto nuevo de Supabase:
+#   usuarios.sql  las cuentas de las personas
+#   publico.sql   tablas, datos, funciones, reglas de seguridad y permisos exactos, más los
+#                 complementos (registro de usuarios, almacén de imágenes y avisos en tiempo real)
+#
+# Versión 2 (14/10/2026): respalda los permisos exactos y los complementos.
+
+name: Respaldo semanal de la base de datos
+
+on:
+  schedule:
+    - cron: '0 9 * * 1'   # lunes 9:00 UTC = 3:00 a. m. en el centro de México
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  respaldo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Hacer el respaldo cifrado
+        env:
+          DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          CLAVE: ${{ secrets.RESPALDO_CLAVE }}
+        run: |
+          set -euo pipefail
+          if [ -z "${DB_URL}" ] || [ -z "${CLAVE}" ]; then
+            echo "::error::Faltan los secretos SUPABASE_DB_URL y RESPALDO_CLAVE del repositorio."; exit 1
+          fi
+          FECHA=$(date -u +%Y-%m-%d)
+
+          # Se usa la misma versión de PostgreSQL que el proyecto (o la 17 si es más antiguo)
+          VER=$(docker run --rm -e DB_URL postgres:17 sh -c 'psql "$DB_URL" -tAc "show server_version_num"' | tr -d '[:space:]')
+          MAYOR=$(( VER / 10000 )); [ "$MAYOR" -lt 17 ] && MAYOR=17
+          IMG="postgres:${MAYOR}"
+          echo "PostgreSQL del proyecto: ${VER} · se usa ${IMG}"
+          pg() { docker run --rm -i -e DB_URL "$IMG" "$@"; }
+
+          # 1. Cuentas de las personas (se restauran primero)
+          pg sh -c 'pg_dump "$DB_URL" --data-only --no-owner --no-privileges --table=auth.users --table=auth.identities' > usuarios.sql \
+            || echo "-- No se pudieron respaldar las cuentas" > usuarios.sql
+
+          # 2. Tablas, datos, funciones, reglas de seguridad y permisos del aplicativo
+          {
+            echo "-- ===== Preparar permisos: Supabase da permisos por defecto a lo que se crea; se quitan para dejar exactamente los originales ====="
+            echo "alter default privileges in schema public revoke all on tables from anon, authenticated, service_role;"
+            echo "alter default privileges in schema public revoke all on functions from anon, authenticated, service_role;"
+            echo "alter default privileges in schema public revoke all on sequences from anon, authenticated, service_role;"
+            pg sh -c 'pg_dump "$DB_URL" --no-owner --schema=public' | sed '/^CREATE SCHEMA public;$/d'
+            echo "-- ===== Devolver los permisos por defecto de Supabase ====="
+            echo "alter default privileges in schema public grant all on tables to anon, authenticated, service_role;"
+            echo "alter default privileges in schema public grant all on functions to anon, authenticated, service_role;"
+            echo "alter default privileges in schema public grant all on sequences to anon, authenticated, service_role;"
+            echo "-- ===== Complementos: registro de usuarios, almacén de imágenes y avisos en tiempo real ====="
+          } > publico.sql
+
+          # 3. Complementos que viven fuera de las tablas del aplicativo
+          pg sh -c 'psql "$DB_URL" -tA -v ON_ERROR_STOP=1' >> publico.sql <<'CONSULTA'
+          set search_path = '';
+          select string_agg(linea, E'\n' order by orden, linea) from (
+            select 1 as orden, format('drop trigger if exists %I on auth.users;', t.tgname) || E'\n' || pg_get_triggerdef(t.oid) || ';' as linea
+              from pg_trigger t where t.tgrelid = 'auth.users'::regclass and not t.tgisinternal
+            union all
+            select 2, format('insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types) values (%L, %L, %L, %s, %L) on conflict (id) do update set public = excluded.public, file_size_limit = excluded.file_size_limit, allowed_mime_types = excluded.allowed_mime_types;',
+                   b.id, b.name, b.public, coalesce(b.file_size_limit::text, 'null'), b.allowed_mime_types)
+              from storage.buckets b where b.id like 'ing-%'
+            union all
+            select 3, format('drop policy if exists %I on storage.objects;', p.policyname) || E'\n' ||
+                   format('create policy %I on storage.objects as %s for %s to %s%s%s;', p.policyname, p.permissive, p.cmd, array_to_string(p.roles, ', '),
+                          case when p.qual is not null then ' using (' || p.qual || ')' else '' end,
+                          case when p.with_check is not null then ' with check (' || p.with_check || ')' else '' end)
+              from pg_policies p where p.schemaname = 'storage' and p.tablename = 'objects' and p.policyname like 'ing_%'
+            union all
+            select 4, format('do $x$ begin if not exists (select 1 from pg_publication_tables where pubname = %L and schemaname = %L and tablename = %L) then alter publication supabase_realtime add table %I.%I; end if; end $x$;',
+                   'supabase_realtime', pt.schemaname, pt.tablename, pt.schemaname, pt.tablename)
+              from pg_publication_tables pt where pt.pubname = 'supabase_realtime' and pt.schemaname = 'public'
+          ) s;
+          CONSULTA
+          sed -i '/^SET$/d' publico.sql
+
+          # Revisión rápida: el respaldo debe traer los SKUs
+          grep -q "COPY public.ing_skus" publico.sql || { echo "::error::El respaldo no trae la tabla de SKUs."; exit 1; }
+
+          # 4. Comprimir y cifrar
+          tar czf respaldo.tar.gz usuarios.sql publico.sql
+          gpg --batch --yes --pinentry-mode loopback --passphrase "${CLAVE}" --symmetric --cipher-algo AES256 -o "respaldo-${FECHA}.tar.gz.gpg" respaldo.tar.gz
+          rm -f publico.sql usuarios.sql respaldo.tar.gz
+          echo "FECHA=${FECHA}" >> "$GITHUB_ENV"
+          echo "IMG=${IMG}" >> "$GITHUB_ENV"
+          echo "TAMANO=$(stat -c%s "respaldo-${FECHA}.tar.gz.gpg")" >> "$GITHUB_ENV"
+
+      - name: Guardar el respaldo (se conserva 90 días)
+        uses: actions/upload-artifact@v4
+        with:
+          name: respaldo-${{ env.FECHA }}
+          path: respaldo-*.tar.gz.gpg
+          retention-days: 90
+
+      - name: Registrar el respaldo en el aplicativo
+        if: success()
+        env:
+          DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          echo "insert into public.ing_respaldos (resultado, tamano, detalle) values ('ok', ${TAMANO}, 'GitHub Actions');" \
+            | docker run --rm -i -e DB_URL "${IMG}" sh -c 'psql "$DB_URL" -v ON_ERROR_STOP=1 -q'
+
+      - name: Registrar la falla en el aplicativo
+        if: failure()
+        env:
+          DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          echo "insert into public.ing_respaldos (resultado, detalle) values ('error', 'Falló la tarea de GitHub. Revisa la pestaña Actions del repositorio.');" \
+            | docker run --rm -i -e DB_URL postgres:17 sh -c 'psql "$DB_URL" -v ON_ERROR_STOP=1 -q' || true
