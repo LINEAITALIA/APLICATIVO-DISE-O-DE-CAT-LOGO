@@ -99,7 +99,7 @@ const CONFIG = Object.assign({
   DRIVE_URL: 'PEGA-AQUI-LA-DIRECCION-DEL-INTERMEDIARIO'
 }, (typeof window !== 'undefined' && window.CONFIG_APLICATIVO) || {});
 /* C2. Versión del aplicativo: cambia con cada actualización */
-const VERSION_APP = '2026.10.14.2';
+const VERSION_APP = '2026.10.14.5';
 const BUCKET_IMAGENES = 'ing-imagenes';
 const driveListo = () => /^https:\/\/script\.google\.com\//.test(CONFIG.DRIVE_URL);
 const LOGO_LINEA_ITALIA = 'data:image/png;base64,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'; // logo completo en negro; en modo oscuro se invierte a blanco
@@ -369,6 +369,17 @@ const DataService = {
     const { data } = await ejecutar(SB.from('ing_perfiles').select('*').eq('id', userId).maybeSingle());
     return data;
   },
+  async compartirPieza(documentoId, destinos) { // destinos: [{ sku_id, pieza, cantidad }]
+    exigirPermiso('subir_documentos');
+    const { data } = await ejecutar(SB.rpc('ing_compartir_pieza', { p_documento: documentoId, p_destinos: destinos }));
+    const libres = (data || []).map(x => x.liberar_drive_id).filter(Boolean);
+    if (libres.length) llamarDrive('borrar', { drive_ids: libres }).catch(() => {});
+    return data || [];
+  },
+  async dejarDeCompartir(documentoId) {
+    exigirPermiso('subir_documentos');
+    await ejecutar(SB.rpc('ing_dejar_de_compartir', { p_documento: documentoId }));
+  },
   async renombrarPieza(documentoId, pieza) {
     exigirPermiso('subir_documentos');
     await ejecutar(SB.rpc('ing_renombrar_pieza', { p_documento: documentoId, p_pieza: pieza }));
@@ -413,7 +424,7 @@ const DataService = {
     exigirPermiso('prototipos');
     const err = validarArchivoDocumento(archivo, tipo); if (err) throw new ErrorApi(err, { tipo: 'validacion' });
     const bytes = new Uint8Array(await archivo.arrayBuffer()), sha = await sha256Bytes(bytes), comprimido = pako.gzip(bytes, { level: 9 });
-    const subida = await llamarDrive('subir', { contenido: aBase64(comprimido), nombre: archivo.name, nombre_drive: `${cantidad}PZ_${pieza}.${extensionDe(archivo.name)}`,
+    const subida = await llamarDrive('subir', { contenido: aBase64(comprimido), nombre: archivo.name, nombre_drive: `${cantidad}PZ_${nombreSeguroWindows(pieza)}.${extensionDe(archivo.name)}`,
       carpetas: ['Prototipos', `${proto.id} ${proto.nombre}`.slice(0, 100), tipo.nombre], pieza });
     await ejecutar(SB.rpc('ing_agregar_archivo_prototipo', { p_prototipo: proto.id, p_tipo: tipo.id, p_pieza: pieza, p_cantidad: Number(cantidad) || 1,
       p_drive_id: subida.drive_id, p_nombre_original: archivo.name, p_tamano: archivo.size, p_tamano_guardado: subida.tamano_guardado || comprimido.length, p_sha256: sha }))
@@ -538,14 +549,15 @@ const DataService = {
     const bytes = new Uint8Array(await archivo.arrayBuffer());
     const sha = await sha256Bytes(bytes);
     const comprimido = pako.gzip(bytes, { level: 9 });
-    const subida = await llamarDrive('subir', { contenido: aBase64(comprimido), nombre: archivo.name, nombre_drive: `${pieza} (subiendo).${extensionDe(archivo.name)}`, carpetas: carpetasDrive(sku.id, sku.clave, tipo.nombre), sku: sku.clave, pieza });
+    const subida = await llamarDrive('subir', { contenido: aBase64(comprimido), nombre: archivo.name, nombre_drive: `${nombreSeguroWindows(pieza)} (subiendo).${extensionDe(archivo.name)}`, carpetas: carpetasDrive(sku.id, sku.clave, tipo.nombre), sku: sku.clave, pieza });
     const { data } = await ejecutar(SB.rpc('ing_registrar_version', {
       p_sku: sku.id, p_tipo: tipo.id, p_pieza: pieza, p_drive_id: subida.drive_id, p_nombre: archivo.name,
       p_tamano: archivo.size, p_tamano_guardado: subida.tamano_guardado || comprimido.length, p_sha256: sha,
       p_cambios: String(cambios || '').trim() || null
     })).catch(async e => { llamarDrive('borrar', { drive_ids: [subida.drive_id] }).catch(() => {}); throw e; });
     const fila = (data && data[0]) || {};
-    if (fila.liberar_drive_id) llamarDrive('borrar', { drive_ids: [fila.liberar_drive_id] }).catch(() => {});
+    const libres = (data || []).map(x => x.liberar_drive_id).filter(Boolean); // con piezas compartidas puede haber más de uno
+    if (libres.length) llamarDrive('borrar', { drive_ids: libres }).catch(() => {});
     // Ya con el número de versión, el archivo toma su nombre definitivo en Drive
     if (fila.version) llamarDrive('renombrar', { drive_id: subida.drive_id, nombre: nombreDrive(pieza, fila.version, archivo.name) }).catch(() => {});
     return fila.version;
@@ -1708,7 +1720,7 @@ async function cargarPrototipos({ primera = false } = {}) {
   render();
 }
 const nombreArchivoProto = (p, a) => /^PROTO_/i.test(a.pieza)
-  ? `PROTOTIPO_${limpiarNombrePieza(p.nombre)}_${String(a.pieza).replace(/^PROTO_/i, '')}.${extensionDe(a.nombre_original) || 'dat'}`
+  ? `PROTOTIPO_${limpiarNombrePieza(p.nombre)}_${nombreSeguroWindows(String(a.pieza).replace(/^PROTO_/i, ''))}.${extensionDe(a.nombre_original) || 'dat'}`
   : `PROTOTIPO_${limpiarNombrePieza(p.nombre)}_${a.cantidad}${a.cantidad === 1 ? 'PZA' : 'PZAS'}_${limpiarNombrePieza(a.pieza)}.${extensionDe(a.nombre_original) || 'dat'}`;
 async function descargarArchivoProto(p, a) {
   try { guardarArchivo(await DataService.bytesPrototipo(a), nombreArchivoProto(p, a)); } catch (e) { agregarAviso('error', e.message); }
@@ -1744,7 +1756,8 @@ function agregarArchivosProto(lista) {
   for (const f of [...lista]) {
     const tipos = tipoPorExtension(f.name);
     if (!tipos.length || f.size > LIMITE_DOCUMENTO_MB * 1024 * 1024) { descartados++; continue; }
-    m.filas.push({ archivo: f, tipo_id: String(tipos[0].id), datos: datosDesdeArchivo(f.name, '', tipos[0]) });
+    const { tipo } = detectarTipo(f.name, tipos, m.filas.length ? m.filas[m.filas.length - 1].tipo_id : null);
+    m.filas.push({ archivo: f, tipo_id: String(tipo.id), datos: datosDesdeArchivo(f.name, '', tipo) });
   }
   m.descartados = descartados; m.arrastrando = false; render();
 }
@@ -1903,7 +1916,7 @@ function ModalPrototipo() {
       const texto = (k, t, ancho, extra) => h('div', { class: ancho }, et(`pr-${k}-${i}`, t),
         h('input', { id: `pr-${k}-${i}`, class: `${e[k] ? CLS.inputError : CLS.input} py-1 text-sm`, value: (f.datos || {})[k] || '', title: e[k] || '', ...extra,
           onInput: ev => { estado.modal.filas[i].datos = { ...estado.modal.filas[i].datos, [k]: ev.target.value }; conRetraso('proto', render, 250); } }));
-      const menu = (k, t) => h('div', { class: 'w-32' }, et(`pr-${k}-${i}`, t),
+      const menu = (k, t) => h('div', { class: k === 'medida' ? 'w-44' : 'w-32' }, et(`pr-${k}-${i}`, t),
         SelectorMedida({ id: `pr-${k}-${i}`, k, atributo, valor: (f.datos || {})[k], clase: `${e[k] ? CLS.inputError : CLS.input} py-1 text-sm`,
           onElegir: v => { estado.modal.filas[i].datos = { ...estado.modal.filas[i].datos, [k]: v }; render(); },
           alAgregar: () => { const volver = estado.modal; abrirModalMedidas({ lista: listaDeCampo(k, atributo), volver, alVolver: v => { volver.filas[i].datos = { ...volver.filas[i].datos, [k]: v }; } }); } }),
@@ -2239,43 +2252,127 @@ function manejadoresArrastre(m, alSoltar) {
 function elegirArchivosDocumento(lista) {
   const m = estado.modal;
   if (!m || m.tipo !== 'documento') return; // la ventana ya se cerró
-  const tipo = DataService.catalogosCorte().tipos.find(t => t.id === Number(m.tipo_id));
-  const permitidas = String(tipo.extensiones || '').split(',');
-  const archivos = [...lista];
-  const validos = archivos.filter(f => permitidas.includes(extensionDe(f.name)) && f.size > 0 && f.size <= LIMITE_DOCUMENTO_MB * 1024 * 1024);
+  const tipos = DataService.catalogosCorte().tipos.filter(t => t.activo || (m.doc && t.id === m.doc.tipo_documento_id));
+  const fijo = m.doc ? tipos.find(t => t.id === m.doc.tipo_documento_id) : null; // nueva versión: el tipo no cambia
+  const archivos = [...lista], validos = [], tipoDe = {}, seguro = {};
+  for (const f of archivos) {
+    if (!(f.size > 0 && f.size <= LIMITE_DOCUMENTO_MB * 1024 * 1024)) continue;
+    const cand = (fijo ? [fijo] : tipos).filter(t => extensionesDe(t).includes(extensionDe(f.name)));
+    if (!cand.length) continue;
+    const r = fijo ? { tipo: fijo, seguro: true } : detectarTipo(f.name, cand, m.tipo_id);
+    tipoDe[validos.length] = String(r.tipo.id); seguro[validos.length] = r.seguro; validos.push(f);
+  }
   m.rechazados = archivos.length - validos.length;
   m.archivos = m.doc ? validos.slice(0, 1) : validos;
-  m.datos = {};
-  m.archivos.forEach((f, i) => { m.datos[i] = m.doc ? datosDePieza(m.doc, m.sku.clave, tipo) : datosDesdeArchivo(f.name, m.sku.clave, tipo); });
-  m.error = m.archivos.length ? null : `No se encontró ningún archivo ${permitidas.map(x => '.' + x).join(' o ')} válido en lo que elegiste.`;
+  m.tipoDe = tipoDe; m.tipoSeguro = seguro; m.datos = {};
+  m.archivos.forEach((f, i) => { const t = tipoDeArchivo(m, i); m.datos[i] = m.doc ? datosDePieza(m.doc, m.sku.clave, t) : datosDesdeArchivo(f.name, m.sku.clave, t); });
+  const exts = [...new Set((fijo ? [fijo] : tipos).flatMap(extensionesDe))];
+  m.error = m.archivos.length ? null : `No se encontró ningún archivo ${exts.map(x => '.' + x).join(' o ')} válido en lo que elegiste.`;
+  render();
+}
+function tipoDeArchivo(m, i) { const tipos = DataService.catalogosCorte().tipos; return tipos.find(t => t.id === Number((m.tipoDe || {})[i] || m.tipo_id)) || tipos[0]; }
+function cambiarTipoArchivo(i, tipoId) { // el ingeniero corrige el tipo detectado: se vuelven a leer los datos del nombre
+  const m = estado.modal, prev = m.datos[i] || {};
+  m.tipoDe = { ...(m.tipoDe || {}), [i]: String(tipoId) }; m.tipoSeguro = { ...(m.tipoSeguro || {}), [i]: true };
+  const prop = datosDesdeArchivo(m.archivos[i].name, m.sku.clave, tipoDeArchivo(m, i));
+  m.datos[i] = { ...prop, cantidad: prev.cantidad || prop.cantidad, nombre: prev.nombre || prop.nombre };
   render();
 }
 function piezasExistentes(tipoId) {
   const mapa = new Map();
-  for (const d of estado.detalle.documentos || []) if (d.tipo_documento_id === Number(tipoId)) mapa.set(normalizarTexto(d.pieza), d);
+  for (const d of estado.detalle.documentos || []) if (d.tipo_documento_id === Number(tipoId) && d.activo !== false) mapa.set(claveComparacion(d.pieza), d);
   return mapa;
 }
 function planSubida() {
   const m = estado.modal;
   if (!m || !m.archivos) return { filas: [], nuevas: 0, versiones: 0, conError: 0 };
-  const previas = piezasExistentes(m.tipo_id);
-  const tipo = DataService.catalogosCorte().tipos.find(t => t.id === Number(m.tipo_id));
-  const { atributo } = nomenDeTipo(tipo);
+  const previasPorTipo = {};
   const filas = m.archivos.map((f, i) => {
+    const tipo = tipoDeArchivo(m, i), { atributo } = nomenDeTipo(tipo);
+    const previas = previasPorTipo[tipo.id] || (previasPorTipo[tipo.id] = piezasExistentes(tipo.id));
     const d = m.datos[i] || {};
     const errores = { ...datosNomenValidos(d, atributo), ...fueraDeLista(d, atributo) };
     const pieza = Object.keys(errores).length ? '' : nombreEstandar(m.sku.clave, tipo, d);
-    const previa = m.doc || previas.get(normalizarTexto(pieza));
-    const renombrar = m.doc && pieza && normalizarTexto(pieza) !== normalizarTexto(m.doc.pieza);
-    const choque = renombrar && previas.get(normalizarTexto(pieza));
-    return { archivo: f, pieza, datos: d, errores, previa, renombrar, esPrimera: !previa,
+    const previa = m.doc || previas.get(claveComparacion(pieza));
+    const renombrar = !!(previa && pieza && normalizarTexto(pieza) !== normalizarTexto(previa.pieza));
+    const otra = renombrar && previas.get(claveComparacion(pieza)), choque = otra && otra.id !== previa.id;
+    return { archivo: f, tipo, atributo, seguro: !(m.tipoSeguro && m.tipoSeguro[i] === false), pieza, datos: d, errores, previa, renombrar, esPrimera: !previa,
       error: Object.keys(errores).length ? 'Completa los datos marcados.' : choque ? 'Ya existe otra pieza con ese nombre.' : validarNombrePieza(pieza) };
   });
   const repetidas = new Set();
   const vistas = new Set();
-  filas.forEach(x => { const k = normalizarTexto(x.pieza); if (vistas.has(k)) repetidas.add(k); vistas.add(k); });
-  filas.forEach(x => { if (!x.error && repetidas.has(normalizarTexto(x.pieza))) x.error = 'Hay dos archivos con el mismo nombre de pieza.'; });
+  filas.forEach(x => { const k = claveComparacion(x.pieza); if (vistas.has(k)) repetidas.add(k); vistas.add(k); });
+  filas.forEach(x => { if (!x.error && repetidas.has(claveComparacion(x.pieza))) x.error = 'Hay dos archivos con el mismo nombre de pieza.'; });
   return { filas, nuevas: filas.filter(x => x.esPrimera && !x.error).length, versiones: filas.filter(x => !x.esPrimera && !x.error).length, conError: filas.filter(x => x.error).length };
+}
+/* ---------- Piezas compartidas entre SKUs ---------- */
+const compartidaCon = d => (d && Array.isArray(d.compartida_con) ? d.compartida_con : []);
+function listaClaves(claves, max = 4) { return claves.length <= max ? claves.join(', ') : `${claves.slice(0, max).join(', ')} y ${claves.length - max} más`; }
+function nombreParaOtroSku(doc, tipo, clave, cantidad) { // el mismo nombre estándar, con la clave del otro SKU
+  const d = { ...datosDePieza(doc, doc.sku_clave, tipo), cantidad: String(cantidad) };
+  if (!Object.keys(datosNomenValidos(d, nomenDeTipo(tipo).atributo)).length) return nombreEstandar(clave, tipo, d);
+  const origen = sinAcentos(doc.sku_clave).toUpperCase().replace(/[_\s]+/g, '-') + '_';
+  return String(doc.pieza).toUpperCase().startsWith(origen) ? sinAcentos(clave).toUpperCase().replace(/[_\s]+/g, '-') + '_' + String(doc.pieza).slice(origen.length) : doc.pieza;
+}
+function abrirModalCompartir(sku, doc) {
+  const tipo = DataService.catalogosCorte().tipos.find(t => t.id === doc.tipo_documento_id);
+  estado.modal = { tipo: 'compartir', sku: { id: sku.id, clave: sku.clave }, doc, tipoDoc: tipo, busqueda: '', sugerencias: [], destinos: [], docsDestino: {}, error: null, enviando: false };
+  enfocarDespues = 'cmp-busqueda'; render();
+}
+function buscarSkusCompartir(q) {
+  const m = estado.modal, n = normalizarTexto(q);
+  m.busqueda = q;
+  const fuera = new Set([normalizarTexto(m.sku.clave), ...compartidaCon(m.doc).map(normalizarTexto), ...m.destinos.map(x => normalizarTexto(x.clave))]);
+  m.sugerencias = !n ? [] : [...(cache.skus ? cache.skus.values() : [])]
+    .filter(x => !fuera.has(normalizarTexto(x.clave)) && normalizarTexto(`${x.clave} ${x.descripcion}`).includes(n))
+    .sort((a, b) => (normalizarTexto(a.clave).startsWith(n) ? 0 : 1) - (normalizarTexto(b.clave).startsWith(n) ? 0 : 1) || compararNatural(a.clave, b.clave)).slice(0, 8);
+  conRetraso('cmpsku', render, 120);
+}
+async function agregarDestinoCompartir(x) {
+  const m = estado.modal;
+  if (m.destinos.some(d => d.id === x.id)) return;
+  m.destinos.push({ id: x.id, clave: x.clave, descripcion: x.descripcion, cantidad: String(m.doc.cantidad || datosDePieza(m.doc, m.sku.clave, m.tipoDoc).cantidad || 1) });
+  m.busqueda = ''; m.sugerencias = []; render();
+  try { const docs = await DataService.listarDocumentos({ sku_id: x.id, solo_activos: false }); if (estado.modal === m) { m.docsDestino[x.id] = docs; render(); } }
+  catch (e) { if (estado.modal === m) { m.docsDestino[x.id] = []; render(); } }
+}
+function planCompartir() { // qué pasará en cada SKU elegido
+  const m = estado.modal, grupo = m.doc.grupo_id || m.doc.id;
+  return m.destinos.map(x => {
+    const cant = Number(x.cantidad);
+    const pieza = Number.isInteger(cant) && cant >= 1 && cant <= 999 ? nombreParaOtroSku(m.doc, m.tipoDoc, x.clave, cant) : '';
+    const docs = m.docsDestino[x.id];
+    const igual = docs && pieza ? docs.find(d => d.tipo_documento_id === m.doc.tipo_documento_id && claveComparacion(d.pieza) === claveComparacion(pieza)) : null;
+    let estadoFila, error = !pieza ? 'Cantidad de 1 a 999.' : validarNombrePieza(pieza);
+    if (!docs) estadoFila = 'Revisando…';
+    else if (!igual) estadoFila = 'Pieza nueva en este SKU';
+    else if (igual.activo && igual.grupo_id && Number(igual.grupo_id) !== Number(grupo)) error = 'Ya está compartida con otros SKUs: primero usa "Dejar de compartir" en ella.';
+    else if (igual.activo && igual.sha256 && igual.sha256 === m.doc.sha256) estadoFila = 'Ya tiene este mismo archivo: solo se vincula';
+    else if (igual.activo) estadoFila = `Ya tiene esta pieza: se reemplaza como nueva versión (v${(igual.version_vigente || 0) + 1})`;
+    else estadoFila = 'Estaba retirada: se vuelve a activar con este archivo';
+    return { ...x, pieza, igual, estado: estadoFila, error };
+  });
+}
+async function guardarCompartir() {
+  const m = estado.modal, plan = planCompartir();
+  if (!plan.length) { m.error = 'Elige al menos un SKU.'; render(); return; }
+  if (plan.some(x => x.error)) { m.error = 'Revisa los SKUs marcados en rojo.'; render(); return; }
+  if (plan.some(x => !m.docsDestino[x.id])) { m.error = 'Espera a que termine de revisar los SKUs elegidos.'; render(); return; }
+  m.enviando = true; m.error = null; render();
+  try {
+    // Si la pieza ya existe con la medida escrita en otro formato, primero toma el nombre nuevo
+    for (const x of plan) if (x.igual && normalizarTexto(x.igual.pieza) !== normalizarTexto(x.pieza)) await DataService.renombrarPieza(x.igual.id, x.pieza);
+    await DataService.compartirPieza(m.doc.id, plan.map(x => ({ sku_id: x.id, pieza: x.pieza, cantidad: Number(x.cantidad) })));
+    estado.modal = null;
+    agregarAviso('exito', `${m.doc.pieza} ahora también está en ${listaClaves(plan.map(x => x.clave))}. Cuando subas una nueva versión, se actualizará en todos.`);
+    cargarDocumentosDetalle(m.sku.id); programarRecarga(0);
+  } catch (e) { if (estado.modal === m) { m.error = e.message; m.enviando = false; } }
+  render();
+}
+function pedirDejarDeCompartir(sku, doc) {
+  abrirConfirmacion({ titulo: `Dejar de compartir ${doc.pieza}`, textoBoton: 'Dejar de compartir',
+    mensaje: `La pieza se queda en ${sku.clave} con su archivo actual, pero ya no se actualizará cuando se suba una nueva versión en ${listaClaves(compartidaCon(doc))} (ni al revés).`,
+    accion: async () => { await DataService.dejarDeCompartir(doc.id); agregarAviso('exito', `${doc.pieza} ya no está compartida.`); cargarDocumentosDetalle(sku.id); programarRecarga(0); } });
 }
 function abrirModalRenombrar(sku, doc) {
   const tipo = DataService.catalogosCorte().tipos.find(t => t.id === doc.tipo_documento_id);
@@ -2296,7 +2393,6 @@ async function guardarRenombrar() {
 }
 async function guardarDocumento() {
   const m = estado.modal;
-  const tipo = DataService.catalogosCorte().tipos.find(t => t.id === Number(m.tipo_id));
   const plan = planSubida();
   if (!m.archivos.length) { m.error = 'Elige al menos un archivo.'; render(); return; }
   if (plan.conError) { m.error = 'Revisa las piezas marcadas en rojo.'; render(); return; }
@@ -2306,11 +2402,11 @@ async function guardarDocumento() {
   for (const f of plan.filas) {
     if (m.cancelar) break;
     try {
-      if (f.renombrar) await DataService.renombrarPieza(m.doc.id, f.pieza);
-      await DataService.subirDocumento({ sku: m.sku, tipo, pieza: f.pieza, archivo: f.archivo, cambios: m.cambios, esPrimera: f.esPrimera });
-      await DataService.guardarNomenclatura(m.sku.id, tipo.id, f.pieza, f.datos, nomenDeTipo(tipo).atributo);
+      if (f.renombrar) await DataService.renombrarPieza(f.previa.id, f.pieza);
+      await DataService.subirDocumento({ sku: m.sku, tipo: f.tipo, pieza: f.pieza, archivo: f.archivo, cambios: m.cambios, esPrimera: f.esPrimera });
+      await DataService.guardarNomenclatura(m.sku.id, f.tipo.id, f.pieza, f.datos, f.atributo);
     }
-    catch (e) { m.errores.push(`${f.pieza}: ${e.message}`); m.fallidas.push({ archivo: f.archivo, datos: f.datos }); }
+    catch (e) { m.errores.push(`${f.pieza}: ${e.message}`); m.fallidas.push({ archivo: f.archivo, datos: f.datos, tipo_id: String(f.tipo.id) }); }
     m.hecho++; render();
   }
   m.fase = 'terminado'; m.enviando = false; render();
@@ -2320,7 +2416,7 @@ async function guardarDocumento() {
 async function reintentarFallidas() { // vuelve a subir solo las piezas que fallaron, con los mismos datos
   const m = estado.modal; if (!m || !m.fallidas || !m.fallidas.length) return;
   m.archivos = m.fallidas.map(f => f.archivo);
-  m.datos = {}; m.fallidas.forEach((f, i) => { m.datos[i] = f.datos; });
+  m.datos = {}; m.tipoDe = {}; m.tipoSeguro = {}; m.fallidas.forEach((f, i) => { m.datos[i] = f.datos; m.tipoDe[i] = f.tipo_id; });
   m.cancelar = false; m.fase = 'elegir';
   await guardarDocumento();
 }
@@ -2686,7 +2782,7 @@ function nombreDescargaDocumento(d) {
   const ext = extensionDe(d.nombre_original) || 'dat', v = d.version_vigente || d.version;
   // Piezas con nombre estándar (ya empiezan con el modelo): se usa tal cual, más la versión
   if (d.pieza && d.sku_clave && String(d.pieza).toUpperCase().startsWith(String(d.sku_clave).toUpperCase().replace(/[_\s]+/g, '-') + '_'))
-    return `${d.pieza}_V${v}.${ext}`;
+    return `${nombreSeguroWindows(d.pieza)}_V${v}.${ext}`;
   return `${d.sku_clave}_${limpio(d.pieza)}_v${v}_${fecha}.${ext}`;
 }
 function guardarArchivo(bytes, nombre) {
@@ -2700,7 +2796,7 @@ function carpetasDrive(skuId, skuClave, tipoNombre) {
 }
 function nombreDrive(pieza, version, nombreOriginal, fecha) {
   const ext = extensionDe(nombreOriginal) || 'dat';
-  return `${pieza} v${version} (${String(fecha || new Date().toISOString()).slice(0, 10)}).${ext}`;
+  return `${nombreSeguroWindows(pieza)} v${version} (${String(fecha || new Date().toISOString()).slice(0, 10)}).${ext}`;
 }
 function formatoTamano(bytes) { return bytes >= 1048576 ? `${(bytes / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`; }
 
@@ -2721,18 +2817,38 @@ function limpiarNombrePieza(t) { // CUBIERTA, SOPORTE-CUBIERTA
   return sinAcentos(t).toUpperCase().replace(/[_\s]+/g, '-').replace(/[^A-Z0-9.\-]/g, '').replace(/-+/g, '-').replace(/^-|-$/g, '');
 }
 function numeroTexto(n) { return String(Math.round(n * 1000) / 1000); }
-function parteMedida(t) { // "1 1/4" o "1 1-4" → 1.25 · "3/4" → 0.75 · "2" → 2
-  const s = String(t).trim().replace(',', '.');
-  let m = /^(\d+)\s+(\d+)\s*[\/\-]\s*(\d+)$/.exec(s); if (m) return Number(m[1]) + Number(m[2]) / Number(m[3]);
-  m = /^(\d+)\s*\/\s*(\d+)$/.exec(s); if (m) return Number(m[1]) / Number(m[2]);
+function parteMedida(t) { // "1 1/4", "1 1-4" o "1-1-4" → 1.25 · "3/4" o "3-4" → 0.75 · "2" → 2
+  const s = String(t).trim().replace(',', '.').replace(/(PULG(ADAS?)?|IN)$/, '').trim();
+  let m = /^(\d+)(?:\s+|\s*-\s*)(\d+)\s*[\/\-]\s*(\d+)$/.exec(s); if (m && Number(m[3]) > 0) return Number(m[1]) + Number(m[2]) / Number(m[3]);
+  m = /^(\d+)\s*[\/\-]\s*(\d+)$/.exec(s); if (m && Number(m[2]) > 0) return Number(m[1]) / Number(m[2]);
   m = /^\d+(\.\d+)?$/.exec(s); if (m) return Number(s);
   return null;
 }
 function normalizarMedida(t) { // "2 x 1" → 2X1 · "1 1/4 X 1 1/4" → 1.25X1.25 · "1" (redondo) → 1
-  const partes = sinAcentos(t).toUpperCase().replace(/["”]/g, '').split('X').map(x => x.trim()).filter(Boolean);
+  const partes = sinAcentos(t).toUpperCase().replace(/["”″']/g, '').split('X').map(x => x.trim()).filter(Boolean);
   if (!partes.length || partes.length > 2) return null;
   const nums = partes.map(parteMedida);
   return nums.some(n => n === null || !(n > 0)) ? null : nums.map(numeroTexto).join('X');
+}
+function fraccionTexto(n) { // 0.75 → 3/4 · 1.75 → 1 3/4 · 2 → 2 (en dieciseisavos)
+  const entero = Math.floor(n + 1e-9), resto = Math.round((n - entero) * 16);
+  if (!resto) return String(entero);
+  if (resto === 16) return String(entero + 1);
+  let a = resto, b = 16; while (a % 2 === 0) { a /= 2; b /= 2; }
+  return Math.abs((n - entero) * 16 - resto) > 0.01 ? numeroTexto(n) : (entero ? `${entero} ${a}/${b}` : `${a}/${b}`);
+}
+function medidaParaNombre(v) { // medida normalizada → como va en el nombre de la pieza: 0.75X1.75 → 3/4X1 3/4 · 2X1 → 2X1
+  return String(v || '').split('X').map(x => fraccionTexto(Number(x))).join('X');
+}
+/* Windows no permite / \ : * ? " < > | en los nombres de archivo: al descargar, la diagonal se vuelve guion (3/4 → 3-4). */
+function nombreSeguroWindows(t) { return String(t || '').replace(/[\/\\:*?"<>|]/g, '-'); }
+/* Para reconocer la misma pieza aunque su medida esté escrita distinto (0.75X1.75, 3/4X1 3/4 o 3-4X1 3-4). */
+function claveComparacion(pieza) {
+  return normalizarTexto(pieza).replace(/tubular([0-9.\/\- ]+x[0-9.\/\- ]+?)(?=_cal)/, (todo, med) => 'tubular' + String(normalizarMedida(med) || med).toLowerCase());
+}
+function medidaEnFraccion(v) { // "0.75X1.75" → "3/4 x 1 3/4"; null si es de números enteros
+  const nums = String(v || '').split('X').map(Number);
+  return nums.some(x => !(x > 0)) || nums.every(Number.isInteger) ? null : nums.map(fraccionTexto).join(' x ');
 }
 function datosNomenValidos(d, atributo) {
   const e = {};
@@ -2740,7 +2856,7 @@ function datosNomenValidos(d, atributo) {
   if (!Number.isInteger(n) || n < 1 || n > 999) e.cantidad = 'Cantidad de 1 a 999.';
   if (atributo === 'espesor') { const x = Number(String(d.espesor).replace(',', '.')); if (!(x > 0 && x <= 200)) e.espesor = 'Espesor en mm.'; }
   if (atributo === 'calibre' || atributo === 'tubular') { const c = Number(d.calibre); if (!Number.isInteger(c) || c < 1 || c > 40) e.calibre = 'Calibre de 1 a 40.'; }
-  if (atributo === 'tubular' && !normalizarMedida(d.medida)) e.medida = 'Medida como 2X1 o 1 1/4 X 1 1/4.';
+  if (atributo === 'tubular' && !normalizarMedida(d.medida)) e.medida = 'Medida como 2X1, 3/4 X 1 3/4 o 0.75X1.75.';
   if (!limpiarNombrePieza(d.nombre)) e.nombre = 'Nombre de la pieza.';
   return e;
 }
@@ -2750,7 +2866,7 @@ function nombreEstandar(skuClave, tipo, d) {
   const partes = [sinAcentos(skuClave).toUpperCase().replace(/[_\s]+/g, '-'), `${n}${n === 1 ? 'PZA' : 'PZAS'}`];
   if (atributo === 'espesor') partes.push(`${codigo}${numeroTexto(Number(String(d.espesor).replace(',', '.')))}MM`);
   else if (atributo === 'calibre') partes.push(codigo, `CAL${Number(d.calibre)}`);
-  else if (atributo === 'tubular') partes.push(`${codigo}${normalizarMedida(d.medida)}`, `CAL${Number(d.calibre)}`);
+  else if (atributo === 'tubular') partes.push(`${codigo}${medidaParaNombre(normalizarMedida(d.medida))}`, `CAL${Number(d.calibre)}`);
   else partes.push(codigo);
   partes.push(limpiarNombrePieza(d.nombre));
   return partes.join('_');
@@ -2758,18 +2874,46 @@ function nombreEstandar(skuClave, tipo, d) {
 /* Propuesta a partir del nombre del archivo (ej. "LATERAL 2 X 1 CAL 18 2 PZAS"); el ingeniero la revisa. */
 function datosDesdeArchivo(nombreArchivo, skuClave, tipo) {
   const { codigo, atributo } = nomenDeTipo(tipo);
-  let t = ' ' + sinAcentos(String(nombreArchivo).replace(/\.[^.]+$/, '')).toUpperCase().replace(/_/g, ' ').replace(/\s+/g, ' ') + ' ';
+  let t = ' ' + sinAcentos(String(nombreArchivo).replace(/\.[A-Za-z][A-Za-z0-9]{1,4}$/, '')).toUpperCase().replace(/_/g, ' ').replace(/\s+/g, ' ') + ' ';
   const d = { cantidad: '1', espesor: '', calibre: '', medida: '', nombre: '' };
+  // Si ya trae el formato estándar (por ejemplo, un archivo descargado del aplicativo), se lee tal cual
+  const e = /^(?:[^_]+_)?(\d{1,3})PZAS?_(?:LP(\d+(?:\.\d+)?)MM|LAMINA_CAL(\d{1,2})|TUBULAR([0-9.\/\- ]+X[0-9.\/\- ]+?)_CAL(\d{1,2})|TELA|PANEL|[A-Z]+)_([A-Z0-9.\-]+)$/
+    .exec(sinAcentos(String(nombreArchivo).replace(/\.[A-Za-z][A-Za-z0-9]{1,4}$/, '')).toUpperCase().replace(/\s+V\d+\s*\(.*$/, '').replace(/_V\d+$/, '').trim());
+  if (e && (!e[4] || normalizarMedida(e[4]))) return { cantidad: e[1], espesor: atributo === 'espesor' ? e[2] || '' : '', calibre: e[3] || e[5] || '', medida: e[4] ? normalizarMedida(e[4]) : '', nombre: e[6] };
   const quitar = re => { const m = re.exec(t); if (m) t = t.replace(m[0], ' '); return m; };
   const esc = x => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   let m = quitar(/\s(\d{1,3})\s*-?\s*PZ(?:A|AS|S)?\.?(?=\s)/); if (m) d.cantidad = m[1];
-  m = quitar(/\sCAL(?:IBRE)?\.?\s*(\d{1,2})(?=\s)/); if (m) d.calibre = m[1];
-  if (atributo === 'tubular') { m = quitar(/\s((?:\d+\s+)?\d+(?:\s*[\/\-]\s*\d+)?(?:\.\d+)?)\s*X\s*((?:\d+\s+)?\d+(?:\s*[\/\-]\s*\d+)?(?:\.\d+)?)(?=\s)/); if (m) d.medida = `${m[1]} X ${m[2]}`; }
-  m = quitar(/\s(\d+(?:[.,]\d+)?)\s*MM(?=\s)/); if (m && atributo === 'espesor') d.espesor = m[1].replace(',', '.');
+  m = quitar(/\s(?:CAL(?:IBRE)?\.?\s*-?\s*(\d{1,2})|C-?(\d{2}))(?=\s)/); if (m) d.calibre = m[1] || m[2];
+  if (atributo === 'tubular') { // 2 X 1 · 1.5X1.5 · 3/4 X 1 3/4 · 3-4 X 1 3-4 · 1-3-4 (Windows no permite "/" en los nombres)
+    const dim = '(\\d+\\s*[\\/\\-]\\s*\\d+|\\d+(?:[.,]\\d+)?(?:(?:\\s+|\\s*-\\s*)\\d+\\s*[\\/\\-]\\s*\\d+)?)\\s*(?:["”″\']+|PULG(?:ADAS?)?\\.?|IN\\.?)?';
+    m = quitar(new RegExp(`\\s${dim}\\s*X\\s*${dim}(?=\\s)`));
+    if (m && normalizarMedida(`${m[1]} X ${m[2]}`)) d.medida = `${m[1]} X ${m[2]}`;
+  }
+  m = quitar(/\s(\d+(?:[.,]\d+)?)\s*MM(?=\s)/) || (atributo === 'espesor' ? quitar(/\sLP\s?(\d+(?:[.,]\d+)?)(?:\s*MM)?(?=\s)/) : null);
+  if (m && atributo === 'espesor') d.espesor = m[1].replace(',', '.');
   [skuClave, codigo, 'LP', 'LAMINADO', 'PLASTICO', 'MELAMINA', 'LAMINA', 'TUBULAR', 'TUBO', 'PTR', 'TELA', 'PANEL', 'ACUSTICO']
     .forEach(w => { if (w) t = t.replace(new RegExp(`\\s${esc(sinAcentos(w).toUpperCase())}(?=\\s)`, 'g'), ' '); });
   d.nombre = limpiarNombrePieza(t.replace(/\s-\s/g, ' ').trim()).replace(/^[0-9.\-]+$/, '');
   return d;
+}
+/* Tipo de archivo según el nombre: .igs → tubular; .dxf → lámina si dice CAL/CALIBRE, laminado si trae el espesor en MM,
+   tela o panel si lo dice. seguro = false cuando no hubo pista y se usó el tipo por defecto (hay que revisarlo). */
+const extensionesDe = t => String((t && t.extensiones) || '').toLowerCase().split(/[,\s]+/).filter(Boolean);
+function detectarTipo(nombreArchivo, candidatos, preferidoId) {
+  if (!candidatos.length) return { tipo: null, seguro: false };
+  if (candidatos.length === 1) return { tipo: candidatos[0], seguro: true };
+  const n = ' ' + sinAcentos(String(nombreArchivo).replace(/\.[A-Za-z][A-Za-z0-9]{1,4}$/, '')).toUpperCase().replace(/[_\-.]+/g, ' ').replace(/\s+/g, ' ') + ' ';
+  const porNombre = re => candidatos.find(t => re.test(normalizarTexto(t.nombre)));
+  const porAtributo = a => candidatos.find(t => nomenDeTipo(t).atributo === a);
+  const pistas = [
+    [/\sTELA\s/, () => porNombre(/tela/)],
+    [/\s(PANEL|ACUSTIC[OA]S?)\s/, () => porNombre(/panel|acust/)],
+    [/\s(LP|MELAMINA|LAMINADO|MDF|MDP|AGLOMERADO)\s|\sLP\s?\d/, () => porAtributo('espesor')],
+    [/\sLAMINA\s/, () => porAtributo('calibre')],
+    [/\s(CAL(IBRE)?\s?\d{1,2}|CAL(IBRE)?|C\s?\d{2})\s/, () => porAtributo('calibre')],
+    [/\s\d+(\s\d+)?\s?MM\s/, () => porAtributo('espesor')]];
+  for (const [re, buscar] of pistas) if (re.test(n)) { const t = buscar(); if (t) return { tipo: t, seguro: true }; }
+  return { tipo: candidatos.find(t => t.id === Number(preferidoId)) || porAtributo('espesor') || candidatos[0], seguro: false };
 }
 /* Datos guardados de una pieza (para su nueva versión o para renombrarla). */
 function datosDePieza(doc, skuClave, tipo) {
@@ -2802,7 +2946,7 @@ function SelectorMedida({ id, k, atributo, valor, clase, onElegir, alAgregar }) 
   return h('select', { id, class: clase, value: fuera ? `__fuera` : v, onChange: ev => { if (ev.target.value === '__nuevo') alAgregar(); else if (ev.target.value !== '__fuera') onElegir(ev.target.value); } },
     h('option', { value: '' }, 'Elige…'),
     fuera ? h('option', { value: '__fuera' }, `${v} (no está en la lista)`) : null,
-    lista.map(x => h('option', { value: x.valor }, k === 'espesor' ? `${x.valor} mm` : k === 'calibre' ? `Cal. ${x.valor}` : x.valor)),
+    lista.map(x => h('option', { value: x.valor }, k === 'espesor' ? `${x.valor} mm` : k === 'calibre' ? `Cal. ${x.valor}` : medidaEnFraccion(x.valor) ? `${medidaEnFraccion(x.valor)}  (${x.valor})` : x.valor)),
     h('option', { value: '__nuevo' }, '＋ Agregar a la lista…'));
 }
 function abrirModalMedidas({ lista = null, volver = null, alVolver = null } = {}) {
@@ -3603,7 +3747,7 @@ function AdminEntregables() {
 function Modal() {
   const m = estado.modal;
   if (!m) return null;
-  const contenido = { desmarcar: ModalDesmarcar, sku: ModalSku, catalogo: ModalCatalogo, aprobar: ModalAprobar, reporte: ModalReporte, importarImagenes: ModalImportarImagenes, documento: ModalDocumento, retirarDocumento: ModalRetirarDocumento, versionesDocumento: ModalVersionesDocumento, corteCatalogo: ModalCorteCatalogo, noAplica: ModalNoAplica, solicitud: ModalSolicitud, cargaMasiva: ModalCargaMasiva, prototipo: ModalPrototipo, protoCortado: ModalProtoCortado, atenderSolicitud: ModalAtenderSolicitud, renombrarPieza: ModalRenombrarPieza, medidas: ModalMedidas, observacion: ModalObservacion, atenderObs: ModalAtenderObs, confirmar: ModalConfirmacion }[m.tipo]();
+  const contenido = { desmarcar: ModalDesmarcar, sku: ModalSku, catalogo: ModalCatalogo, aprobar: ModalAprobar, reporte: ModalReporte, importarImagenes: ModalImportarImagenes, documento: ModalDocumento, retirarDocumento: ModalRetirarDocumento, versionesDocumento: ModalVersionesDocumento, corteCatalogo: ModalCorteCatalogo, noAplica: ModalNoAplica, solicitud: ModalSolicitud, cargaMasiva: ModalCargaMasiva, prototipo: ModalPrototipo, protoCortado: ModalProtoCortado, atenderSolicitud: ModalAtenderSolicitud, renombrarPieza: ModalRenombrarPieza, compartir: ModalCompartirPieza, medidas: ModalMedidas, observacion: ModalObservacion, atenderObs: ModalAtenderObs, confirmar: ModalConfirmacion }[m.tipo]();
   return h('div', { class: 'fixed inset-0 z-50 flex items-center justify-center p-4' },
     h('button', { type: 'button', class: 'absolute inset-0 h-full w-full cursor-default bg-[#1B2430]/40 dark:bg-[#000000]/40', 'aria-label': 'Cerrar diálogo', tabindex: '-1', onClick: cerrarModal }),
     h('div', { 'data-scroll-id': `modal-${m.tipo}`, class: `relative max-h-[90vh] w-full ${m.tipo === 'documento' || m.tipo === 'prototipo' || m.tipo === 'cargaMasiva' ? 'max-w-3xl' : m.tipo === 'renombrarPieza' ? 'max-w-xl' : 'max-w-md'} overflow-y-auto rounded-lg bg-white dark:bg-[#18202A] p-6 shadow-xl`, role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'titulo-modal' }, contenido));
@@ -3919,7 +4063,7 @@ function VistaCorte() {
     h('thead', null, h('tr', null, [['SKU'], ['Pieza'], ['Documento'], ['Área'], ['Vigente'], ['Subida por'], ['Fecha'], [h('span', { class: 'sr-only' }, 'Acciones')]].map(([t]) => h('th', { scope: 'col', class: CLS.th }, t)))),
     h('tbody', null, lista.map(d => h('tr', null,
       h('th', { scope: 'row', class: `${CLS.td} text-left font-semibold tabular-nums` }, h('button', { type: 'button', class: CLS.enlace, onClick: () => abrirDetalle(d.sku_id) }, d.sku_clave)),
-      h('td', { class: CLS.td }, d.pieza),
+      h('td', { class: CLS.td }, d.pieza, compartidaCon(d).length ? h('span', { class: 'ml-2 whitespace-nowrap rounded bg-[#EEF3F8] px-1.5 py-0.5 text-[11px] font-medium text-[#1E3A5F] dark:bg-[#1C2A3A] dark:text-[#BFD6EE]', title: `También en ${compartidaCon(d).join(', ')}` }, 'compartida') : null),
       h('td', { class: `${CLS.td} whitespace-nowrap` }, d.tipo_nombre),
       h('td', { class: `${CLS.td} whitespace-nowrap text-[#5B6675] dark:text-[#9AA7B6]` }, d.area_nombre),
       h('td', { class: `${CLS.td} whitespace-nowrap font-semibold tabular-nums` }, `v${d.version_vigente}`),
@@ -3981,12 +4125,16 @@ function DocumentosCorteSku(s) {
             h('p', { class: 'text-sm font-medium' }, x.pieza, h('span', { class: 'ml-2 whitespace-nowrap rounded bg-[#E6F2EB] px-1.5 py-0.5 text-xs font-semibold text-[#1F7A4D] dark:bg-[#173526] dark:text-[#5CC48E]' }, `v${x.version_vigente}`)),
             h('p', { class: 'mt-0.5 text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, `${formatoTamano(x.tamano)} · ${x.subida_por_nombre || '—'}, ${formatearFechaHora(x.subida_en)}`),
             x.cambios ? h('p', { class: 'text-xs' }, `Cambios: ${x.cambios}`) : null,
+            compartidaCon(x).length ? h('p', { class: 'mt-1 inline-flex flex-wrap items-center gap-1 rounded bg-[#EEF3F8] px-1.5 py-0.5 text-xs text-[#1E3A5F] dark:bg-[#1C2A3A] dark:text-[#BFD6EE]', title: 'Es el mismo archivo: una nueva versión se aplica en todos estos SKUs.' },
+              h('span', { class: 'font-semibold' }, 'Pieza compartida'), ` también en ${compartidaCon(x).join(', ')}`) : null,
             h('div', { class: 'mt-1.5 flex flex-wrap gap-2' },
               visorDisponible(x) ? h('button', { type: 'button', class: CLS.btnChico, onClick: () => verPieza({ ...x, sku_clave: x.sku_clave || s.clave }) }, icono('ojo', 'w-3.5 h-3.5'), 'Ver pieza') : null,
               h('button', { type: 'button', class: CLS.btnChico, disabled: !!estado.corte.descargando, onClick: () => descargarDocumento(x) }, icono('descarga', 'w-3.5 h-3.5'), 'Descargar'),
               h('button', { type: 'button', class: CLS.btnChico, onClick: () => abrirHistorialDocumento(x) }, `Versiones (${x.version_vigente})`),
               editable ? h('button', { type: 'button', class: CLS.btnChico, onClick: () => abrirModalDocumento(s, x) }, icono('subir', 'w-3.5 h-3.5'), 'Nueva versión') : null,
               editable ? h('button', { type: 'button', class: CLS.btnChico, onClick: () => abrirModalRenombrar(s, x) }, icono('editar', 'w-3.5 h-3.5'), 'Renombrar') : null,
+              editable && x.drive_id && !x.archivo_borrado ? h('button', { type: 'button', class: CLS.btnChico, onClick: () => abrirModalCompartir(s, x), title: 'Usar este mismo archivo en otros SKUs' }, icono('mas', 'w-3.5 h-3.5'), compartidaCon(x).length ? 'Compartir con más SKUs' : 'Usar en otros SKUs') : null,
+              editable && compartidaCon(x).length ? h('button', { type: 'button', class: CLS.btnChico, onClick: () => pedirDejarDeCompartir(s, x) }, 'Dejar de compartir') : null,
               editable ? h('button', { type: 'button', class: `${CLS.btnChico} text-[#B42318] dark:text-[#F28B82]`, onClick: () => pedirRetirarDocumento(x) }, 'Retirar') : null))))))),
     retirados.length ? h('p', { class: 'mt-2 text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, 'Piezas retiradas: ', retirados.map((x, i) => [i ? '; ' : '', h('button', { type: 'button', class: `${CLS.enlace} text-xs`, onClick: () => abrirHistorialDocumento(x) }, x.pieza), x.motivo_retiro ? ` (${x.motivo_retiro})` : ''])) : null);
 }
@@ -4036,8 +4184,8 @@ function CoberturaCorte(sku, editable) {
 function ModalDocumento() {
   const m = estado.modal;
   const tipos = DataService.catalogosCorte().tipos.filter(t => t.activo || String(t.id) === m.tipo_id);
-  const tipo = tipos.find(t => t.id === Number(m.tipo_id)) || tipos[0];
-  const ext = tipo ? tipo.extensiones.split(',').map(x => '.' + x).join(',') : '';
+  const tipoDoc = m.doc ? tipos.find(t => t.id === m.doc.tipo_documento_id) : null;
+  const ext = [...new Set((tipoDoc ? [tipoDoc] : tipos).flatMap(extensionesDe))].map(x => '.' + x).join(',');
   const titulo = h('h2', { id: 'titulo-modal', class: 'text-lg font-semibold' }, m.doc ? `Nueva versión de ${m.doc.pieza}` : `Subir piezas a ${m.sku.clave}`);
 
   if (m.fase === 'terminado' && !m.errores.length) return h('div', null, titulo,
@@ -4060,7 +4208,6 @@ function ModalDocumento() {
   }
 
   const plan = planSubida();
-  const { atributo, codigo } = nomenDeTipo(tipo);
   const setDato = (i, k, v) => { estado.modal.datos[i] = { ...(estado.modal.datos[i] || {}), [k]: v }; conRetraso('pieza', render, 250); };
   const campo = (i, k, etiqueta, ancho, extra) => {
     const f = plan.filas[i], err = f && f.errores[k];
@@ -4069,7 +4216,7 @@ function ModalDocumento() {
       h('input', { id: `pz-${k}-${i}`, class: `${err ? CLS.inputError : CLS.input} py-1 text-sm`, value: (m.datos[i] || {})[k] || '', title: err || '', ...extra, onInput: ev => setDato(i, k, ev.target.value) }));
   };
   const menu = (i, k, etiqueta, ancho) => {
-    const f = plan.filas[i], err = f && f.errores[k];
+    const f = plan.filas[i], err = f && f.errores[k], atributo = f.atributo;
     return h('div', { class: ancho },
       h('label', { for: `pz-${k}-${i}`, class: 'block text-[11px] font-medium text-[#5B6675] dark:text-[#9AA7B6]' }, etiqueta),
       SelectorMedida({ id: `pz-${k}-${i}`, k, atributo, valor: (m.datos[i] || {})[k], clase: `${err ? CLS.inputError : CLS.input} py-1 text-sm`,
@@ -4077,39 +4224,48 @@ function ModalDocumento() {
         alAgregar: () => { const volver = estado.modal; abrirModalMedidas({ lista: listaDeCampo(k, atributo), volver, alVolver: v => { volver.datos[i] = { ...(volver.datos[i] || {}), [k]: v }; } }); } }),
       err ? h('p', { class: 'mt-0.5 max-w-[12rem] text-[11px] text-[#B42318] dark:text-[#F28B82]' }, err) : null);
   };
-  const camposAtributo = i => atributo === 'espesor' ? [menu(i, 'espesor', 'Espesor', 'w-28')]
+  const camposAtributo = (i, atributo) => atributo === 'espesor' ? [menu(i, 'espesor', 'Espesor', 'w-28')]
     : atributo === 'calibre' ? [menu(i, 'calibre', 'Calibre', 'w-28')]
-    : atributo === 'tubular' ? [menu(i, 'medida', 'Tubular', 'w-32'), menu(i, 'calibre', 'Calibre', 'w-28')] : [];
-  const aplicarATodas = () => { const c = estado.modal.comun || {}; m.archivos.forEach((_, i) => { const d = { ...(estado.modal.datos[i] || {}) }; ['espesor', 'calibre', 'medida'].forEach(k => { if (c[k]) d[k] = c[k]; }); estado.modal.datos[i] = d; }); render(); };
-  const barraComun = m.archivos.length > 1 && atributo !== 'ninguno' ? h('div', { class: 'flex flex-wrap items-end gap-2 rounded-md bg-[#F4F6F8] p-2 dark:bg-[#1F2833]' },
-    h('p', { class: 'w-full text-xs font-medium' }, 'Si todas las piezas llevan el mismo dato, elígelo una vez:'),
-    ...(atributo === 'espesor' ? [['espesor', 'Espesor (mm)', 'sug-espesor']] : atributo === 'calibre' ? [['calibre', 'Calibre', 'sug-calibre']] : [['medida', 'Tubular', 'sug-medida'], ['calibre', 'Calibre', 'sug-calibre']])
-      .map(([k, et]) => h('div', { class: 'w-32' }, h('label', { for: `comun-${k}`, class: 'block text-[11px] font-medium text-[#5B6675] dark:text-[#9AA7B6]' }, et),
-        SelectorMedida({ id: `comun-${k}`, k, atributo, valor: (m.comun || {})[k], clase: `${CLS.input} py-1 text-sm`,
-          onElegir: v => { estado.modal.comun = { ...(estado.modal.comun || {}), [k]: v }; render(); },
-          alAgregar: () => { const volver = estado.modal; abrirModalMedidas({ lista: listaDeCampo(k, atributo), volver, alVolver: v => { volver.comun = { ...(volver.comun || {}), [k]: v }; } }); } }))),
-    h('button', { type: 'button', class: CLS.btnChico, onClick: aplicarATodas }, 'Aplicar a todas')) : null;
+    : atributo === 'tubular' ? [menu(i, 'medida', 'Tubular', 'w-48'), menu(i, 'calibre', 'Calibre', 'w-28')] : [];
+  // Dato común por material: si todas las piezas de un material llevan el mismo espesor, calibre o medida
+  const NOMBRE_ATRIB = { espesor: 'Laminado', calibre: 'Lámina', tubular: 'Tubular' };
+  const atributosPresentes = [...new Set(plan.filas.map(f => f.atributo))].filter(a => a !== 'ninguno');
+  const camposComunes = a => a === 'espesor' ? [['espesor', 'Espesor']] : a === 'calibre' ? [['calibre', 'Calibre']] : [['medida', 'Tubular'], ['calibre', 'Calibre']];
+  const aplicarATodas = a => { const c = (estado.modal.comun || {})[a] || {}; plan.filas.forEach((f, i) => { if (f.atributo !== a) return; const d = { ...(estado.modal.datos[i] || {}) }; ['espesor', 'calibre', 'medida'].forEach(k => { if (c[k]) d[k] = c[k]; }); estado.modal.datos[i] = d; }); render(); };
+  const barraComun = m.archivos.length > 1 && atributosPresentes.length ? h('div', { class: 'space-y-2 rounded-md bg-[#F4F6F8] p-2 dark:bg-[#1F2833]' },
+    h('p', { class: 'text-xs font-medium' }, 'Si todas las piezas de un material llevan el mismo dato, elígelo una vez:'),
+    atributosPresentes.filter(a => plan.filas.filter(f => f.atributo === a).length > 1).map(a => h('div', { class: 'flex flex-wrap items-end gap-2' },
+      atributosPresentes.length > 1 ? h('span', { class: 'w-20 pb-1.5 text-xs font-semibold' }, NOMBRE_ATRIB[a]) : null,
+      camposComunes(a).map(([k, et]) => h('div', { class: k === 'medida' ? 'w-48' : 'w-32' }, h('label', { for: `comun-${a}-${k}`, class: 'block text-[11px] font-medium text-[#5B6675] dark:text-[#9AA7B6]' }, et),
+        SelectorMedida({ id: `comun-${a}-${k}`, k, atributo: a, valor: ((m.comun || {})[a] || {})[k], clase: `${CLS.input} py-1 text-sm`,
+          onElegir: v => { const c = estado.modal.comun || {}; estado.modal.comun = { ...c, [a]: { ...(c[a] || {}), [k]: v } }; render(); },
+          alAgregar: () => { const volver = estado.modal; abrirModalMedidas({ lista: listaDeCampo(k, a), volver, alVolver: v => { const c = volver.comun || {}; volver.comun = { ...c, [a]: { ...(c[a] || {}), [k]: v } }; } }); } }))),
+      h('button', { type: 'button', class: CLS.btnChico, onClick: () => aplicarATodas(a) }, plan.filas.filter(f => f.atributo === a).length === plan.filas.length ? 'Aplicar a todas' : `Aplicar a las de ${NOMBRE_ATRIB[a].toLowerCase()}`)))) : null;
   const listas = ['espesor', 'calibre', 'medida'].map(k => h('datalist', { id: `sug-${k}` }, SUGERENCIAS_NOMEN[k].map(v => h('option', { value: v }))));
   const listaArchivos = m.archivos.length ? h('div', { 'data-scroll-id': 'lista-piezas', class: 'max-h-96 space-y-2 overflow-y-auto rounded-md border border-[#D5DBE2] p-2 dark:border-[#2E3A48]' },
     plan.filas.map((f, i) => h('div', { class: 'rounded-md border border-[#E3E7EC] p-2 dark:border-[#26313D]' },
-      h('p', { class: 'text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, `Archivo: ${f.archivo.name} · ${formatoTamano(f.archivo.size)}`),
+      h('div', { class: 'flex flex-wrap items-center justify-between gap-2' },
+        h('p', { class: 'min-w-0 break-all text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, `Archivo: ${f.archivo.name} · ${formatoTamano(f.archivo.size)}`),
+        m.doc ? null : (() => { const cand = tipos.filter(t => t.activo && extensionesDe(t).includes(extensionDe(f.archivo.name)));
+          return h('div', { class: 'flex items-center gap-1.5' },
+            f.seguro ? null : h('span', { class: 'rounded bg-[#FFF4DB] px-1.5 py-0.5 text-[11px] font-medium text-[#8A5A00] dark:bg-[#3A2F14] dark:text-[#F0D9A0]', title: 'El nombre del archivo no dice el material: confirma el tipo.' }, 'Revisa el tipo'),
+            h('label', { for: `pz-tipo-${i}`, class: 'sr-only' }, 'Tipo de archivo'),
+            h('select', { id: `pz-tipo-${i}`, class: `${f.seguro ? CLS.input : CLS.inputError} w-auto py-1 text-xs`, value: String(f.tipo.id), disabled: cand.length < 2,
+              onChange: ev => cambiarTipoArchivo(i, ev.target.value) }, cand.map(t => h('option', { value: t.id }, t.nombre)))); })()),
       h('div', { class: 'mt-1 flex flex-wrap items-end gap-2' },
         campo(i, 'cantidad', 'Piezas', 'w-16', { type: 'number', min: '1', max: '999', inputmode: 'numeric' }),
-        h('div', { class: 'pb-1.5 text-sm font-semibold text-[#5B6675] dark:text-[#9AA7B6]' }, codigo),
-        ...camposAtributo(i),
+        h('div', { class: 'pb-1.5 text-sm font-semibold text-[#5B6675] dark:text-[#9AA7B6]' }, nomenDeTipo(f.tipo).codigo),
+        ...camposAtributo(i, f.atributo),
         campo(i, 'nombre', 'Nombre de la pieza', 'min-w-[10rem] flex-1', { maxlength: '80', placeholder: 'CUBIERTA' })),
       h('div', { class: 'mt-1.5 flex flex-wrap items-center justify-between gap-2' },
         h('code', { class: 'break-all text-xs font-semibold' }, f.pieza || '—'),
         h('span', { class: `whitespace-nowrap text-xs font-medium ${f.error ? 'text-[#B42318] dark:text-[#F28B82]' : f.esPrimera ? 'text-[#1F7A4D] dark:text-[#5CC48E]' : 'text-[#B26A00] dark:text-[#E0A650]'}` },
-          f.error ? f.error : f.esPrimera ? 'Pieza nueva' : `Nueva versión (v${f.previa.version_vigente + 1})${f.renombrar ? ' · se renombra' : ''}`))))) : null;
+          f.error ? f.error : f.esPrimera ? 'Pieza nueva' : `Nueva versión (v${f.previa.version_vigente + 1})${f.renombrar ? ' · se renombra' : ''}${compartidaCon(f.previa).length ? ` · también en ${listaClaves(compartidaCon(f.previa), 3)}` : ''}`))))) : null;
   return h('div', null, titulo,
     h('p', { class: 'mt-1 text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, m.doc
-      ? `La versión v${m.doc.version_vigente} quedará obsoleta y los operadores ya no podrán descargarla.`
-      : 'Elige todos los archivos de un tipo a la vez. El aplicativo propone los datos de cada pieza leyendo el nombre del archivo; revísalos y corrige lo necesario. El nombre se arma solo con el formato estándar.'),
+      ? (compartidaCon(m.doc).length ? `Es una pieza compartida: la nueva versión también se aplicará en ${listaClaves(compartidaCon(m.doc), 6)}, y la v${m.doc.version_vigente} quedará obsoleta en todos.` : `La versión v${m.doc.version_vigente} quedará obsoleta y los operadores ya no podrán descargarla.`)
+      : 'Arrastra todos los archivos a la vez, de cualquier material. El aplicativo detecta el tipo de cada uno (IGES → tubular; DXF con CAL o CALIBRE → lámina; DXF con el espesor en MM → laminado) y propone sus datos leyendo el nombre; revísalos y corrige lo necesario.'),
     h('div', { class: 'mt-4 space-y-4' },
-      m.doc ? null : h('div', null, h('label', { for: 'doc-tipo', class: CLS.etiqueta }, 'Tipo de documento'),
-        h('select', { id: 'doc-tipo', class: CLS.input, value: m.tipo_id, onChange: ev => { estado.modal.tipo_id = ev.target.value; estado.modal.archivos = []; estado.modal.piezas = {}; estado.modal.error = null; render(); } },
-          tipos.map(t => h('option', { value: t.id }, `${t.nombre} (${t.area_nombre})`)))),
       h('div', null, h('p', { class: CLS.etiqueta }, m.doc ? 'Archivo' : 'Archivos'),
         h('input', { id: 'doc-archivo', type: 'file', accept: ext, multiple: !m.doc, class: 'sr-only', tabindex: '-1', 'aria-hidden': 'true', onChange: ev => { elegirArchivosDocumento(ev.target.files); ev.target.value = ''; } }),
         h('div', { class: `flex flex-col items-center justify-center gap-2 rounded-md border-2 border-dashed px-4 py-5 text-center transition-colors ${m.arrastrando ? 'border-[#1E4E79] bg-[#EEF3F8] dark:border-[#7FB2E5] dark:bg-[#1C2A3A]' : 'border-[#C3CBD4] dark:border-[#3A4756]'}`,
@@ -4121,7 +4277,7 @@ function ModalDocumento() {
           h('span', { class: 'text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, m.archivos.length ? `${m.archivos.length} ${m.archivos.length === 1 ? 'archivo elegido' : 'archivos elegidos'}` : `Formato ${ext}, hasta ${LIMITE_DOCUMENTO_MB} MB cada uno${m.doc ? '' : ' · puedes elegir varios con Ctrl'}`)),
         m.rechazados ? h('p', { class: 'mt-1 text-xs text-[#B26A00] dark:text-[#E0A650]' }, `Se descartaron ${m.rechazados} archivos por formato o tamaño.`) : null),
       listas, barraComun, listaArchivos,
-      m.archivos.length ? h('p', { class: 'text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, `${plan.nuevas} piezas nuevas · ${plan.versiones} versiones nuevas${plan.conError ? ` · ${plan.conError} con problema` : ''}`) : null,
+      m.archivos.length ? h('p', { class: 'text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, `${plan.nuevas} piezas nuevas · ${plan.versiones} versiones nuevas${plan.conError ? ` · ${plan.conError} con problema` : ''}${plan.filas.some(f => !f.seguro) ? ` · ${plan.filas.filter(f => !f.seguro).length} con el tipo por confirmar` : ''}`) : null,
       h('div', null, h('label', { for: 'doc-cambios', class: CLS.etiqueta }, plan.versiones ? 'Qué cambió (obligatorio)' : 'Notas (opcional)'),
         h('textarea', { id: 'doc-cambios', rows: '2', maxlength: '500', class: CLS.input, placeholder: plan.versiones ? 'Por ejemplo: se corrigió la cota del costado izquierdo.' : 'Por ejemplo: versión inicial liberada para producción.', value: m.cambios, onInput: ev => { estado.modal.cambios = ev.target.value; } }),
         plan.versiones && plan.nuevas ? h('p', { class: 'mt-1 text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, 'La nota se guarda en todas las piezas de esta subida.') : null)),
@@ -4139,6 +4295,7 @@ function ModalRetirarDocumento() {
   return h('form', { novalidate: true, onSubmit: ev => { ev.preventDefault(); confirmarRetiroDocumento(); } },
     h('h2', { id: 'titulo-modal', class: 'text-lg font-semibold' }, `Retirar ${m.doc.pieza} de ${m.doc.sku_clave}`),
     h('p', { class: 'mt-1 text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, `Úsalo cuando el SKU ya no lleve esta pieza (${m.doc.tipo_nombre}). Desaparece del SKU, las máquinas ya no pueden descargarla y se libera su espacio; su historial se conserva.`),
+    compartidaCon(m.doc).length ? h('p', { class: 'mt-2 rounded bg-[#EEF3F8] px-2 py-1.5 text-sm text-[#1E3A5F] dark:bg-[#1C2A3A] dark:text-[#BFD6EE]' }, `Es una pieza compartida: solo se retira de ${m.doc.sku_clave}. En ${listaClaves(compartidaCon(m.doc), 6)} sigue vigente.`) : null,
     h('div', { class: 'mt-4' }, h('label', { for: 'motivo-retiro', class: CLS.etiqueta }, 'Motivo (obligatorio)'),
       h('textarea', { id: 'motivo-retiro', rows: '3', maxlength: '255', class: CLS.input, disabled: m.enviando, placeholder: 'Por ejemplo: el SKU ya no lleva piezas de lámina.', value: m.motivo, onInput: ev => { estado.modal.motivo = ev.target.value; } })),
     ErrorModal(m.error),
@@ -4179,13 +4336,7 @@ function clasificarArchivoMasivo(ruta, skusPorClave, tipos) {
     tipo = candidatos.find(t => normalizarTexto(t.nombre) === c || c.includes(normalizarTexto(nomenDeTipo(t).codigo))) || null;
     if (tipo) break;
   }
-  if (!tipo && candidatos.length === 1) tipo = candidatos[0];
-  if (!tipo) { // varios tipos DXF: se deduce por el nombre del archivo
-    const n = normalizarTexto(nombre);
-    for (const [re, clave] of [[/\blp\b|melamina|laminado|\d\s*mm/, 'melamina'], [/lamina|\bcal\b/, 'lamina'], [/tela/, 'tela'], [/panel|acust/, 'panel']]) {
-      if (re.test(n)) { tipo = candidatos.find(t => normalizarTexto(t.nombre).includes(clave)) || null; if (tipo) break; }
-    }
-  }
+  if (!tipo) { const r = detectarTipo(nombre, candidatos); if (r.seguro) tipo = r.tipo; } // varios tipos DXF: se deduce por el nombre del archivo
   return { sku, tipo, candidatos };
 }
 async function abrirModalCargaMasiva() {
@@ -4194,7 +4345,7 @@ async function abrirModalCargaMasiva() {
   render();
   try {
     const docs = await DataService.listarDocumentos({});
-    if (estado.modal && estado.modal.tipo === 'cargaMasiva') { estado.modal.existentes = new Map(docs.filter(d => d.activo).map(d => [`${d.sku_id}|${d.tipo_documento_id}|${normalizarTexto(d.pieza)}`, d])); render(); }
+    if (estado.modal && estado.modal.tipo === 'cargaMasiva') { estado.modal.existentes = new Map(docs.filter(d => d.activo).map(d => [`${d.sku_id}|${d.tipo_documento_id}|${claveComparacion(d.pieza)}`, d])); render(); }
   } catch (e) { if (estado.modal) { estado.modal.error = e.message; render(); } }
 }
 function agregarArchivosMasivos(lista) { // lista: [{ archivo, ruta }]
@@ -4218,13 +4369,13 @@ function planMasivo() {
     const tipo = tipos.find(t => t.id === Number(f.tipo_id)), { atributo } = nomenDeTipo(tipo);
     const errores = tipo ? { ...datosNomenValidos(f.datos, atributo), ...fueraDeLista(f.datos, atributo) } : {};
     const pieza = f.sku && tipo && !Object.keys(errores).length ? nombreEstandar(f.sku.clave, tipo, f.datos) : '';
-    const previa = pieza && m.existentes ? m.existentes.get(`${f.sku.id}|${tipo.id}|${normalizarTexto(pieza)}`) : null;
+    const previa = pieza && m.existentes ? m.existentes.get(`${f.sku.id}|${tipo.id}|${claveComparacion(pieza)}`) : null;
     const error = !f.sku ? 'No se encontró el SKU: la carpeta o el nombre del archivo debe empezar con su clave.'
       : !tipo ? 'Elige el material.' : Object.keys(errores).length ? 'Completa los datos marcados.' : validarNombrePieza(pieza);
     return { ...f, tipo, atributo, errores, pieza, previa, esPrimera: !previa, error };
   });
   const vistas = new Map();
-  filas.forEach(x => { if (!x.error) { const k = `${x.sku.id}|${normalizarTexto(x.pieza)}`; if (vistas.has(k)) { x.error = 'Hay dos archivos con el mismo nombre de pieza.'; vistas.get(k).error = x.error; } else vistas.set(k, x); } });
+  filas.forEach(x => { if (!x.error) { const k = `${x.sku.id}|${claveComparacion(x.pieza)}`; if (vistas.has(k)) { x.error = 'Hay dos archivos con el mismo nombre de pieza.'; vistas.get(k).error = x.error; } else vistas.set(k, x); } });
   const ok = filas.filter(x => !x.error);
   return { filas, nuevas: ok.filter(x => x.esPrimera).length, versiones: ok.filter(x => !x.esPrimera).length, conError: filas.length - ok.length, skus: new Set(ok.map(x => x.sku.id)).size };
 }
@@ -4236,6 +4387,7 @@ async function subirMasivo() {
   for (const f of lista) {
     if (m.cancelar) break;
     try {
+      if (f.previa && f.previa.id && normalizarTexto(f.previa.pieza) !== normalizarTexto(f.pieza)) await DataService.renombrarPieza(f.previa.id, f.pieza); // misma pieza con la medida escrita en el formato nuevo
       await DataService.subirDocumento({ sku: { id: f.sku.id, clave: f.sku.clave }, tipo: f.tipo, pieza: f.pieza, archivo: f.archivo, cambios: m.cambios, esPrimera: f.esPrimera });
       await DataService.guardarNomenclatura(f.sku.id, f.tipo.id, f.pieza, f.datos, f.atributo);
     } catch (e) { m.errores.push(`${f.pieza}: ${e.message}`); m.fallidas.push(f); }
@@ -4248,7 +4400,7 @@ async function subirMasivo() {
 function reintentarMasivo() {
   const m = estado.modal; m.filas = m.fallidas.map(f => ({ archivo: f.archivo, ruta: f.ruta, sku: f.sku, tipo_id: f.tipo_id, candidatos: f.candidatos, datos: f.datos }));
   m.fallidas = []; m.fase = 'elegir'; m.existentes = null;
-  DataService.listarDocumentos({}).then(docs => { m.existentes = new Map(docs.filter(d => d.activo).map(d => [`${d.sku_id}|${d.tipo_documento_id}|${normalizarTexto(d.pieza)}`, d])); subirMasivo(); });
+  DataService.listarDocumentos({}).then(docs => { m.existentes = new Map(docs.filter(d => d.activo).map(d => [`${d.sku_id}|${d.tipo_documento_id}|${claveComparacion(d.pieza)}`, d])); subirMasivo(); });
 }
 function ModalCargaMasiva() {
   const m = estado.modal, tipos = DataService.catalogosCorte().tipos;
@@ -4285,7 +4437,7 @@ function ModalCargaMasiva() {
     const opciones = tipos.filter(t => f.candidatos.includes(t.id)), e = f.errores || {};
     const texto = (k, t, ancho, extra) => h('div', { class: ancho }, et(`mv-${k}-${i}`, t),
       h('input', { id: `mv-${k}-${i}`, class: `${e[k] ? CLS.inputError : CLS.input} py-1 text-sm`, value: f.datos[k] || '', title: e[k] || '', ...extra, onInput: ev => { setD(i, k, ev.target.value); conRetraso('masiva', render, 300); } }));
-    const menu = (k, t) => h('div', { class: 'w-28' }, et(`mv-${k}-${i}`, t),
+    const menu = (k, t) => h('div', { class: k === 'medida' ? 'w-44' : 'w-28' }, et(`mv-${k}-${i}`, t),
       SelectorMedida({ id: `mv-${k}-${i}`, k, atributo: f.atributo, valor: f.datos[k], clase: `${e[k] ? CLS.inputError : CLS.input} py-1 text-sm`, onElegir: v => { setD(i, k, v); render(); },
         alAgregar: () => { const volver = estado.modal; abrirModalMedidas({ lista: listaDeCampo(k, f.atributo), volver, alVolver: v => { volver.filas[i].datos = { ...volver.filas[i].datos, [k]: v }; } }); } }));
     const etiqueta = f.error ? h('span', { class: 'text-xs font-medium text-[#B42318] dark:text-[#F28B82]' }, f.error)
@@ -4331,7 +4483,7 @@ function ModalCargaMasiva() {
 
 function compararVersiones(doc, anterior, vigente) {
   const bytes = async x => pako.ungzip(deBase64((await llamarDrive('descargar', { drive_id: x.drive_id })).contenido));
-  window.VisorCorte.comparar({ nombre: `${doc.pieza}.${extensionDe(vigente.nombre_original) || 'dxf'}`, subtitulo: `${doc.sku_clave} · ${doc.tipo_nombre} · Comparación de versiones`,
+  window.VisorCorte.comparar({ nombre: `${nombreSeguroWindows(doc.pieza)}.${extensionDe(vigente.nombre_original) || 'dxf'}`, subtitulo: `${doc.sku_clave} · ${doc.tipo_nombre} · Comparación de versiones`,
     etiquetaA: `v${anterior.version}`, etiquetaB: `v${vigente.version}`, obtenerA: () => bytes(anterior), obtenerB: () => bytes(vigente) });
 }
 function ModalVersionesDocumento() {
@@ -4543,6 +4695,10 @@ function AdminEstado() {
   const sinScript = !e.bd.ok && /ing_estado_sistema|function|no existe|does not exist|schema cache/i.test(e.bd.error || '');
   const resp = d.ultimo_respaldo, diasResp = resp ? Math.floor((Date.now() - new Date(resp.created_at).getTime()) / 86400000) : null;
   const nivelResp = !resp ? 'falla' : resp.resultado !== 'ok' ? 'falla' : diasResp <= 8 ? 'ok' : diasResp <= 15 ? 'aviso' : 'falla';
+  const ra = d.ultimo_respaldo_archivos, diasArch = ra ? Math.floor((Date.now() - new Date(ra.created_at).getTime()) / 86400000) : null;
+  const nivelArch = !ra || ra.resultado !== 'ok' ? 'falla' : diasArch > 15 ? 'falla' : diasArch > 8 || ra.faltantes > 0 ? 'aviso' : 'ok';
+  const hace = n => n === 0 ? 'Hoy' : `Hace ${n} ${n === 1 ? 'día' : 'días'}`;
+  const versionDrive = (e.drive.datos && e.drive.datos.version) || 0;
   const bdBytes = Number(d.bd_bytes || 0), bdPct = Math.round(bdBytes / (500 * 1024 * 1024) * 100);
   const esp = e.espacio.ok && e.espacio.datos && e.espacio.datos.cuenta ? e.espacio.datos.cuenta : null;
   const espPct = esp ? Math.round(Number(esp.bytes || 0) / (15 * 1024 ** 3) * 100) : null;
@@ -4557,11 +4713,15 @@ function AdminEstado() {
       TarjetaEstado('Base de datos (Supabase)', e.bd.ok ? (bdPct >= 80 ? 'aviso' : 'ok') : 'falla', e.bd.ok ? `Responde en ${e.bd.ms} ms` : 'Sin respuesta',
         e.bd.ok ? `Tamaño: ${MB(bdBytes)} de 500 MB del plan gratuito (${bdPct} %).` : e.bd.error),
       TarjetaEstado('Almacén de archivos (Google Drive)', e.drive.ok ? 'ok' : 'falla', e.drive.ok ? `Responde en ${e.drive.ms} ms` : 'Sin respuesta',
-        e.drive.ok ? `Intermediario versión ${e.drive.datos && e.drive.datos.version || '—'}${(e.drive.datos && e.drive.datos.version) < 4 ? ' · actualízalo para el resumen diario por correo' : ''}.` : e.drive.error),
+        e.drive.ok ? `Intermediario versión ${versionDrive || '—'}${versionDrive < 5 ? ' · actualízalo a la versión 5 para el respaldo de los archivos de corte' : ''}.` : e.drive.error),
       TarjetaEstado('Espacio en Google Drive', esp ? (espPct >= 80 ? 'aviso' : 'ok') : 'aviso', esp ? `${MB(esp.bytes)} (${espPct} %)` : 'Sin datos',
         esp ? `${esp.archivos} archivos de 15 GB gratuitos.` : 'No se pudo consultar el espacio de Drive.'),
-      TarjetaEstado('Último respaldo', nivelResp, resp ? (diasResp === 0 ? 'Hoy' : `Hace ${diasResp} ${diasResp === 1 ? 'día' : 'días'}`) : 'Ninguno',
+      TarjetaEstado('Respaldo de la base de datos', nivelResp, resp ? hace(diasResp) : 'Ninguno',
         resp ? `${formatearFechaHora(resp.created_at)} · ${resp.resultado === 'ok' ? `correcto (${MB(resp.tamano)})` : `con error: ${resp.detalle || ''}`}. Se respalda cada lunes.` : 'Todavía no se registra ningún respaldo automático. Revisa la tarea "Respaldo semanal" en GitHub.'),
+      e.bd.ok ? TarjetaEstado('Respaldo de los archivos de corte', nivelArch, ra ? hace(diasArch) : 'Ninguno',
+        !ra ? 'Todavía no se registra ningún respaldo de archivos. Revisa la tarea "Respaldo semanal de los archivos de corte" en GitHub.'
+          : ra.resultado !== 'ok' ? `${formatearFechaHora(ra.created_at)} · con error: ${ra.detalle || ''}`
+          : `${formatearFechaHora(ra.created_at)} · ${ra.archivos} archivos (${MB(ra.tamano)}).${ra.faltantes > 0 ? ` ${ra.faltantes} no se encontraron en Drive o estaban dañados: la lista está en la ejecución de GitHub.` : ''} Se respalda cada lunes.`) : null,
       TarjetaEstado('Versión del aplicativo', estado.versionNueva ? 'aviso' : 'ok', VERSION_APP, estado.versionNueva ? 'Hay una versión más nueva publicada: presiona "Actualizar ahora" en el aviso azul.' : 'Es la versión publicada más reciente.'),
       TarjetaEstado('Errores (últimas 24 horas)', (d.errores_24h || 0) === 0 ? 'ok' : d.errores_24h < 10 ? 'aviso' : 'falla', String(d.errores_24h ?? '—'), 'Avisos de error que vio alguna persona. El detalle está abajo.')),
     e.bd.ok ? h('div', { class: `${CLS.panel} p-4` },
@@ -4725,6 +4885,36 @@ function ModalAtenderObs() {
     PieModal(resolver ? 'Marcar como resuelta' : cancelar ? 'Cancelar observación' : 'Reabrir', guardarAtenderObs, { enviando: m.enviando, peligro: cancelar, textoCerrar: cancelar ? 'Volver' : 'Cancelar' }));
 }
 /* FIN COMPONENTE: ModalAtenderObs */
+
+/* COMPONENTE: ModalCompartirPieza — usar la misma pieza en otros SKUs */
+function ModalCompartirPieza() {
+  const m = estado.modal, plan = planCompartir(), ya = compartidaCon(m.doc);
+  return h('form', { novalidate: true, onSubmit: ev => { ev.preventDefault(); guardarCompartir(); } },
+    h('h2', { id: 'titulo-modal', class: 'text-lg font-semibold' }, 'Usar esta pieza en otros SKUs'),
+    h('p', { class: 'mt-1 break-all text-sm font-medium' }, `${m.doc.pieza} · v${m.doc.version_vigente}`),
+    h('p', { class: 'mt-2 text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, 'El mismo archivo aparecerá en cada SKU que elijas, con la clave de ese SKU en el nombre. Cuando se suba una nueva versión en cualquiera de ellos, se actualizará en todos y la anterior quedará obsoleta en todos.'),
+    ya.length ? h('p', { class: 'mt-2 rounded bg-[#EEF3F8] px-2 py-1.5 text-xs text-[#1E3A5F] dark:bg-[#1C2A3A] dark:text-[#BFD6EE]' }, `Ya está compartida con: ${ya.join(', ')}.`) : null,
+    h('div', { class: 'relative mt-4' },
+      h('label', { for: 'cmp-busqueda', class: CLS.etiqueta }, 'Agregar SKU'),
+      h('input', { id: 'cmp-busqueda', type: 'search', class: CLS.input, autocomplete: 'off', placeholder: 'Clave o descripción, por ejemplo 1001', value: m.busqueda, disabled: m.enviando,
+        onInput: ev => buscarSkusCompartir(ev.target.value), onKeydown: ev => { if (ev.key === 'Enter') { ev.preventDefault(); if (m.sugerencias[0]) agregarDestinoCompartir(m.sugerencias[0]); } } }),
+      m.sugerencias.length ? h('ul', { class: 'absolute z-10 mt-1 max-h-64 w-full overflow-y-auto rounded-md border border-[#D5DBE2] bg-white shadow-md dark:border-[#2E3A48] dark:bg-[#18202A]', role: 'listbox' },
+        m.sugerencias.map(x => h('li', null, h('button', { type: 'button', class: 'block w-full px-3 py-2 text-left text-sm hover:bg-[#EEF3F8] dark:hover:bg-[#1F2833]', onClick: () => agregarDestinoCompartir(x) },
+          h('span', { class: 'font-semibold tabular-nums' }, x.clave), h('span', { class: 'ml-2 text-[#5B6675] dark:text-[#9AA7B6]' }, x.descripcion || ''))))) : null),
+    plan.length ? h('ul', { class: 'mt-3 max-h-80 space-y-2 overflow-y-auto' }, plan.map((x, i) => h('li', { class: `rounded-md border p-2 ${x.error ? 'border-[#E7B4AE] dark:border-[#6B2E29]' : 'border-[#E3E7EC] dark:border-[#26313D]'}` },
+      h('div', { class: 'flex flex-wrap items-end gap-2' },
+        h('div', { class: 'min-w-0 flex-1' }, h('p', { class: 'text-sm' }, h('span', { class: 'font-semibold tabular-nums' }, x.clave), h('span', { class: 'ml-2 text-[#5B6675] dark:text-[#9AA7B6]' }, x.descripcion || '')),
+          h('code', { class: 'mt-0.5 block break-all text-xs font-semibold' }, x.pieza || '—')),
+        h('div', { class: 'w-20' }, h('label', { for: `cmp-cant-${i}`, class: 'block text-[11px] font-medium text-[#5B6675] dark:text-[#9AA7B6]' }, 'Piezas'),
+          h('input', { id: `cmp-cant-${i}`, type: 'number', min: '1', max: '999', class: `${CLS.input} py-1 text-sm`, value: x.cantidad, disabled: m.enviando,
+            onInput: ev => { estado.modal.destinos[i].cantidad = ev.target.value; conRetraso('cmpcant', render, 250); } })),
+        h('button', { type: 'button', class: CLS.btnChico, disabled: m.enviando, 'aria-label': `Quitar ${x.clave}`, onClick: () => { estado.modal.destinos.splice(i, 1); render(); } }, icono('x', 'w-3.5 h-3.5'))),
+      h('p', { class: `mt-1 text-xs font-medium ${x.error ? 'text-[#B42318] dark:text-[#F28B82]' : /reemplaza|retirada/.test(x.estado) ? 'text-[#B26A00] dark:text-[#E0A650]' : 'text-[#1F7A4D] dark:text-[#5CC48E]'}` }, x.error || x.estado)))) 
+      : h('p', { class: 'mt-3 rounded-md border border-dashed border-[#C3CBD4] px-3 py-3 text-sm text-[#5B6675] dark:border-[#3A4756] dark:text-[#9AA7B6]' }, 'Busca y agrega los SKUs que usan esta misma pieza. Puedes cambiar la cantidad de piezas de cada uno.'),
+    ErrorModal(m.error),
+    PieModal(plan.length > 1 ? `Compartir con ${plan.length} SKUs` : 'Compartir', guardarCompartir, { enviando: m.enviando, textoEnviando: 'Compartiendo…' }));
+}
+/* FIN COMPONENTE: ModalCompartirPieza */
 
 /* COMPONENTE: ModalRenombrarPieza — pasar una pieza al formato estándar */
 function ModalRenombrarPieza() {
