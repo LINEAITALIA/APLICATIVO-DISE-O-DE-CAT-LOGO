@@ -12,7 +12,7 @@
 # Si cambiaste de cuenta de Google, primero instala el intermediario en la cuenta nueva
 # y pon su dirección en el config.js del repositorio; después corre esta tarea.
 #
-# Versión 2 (14/10/2026): piezas compartidas entre SKUs (un archivo, varios SKUs).
+# Versión 3 (15/10/2026): piezas compartidas entre SKUs y respaldo con los archivos originales.
 
 name: Restaurar archivos de corte
 
@@ -82,7 +82,9 @@ jobs:
           MODO: ${{ inputs.modo }}
         run: |
           node - <<'JS'
-          const fs = require('fs'), path = require('path');
+          const fs = require('fs'), path = require('path'), zlib = require('zlib');
+          // Drive guarda cada archivo comprimido tantas veces como diga el respaldo (capas); se vuelve a armar igual
+          const comoEnDrive = x => { let b = fs.readFileSync(path.join('respaldo', x.ruta)); for (let i = 0; i < (x.capas ?? 1); i++) b = zlib.gzipSync(b); return b; };
           const URL_DRIVE = process.env.DRIVE_URL, CLAVE = process.env.CLAVE_ARCHIVOS, RESTAURAR = process.env.MODO === 'restaurar';
           const actual = JSON.parse(fs.readFileSync('lista_actual.json', 'utf8'));
           const respaldo = JSON.parse(fs.readFileSync('respaldo/manifiesto.json', 'utf8')).archivos.filter(x => x.estado === 'ok' && x.ruta);
@@ -115,7 +117,7 @@ jobs:
             const porRestaurar = [], sinCopia = [];
             for (const x of actual.filter(x => faltantes.has(x.drive_id))) {
               const c = (x.sha256 && porHuella.get(x.sha256.trim())) || enRespaldo.get(`${x.tabla}:${x.id}`);
-              if (c && (!x.sha256 || !c.sha256 || x.sha256.trim() === c.sha256.trim())) porRestaurar.push({ ...x, ruta: c.ruta });
+              if (c && (!x.sha256 || !c.sha256 || x.sha256.trim() === c.sha256.trim())) porRestaurar.push({ ...x, ruta: c.ruta, capas: c.capas });
               else sinCopia.push(`${x.carpetas.join(' / ')} / ${x.nombre}`);
             }
             let texto = `**Respaldo del ${process.env.RESPALDO_DE}** · modo **${RESTAURAR ? 'restaurar' : 'revisar'}**\n\n` +
@@ -127,7 +129,7 @@ jobs:
             if (RESTAURAR && porRestaurar.length) {
               let lote = [], peso = 0;
               const enviar = async () => {
-                const r = await llamar({ accion: 'restaurar', clave: CLAVE, archivos: lote.map((x, k) => ({ clave: k, carpetas: x.carpetas, nombre: x.nombre, contenido: fs.readFileSync(path.join('respaldo', x.ruta)).toString('base64') })) });
+                const r = await llamar({ accion: 'restaurar', clave: CLAVE, archivos: lote.map((x, k) => ({ clave: k, carpetas: x.carpetas, nombre: x.nombre, contenido: comoEnDrive(x).toString('base64') })) });
                 // Se actualizan todas las piezas que usaban ese archivo (una pieza compartida está en varios SKUs)
                 for (const a of r.archivos || []) if (a.drive_id) { const x = lote[a.clave]; cambios.push(`update public.ing_versiones_documento set drive_id = ${sql(a.drive_id)} where drive_id = ${sql(x.drive_id)}; update public.ing_prototipo_archivos set drive_id = ${sql(a.drive_id)} where drive_id = ${sql(x.drive_id)};`); }
                 console.log(`Restaurados ${cambios.length} de ${porRestaurar.length}`); lote = []; peso = 0;
