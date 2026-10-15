@@ -11,11 +11,11 @@
 # los cifra y los guarda 90 días en GitHub (pestaña Actions). También se puede correr a mano.
 #
 # El respaldo trae:
-#   archivos-de-corte/SKU/Tipo/pieza vN (fecha).ext.gz   cada archivo, comprimido como en Drive
+#   archivos-de-corte/SKU/Tipo/pieza vN (fecha).ext      cada archivo original, listo para abrir
 #   archivos-de-corte/Prototipos/...                      archivos de prototipos
 #   manifiesto.json                                      a qué pieza y versión corresponde cada uno
 #
-# Versión 1 (14/10/2026)
+# Versión 2 (15/10/2026): guarda los DXF/IGES originales (Drive los tiene comprimidos dos veces).
 
 name: Respaldo semanal de los archivos de corte
 
@@ -101,16 +101,23 @@ jobs:
               for (const x of l) {
                 const b64 = porId.get(x.drive_id);
                 if (!b64) { x.estado = 'faltante'; cuenta.faltantes++; faltan.push(`${x.carpetas.join(' / ')} / ${x.nombre}`); continue; }
-                const gz = Buffer.from(b64, 'base64');
-                let original = null; try { original = zlib.gunzipSync(gz); } catch (e) {}
-                const sha = original && crypto.createHash('sha256').update(original).digest('hex');
-                x.estado = !original ? 'danado' : (x.sha256 && x.sha256.trim() !== sha ? 'danado' : 'ok');
+                // En Drive cada archivo está comprimido (el aplicativo lo comprime y el intermediario otra vez):
+                // se descomprime capa por capa hasta llegar al DXF o IGES original y se compara su huella.
+                let datos = Buffer.from(b64, 'base64'), capas = 0, sha = null;
+                const huella = b => crypto.createHash('sha256').update(b).digest('hex');
+                while (datos.length > 2 && datos[0] === 0x1f && datos[1] === 0x8b && capas < 4) {
+                  try { datos = zlib.gunzipSync(datos); capas++; } catch (e) { break; }
+                  if (x.sha256 && huella(datos) === x.sha256.trim()) break;
+                }
+                sha = huella(datos);
+                x.capas = capas;
+                x.estado = !capas ? 'danado' : (x.sha256 && x.sha256.trim() !== sha ? 'danado' : 'ok');
                 if (x.estado === 'danado') cuenta.danados++; else cuenta.ok++;
-                let ruta = path.join('archivos-de-corte', ...x.carpetas.map(limpiar), limpiar(x.nombre) + '.gz');
-                if (usadas.has(ruta.toLowerCase())) ruta = ruta.replace(/\.gz$/, ` [${x.tabla} ${x.id}].gz`);
+                let ruta = path.join('archivos-de-corte', ...x.carpetas.map(limpiar), limpiar(x.nombre));
+                if (usadas.has(ruta.toLowerCase())) ruta = ruta.replace(/(\.[^.\/]+)?$/, ` [${x.tabla} ${x.id}]$1`);
                 usadas.add(ruta.toLowerCase());
-                fs.mkdirSync(path.dirname(ruta), { recursive: true }); fs.writeFileSync(ruta, gz);
-                x.ruta = ruta; cuenta.bytes += gz.length;
+                fs.mkdirSync(path.dirname(ruta), { recursive: true }); fs.writeFileSync(ruta, datos);
+                x.ruta = ruta; cuenta.bytes += datos.length;
               }
               console.log(`Lote ${i + 1} de ${lotes.length}: listo`);
             }
