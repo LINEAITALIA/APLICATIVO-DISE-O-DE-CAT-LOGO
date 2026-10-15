@@ -1,0 +1,162 @@
+# Respaldo semanal de los ARCHIVOS DE CORTE (los que viven en Google Drive).
+# Va en el repositorio de GitHub en la ruta:  .github/workflows/respaldo-archivos.yml
+#
+# Usa los mismos dos secretos que el respaldo de la base de datos; no hay que crear otros:
+#   SUPABASE_DB_URL  cadena de conexión "Session pooler" de Supabase
+#   RESPALDO_CLAVE   contraseña con la que se cifra el respaldo
+# La dirección del intermediario de Google la toma del config.js del repositorio.
+#
+# Cada lunes a las 3:30 a. m. (hora del centro de México) pide al intermediario de Google
+# todos los archivos de corte vigentes y de prototipos, revisa que estén completos y sin daño,
+# los cifra y los guarda 90 días en GitHub (pestaña Actions). También se puede correr a mano.
+#
+# El respaldo trae:
+#   archivos-de-corte/SKU/Tipo/pieza vN (fecha).ext.gz   cada archivo, comprimido como en Drive
+#   archivos-de-corte/Prototipos/...                      archivos de prototipos
+#   manifiesto.json                                      a qué pieza y versión corresponde cada uno
+#
+# Versión 1 (14/10/2026)
+
+name: Respaldo semanal de los archivos de corte
+
+on:
+  schedule:
+    - cron: '30 9 * * 1'   # lunes 9:30 UTC = 3:30 a. m. en el centro de México
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  respaldo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Descargar el aplicativo (para leer config.js)
+        uses: actions/checkout@v4
+
+      - name: Preparar
+        env:
+          DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          CLAVE: ${{ secrets.RESPALDO_CLAVE }}
+        run: |
+          set -euo pipefail
+          if [ -z "${DB_URL}" ] || [ -z "${CLAVE}" ]; then
+            echo "::error::Faltan los secretos SUPABASE_DB_URL y RESPALDO_CLAVE del repositorio."; exit 1
+          fi
+          # Dirección del intermediario de Google, desde config.js
+          DRIVE_URL=$(node -e "const vm=require('vm');const c={window:{}};vm.runInNewContext(require('fs').readFileSync('config.js','utf8'),c);process.stdout.write(String((c.window.CONFIG_APLICATIVO||{}).DRIVE_URL||''))" 2>/dev/null || true)
+          case "$DRIVE_URL" in https://script.google.com/*) ;; *) echo "::error::No se encontró la dirección del intermediario (DRIVE_URL) en el config.js del repositorio."; exit 1;; esac
+          echo "::add-mask::${DRIVE_URL}"
+          echo "DRIVE_URL=${DRIVE_URL}" >> "$GITHUB_ENV"
+
+          VER=$(docker run --rm -e DB_URL postgres:17 sh -c 'psql "$DB_URL" -tAc "show server_version_num"' | tr -d '[:space:]')
+          MAYOR=$(( VER / 10000 )); [ "$MAYOR" -lt 17 ] && MAYOR=17
+          echo "IMG=postgres:${MAYOR}" >> "$GITHUB_ENV"
+          pg() { docker run --rm -i -e DB_URL "postgres:${MAYOR}" sh -c 'psql "$DB_URL" -tA -v ON_ERROR_STOP=1'; }
+
+          CLAVE_ARCH=$(echo "select valor from public.ing_config where clave = 'archivos_clave';" | pg | tr -d '[:space:]')
+          [ -n "$CLAVE_ARCH" ] || { echo "::error::Falta ejecutar actualizacion_respaldo_archivos.sql en Supabase."; exit 1; }
+          echo "::add-mask::${CLAVE_ARCH}"
+          echo "CLAVE_ARCHIVOS=${CLAVE_ARCH}" >> "$GITHUB_ENV"
+          echo "select public.ing_manifiesto_archivos();" | pg > lista.json
+          echo "Archivos a respaldar: $(node -e "process.stdout.write(String(require('./lista.json').length))")"
+
+      - name: Pedir los archivos al intermediario de Google
+        run: |
+          mkdir -p respaldo && cd respaldo
+          node - <<'JS'
+          const fs = require('fs'), path = require('path'), zlib = require('zlib'), crypto = require('crypto');
+          const URL_DRIVE = process.env.DRIVE_URL, CLAVE = process.env.CLAVE_ARCHIVOS;
+          const lista = JSON.parse(fs.readFileSync('../lista.json', 'utf8'));
+          const limpiar = t => String(t || 'Sin nombre').replace(/[\/\\:*?"<>|]/g, '-').replace(/\s+/g, ' ').trim().slice(0, 120) || 'Sin nombre';
+          const espera = ms => new Promise(r => setTimeout(r, ms));
+          async function llamar(cuerpo) {
+            for (let intento = 1; ; intento++) {
+              try {
+                const r = await fetch(URL_DRIVE, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(cuerpo), redirect: 'follow' });
+                const t = await r.text(); let j;
+                try { j = JSON.parse(t); } catch (e) { throw new Error('El intermediario no respondió bien (¿está publicada la versión 5?): ' + t.slice(0, 150)); }
+                if (j.error) { const e = new Error(j.error); e.definitivo = /clave|acción/i.test(j.error); throw e; }
+                return j;
+              } catch (e) {
+                if (e.definitivo || intento >= 4) throw e;
+                console.log(`Reintento ${intento}: ${e.message}`); await espera(5000 * intento);
+              }
+            }
+          }
+          (async () => {
+            // Lotes de hasta 100 archivos o 6 MB, para no rebasar los límites de Google
+            const lotes = []; let lote = [], peso = 0;
+            for (const x of lista) {
+              const t = Number(x.tamano_guardado || 50000);
+              if (lote.length && (lote.length >= 100 || peso + t > 6e6)) { lotes.push(lote); lote = []; peso = 0; }
+              lote.push(x); peso += t;
+            }
+            if (lote.length) lotes.push(lote);
+            const usadas = new Set(), cuenta = { ok: 0, faltantes: 0, danados: 0, bytes: 0 }, faltan = [];
+            for (const [i, l] of lotes.entries()) {
+              const r = await llamar({ accion: 'respaldo', clave: CLAVE, drive_ids: l.map(x => x.drive_id) });
+              const porId = new Map((r.archivos || []).map(a => [a.drive_id, a.contenido]));
+              for (const x of l) {
+                const b64 = porId.get(x.drive_id);
+                if (!b64) { x.estado = 'faltante'; cuenta.faltantes++; faltan.push(`${x.carpetas.join(' / ')} / ${x.nombre}`); continue; }
+                const gz = Buffer.from(b64, 'base64');
+                let original = null; try { original = zlib.gunzipSync(gz); } catch (e) {}
+                const sha = original && crypto.createHash('sha256').update(original).digest('hex');
+                x.estado = !original ? 'danado' : (x.sha256 && x.sha256.trim() !== sha ? 'danado' : 'ok');
+                if (x.estado === 'danado') cuenta.danados++; else cuenta.ok++;
+                let ruta = path.join('archivos-de-corte', ...x.carpetas.map(limpiar), limpiar(x.nombre) + '.gz');
+                if (usadas.has(ruta.toLowerCase())) ruta = ruta.replace(/\.gz$/, ` [${x.tabla} ${x.id}].gz`);
+                usadas.add(ruta.toLowerCase());
+                fs.mkdirSync(path.dirname(ruta), { recursive: true }); fs.writeFileSync(ruta, gz);
+                x.ruta = ruta; cuenta.bytes += gz.length;
+              }
+              console.log(`Lote ${i + 1} de ${lotes.length}: listo`);
+            }
+            fs.writeFileSync('manifiesto.json', JSON.stringify({ fecha: new Date().toISOString(), archivos: lista }, null, 1));
+            const resumen = `**Archivos de corte respaldados:** ${cuenta.ok} de ${lista.length}` +
+              (cuenta.faltantes ? `\n\n**No se encontraron en Drive (${cuenta.faltantes}):**\n` + faltan.slice(0, 100).map(f => `- ${f}`).join('\n') : '') +
+              (cuenta.danados ? `\n\n**Archivos dañados o distintos a los registrados:** ${cuenta.danados}` : '');
+            fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, resumen + '\n');
+            fs.appendFileSync(process.env.GITHUB_ENV, `ARCHIVOS=${cuenta.ok}\nFALTANTES=${cuenta.faltantes + cuenta.danados}\n`);
+            console.log(resumen);
+            if (lista.length && cuenta.ok === 0) { console.log('::error::No se pudo respaldar ningún archivo.'); process.exit(1); }
+          })().catch(e => { console.log('::error::' + e.message); process.exit(1); });
+          JS
+
+      - name: Comprimir y cifrar
+        env:
+          CLAVE: ${{ secrets.RESPALDO_CLAVE }}
+        run: |
+          set -euo pipefail
+          FECHA=$(date -u +%Y-%m-%d)
+          tar czf archivos.tar.gz -C respaldo .
+          gpg --batch --yes --pinentry-mode loopback --passphrase "${CLAVE}" --symmetric --cipher-algo AES256 -o "archivos-${FECHA}.tar.gz.gpg" archivos.tar.gz
+          rm -rf respaldo archivos.tar.gz lista.json
+          echo "FECHA=${FECHA}" >> "$GITHUB_ENV"
+          echo "TAMANO=$(stat -c%s "archivos-${FECHA}.tar.gz.gpg")" >> "$GITHUB_ENV"
+
+      - name: Guardar el respaldo (se conserva 90 días)
+        uses: actions/upload-artifact@v4
+        with:
+          name: archivos-${{ env.FECHA }}
+          path: archivos-*.tar.gz.gpg
+          retention-days: 90
+          compression-level: 0
+
+      - name: Registrar el respaldo en el aplicativo
+        if: success()
+        env:
+          DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          echo "insert into public.ing_respaldos (tipo, resultado, tamano, archivos, faltantes, detalle) values ('archivos', 'ok', ${TAMANO}, ${ARCHIVOS}, ${FALTANTES}, 'GitHub Actions');" \
+            | docker run --rm -i -e DB_URL "${IMG}" sh -c 'psql "$DB_URL" -v ON_ERROR_STOP=1 -q'
+
+      - name: Registrar la falla en el aplicativo
+        if: failure()
+        env:
+          DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          echo "insert into public.ing_respaldos (tipo, resultado, detalle) values ('archivos', 'error', 'Falló la tarea de GitHub. Revisa la pestaña Actions del repositorio.');" \
+            | docker run --rm -i -e DB_URL postgres:17 sh -c 'psql "$DB_URL" -v ON_ERROR_STOP=1 -q' || true
