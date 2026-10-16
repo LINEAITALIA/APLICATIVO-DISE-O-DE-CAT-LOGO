@@ -1,0 +1,305 @@
+# Importar la DOCUMENTACIÓN TÉCNICA (especificaciones, empaque, fichas técnicas e instructivos)
+# desde el sitio de documentación de ingeniería al aplicativo. Solo se corre a mano.
+# Va en el repositorio de GitHub en la ruta:  .github/workflows/importar-documentacion.yml
+#
+# Modo "revisar": arma un reporte de Excel con qué archivo va a qué SKU. No cambia nada.
+# Modo "importar": sube a Google Drive los documentos con SKU y los registra en el aplicativo.
+#   - Nunca reemplaza un documento que ya se subió en el aplicativo.
+#   - Si la tarea se interrumpe, se vuelve a correr y continúa con lo que falta.
+#   - "Límite" sirve para una prueba: importa solo esa cantidad de archivos.
+#
+# Usa los mismos secretos que los respaldos (SUPABASE_DB_URL). La dirección del
+# intermediario de Google la toma del config.js del repositorio.
+#
+# Versión 1 (16/10/2026)
+
+name: Importar documentación técnica
+
+on:
+  workflow_dispatch:
+    inputs:
+      modo:
+        description: 'revisar = solo el reporte · importar = sube los documentos'
+        type: choice
+        options: [revisar, importar]
+        default: revisar
+      coincidencias:
+        description: 'Qué archivos se toman: exactas y parciales, o solo los que coinciden exacto con la clave'
+        type: choice
+        options: [exactas_y_parciales, solo_exactas]
+        default: exactas_y_parciales
+      limite:
+        description: 'Máximo de archivos a importar en esta corrida (vacío = todos)'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  importar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - name: Descargar el aplicativo (para leer config.js)
+        uses: actions/checkout@v4
+
+      - name: Preparar
+        env:
+          DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          set -euo pipefail
+          [ -n "${DB_URL}" ] || { echo "::error::Falta el secreto SUPABASE_DB_URL del repositorio."; exit 1; }
+          DRIVE_URL=$(node -e "const vm=require('vm');const c={window:{}};vm.runInNewContext(require('fs').readFileSync('config.js','utf8'),c);process.stdout.write(String((c.window.CONFIG_APLICATIVO||{}).DRIVE_URL||''))" 2>/dev/null || true)
+          case "$DRIVE_URL" in https://script.google.com/*) ;; *) echo "::error::No se encontró la dirección del intermediario (DRIVE_URL) en el config.js del repositorio."; exit 1;; esac
+          echo "::add-mask::${DRIVE_URL}"
+          echo "DRIVE_URL=${DRIVE_URL}" >> "$GITHUB_ENV"
+          VER=$(docker run --rm -e DB_URL postgres:17 sh -c 'psql "$DB_URL" -tAc "show server_version_num"' | tr -d '[:space:]')
+          MAYOR=$(( VER / 10000 )); [ "$MAYOR" -lt 17 ] && MAYOR=17
+          echo "IMG=postgres:${MAYOR}" >> "$GITHUB_ENV"
+          pg() { docker run --rm -i -e DB_URL "postgres:${MAYOR}" sh -c 'psql "$DB_URL" -tA -v ON_ERROR_STOP=1'; }
+          CLAVE_ARCH=$(echo "select valor from public.ing_config where clave = 'archivos_clave';" | pg | tr -d '[:space:]')
+          [ -n "$CLAVE_ARCH" ] || { echo "::error::Falta ejecutar actualizacion_respaldo_archivos.sql en Supabase."; exit 1; }
+          echo "::add-mask::${CLAVE_ARCH}"
+          echo "CLAVE_ARCHIVOS=${CLAVE_ARCH}" >> "$GITHUB_ENV"
+          echo "select public.ing_datos_importacion();" | pg > datos.json \
+            || { echo "::error::Falta ejecutar actualizacion_documentacion_tecnica.sql en Supabase."; exit 1; }
+          npm install --no-save --silent exceljs@4.4.0 >/dev/null 2>&1 || echo "No se pudo instalar el generador de Excel; el reporte saldrá solo en el resumen."
+
+      - name: Revisar e importar
+        env:
+          DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          MODO: ${{ inputs.modo }}
+          COINCIDENCIAS: ${{ inputs.coincidencias }}
+          LIMITE: ${{ inputs.limite }}
+        run: |
+          export PSQL_CMD="docker run --rm -i -e DB_URL ${IMG} sh -c 'psql \"\$DB_URL\" -tA -v ON_ERROR_STOP=1'"
+          node - <<'JS'
+          // Importa la documentación técnica del sitio de documentación de ingeniería al aplicativo.
+          // Modo "revisar": solo arma el reporte de qué archivo va a qué SKU. Modo "importar": además los sube.
+          const fs = require('fs'), zlib = require('zlib'), crypto = require('crypto'), { spawnSync } = require('child_process');
+          const SITIO = (process.env.SITIO || 'https://ingenieria.lineaitalia.net').replace(/\/+$/, '');
+          const URL_DRIVE = process.env.DRIVE_URL, CLAVE = process.env.CLAVE_ARCHIVOS;
+          const IMPORTAR = process.env.MODO === 'importar', SOLO_EXACTAS = process.env.COINCIDENCIAS === 'solo_exactas';
+          const LIMITE = Number(process.env.LIMITE || 0) || Infinity;
+          const datos = JSON.parse(fs.readFileSync(process.env.DATOS || 'datos.json', 'utf8'));
+          const espera = ms => new Promise(r => setTimeout(r, ms));
+          const CATEGORIAS = { 'Especificaciones': 'ESPEC', 'Empaque': 'EMPAQUE', 'Fichas Técnicas': 'FICHA', 'Instructivos': 'INSTRUCTIVO' };
+          const SUFIJO = { ESPEC: /E$/, EMPAQUE: /EMP$/, FICHA: /F$/, INSTRUCTIVO: /I$/ };
+          const norm = t => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().replace(/\s+/g, ' ').trim();
+          const compacto = t => norm(t).replace(/[\s_]+/g, '');
+
+          // ---------- 1. Lista de archivos del sitio ----------
+          async function listaDelSitio() {
+            const r = await fetch(SITIO + '/', { headers: { 'User-Agent': 'LineaItalia-Importacion' } });
+            if (!r.ok) throw new Error(`El sitio de documentación respondió ${r.status}.`);
+            const html = await r.text();
+            const m = /data-page="([^"]+)"/.exec(html);
+            if (!m) throw new Error('No se encontró la lista de archivos en el sitio de documentación (¿cambió la página o pide iniciar sesión?).');
+            const json = m[1].replace(/&quot;/g, '"').replace(/&#0?39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+            return JSON.parse(json).props.files || [];
+          }
+
+          // ---------- 2. A qué SKU corresponde cada archivo ----------
+          const skus = datos.skus.map(s => ({ ...s, n: norm(s.clave), c: compacto(s.clave) }));
+          const porNorm = new Map(skus.map(s => [s.n, s])), porCompacto = new Map(skus.map(s => [s.c, s]));
+          const porLargo = [...skus].sort((a, b) => b.n.length - a.n.length);
+          function baseDe(nombre, codigo) {
+            let b = String(nombre).replace(/\.[^.]+$/, '').replace(/\s*\(\d+\)\s*$/, '');
+            return norm(b).replace(SUFIJO[codigo], '').trim().replace(/[\s_\-,.]+$/, '');
+          }
+          function exacta(b) { return porNorm.get(b) || porCompacto.get(compacto(b)) || null; }
+          function asignar(nombre, codigo) {
+            const b = baseDe(nombre, codigo);
+            const e = exacta(b);
+            if (e) return { regla: 'exacta', skus: [e], base: b };
+            const partes = b.split(/\s*(?:__|_|,|\s-\s|\sY\s)\s*/).map(x => x.trim()).filter(Boolean);
+            if (partes.length > 1 && partes.every(x => exacta(x))) return { regla: 'varios SKUs', skus: [...new Set(partes.map(exacta))], base: b };
+            const guiones = b.split('-').map(x => x.trim()); // "1020-1023": un mismo documento para dos SKUs
+            if (guiones.length > 1 && guiones.every(x => x.length >= 3 && exacta(x))) return { regla: 'varios SKUs', skus: [...new Set(guiones.map(exacta))], base: b };
+            let limpio = b.replace(/^(REV\.?\s*[A-Z0-9]+[_\s-]+|INST\.?\s+|INSTRUCTIVO\s+|FICHA TECNICA\s+(MINI MAMPARA\s+)?|ESPECIFICACION\s+)/, '').trim();
+            const e2 = exacta(limpio);
+            if (e2) return { regla: 'parcial', skus: [e2], base: b };
+            for (const s of porLargo) {
+              if (limpio.startsWith(s.n) && (limpio.length === s.n.length || /[\s\-_(,.]/.test(limpio[s.n.length]))) return { regla: 'parcial', skus: [s], base: b };
+            }
+            return { regla: 'sin SKU', skus: [], base: b };
+          }
+
+          // ---------- 3. Utilidades de red ----------
+          async function tamanoRemoto(id) {
+            for (let i = 1; ; i++) {
+              try {
+                const r = await fetch(`${SITIO}/files/${id}`, { headers: { Range: 'bytes=0-0' } });
+                await r.arrayBuffer();
+                const m = /\/(\d+)$/.exec(r.headers.get('content-range') || '');
+                return m ? Number(m[1]) : Number(r.headers.get('content-length') || 0) || null;
+              } catch (e) { if (i >= 3) return null; await espera(2000 * i); }
+            }
+          }
+          async function bajar(id) {
+            for (let i = 1; ; i++) {
+              try {
+                const r = await fetch(`${SITIO}/files/${id}`);
+                if (!r.ok) throw new Error(`respuesta ${r.status}`);
+                return Buffer.from(await r.arrayBuffer());
+              } catch (e) { if (i >= 3) throw e; await espera(3000 * i); }
+            }
+          }
+          async function llamarDrive(cuerpo) {
+            for (let intento = 1; ; intento++) {
+              try {
+                const r = await fetch(URL_DRIVE, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(cuerpo), redirect: 'follow' });
+                const t = await r.text(); let j;
+                try { j = JSON.parse(t); } catch (e) { throw new Error('El intermediario no respondió bien: ' + t.slice(0, 150)); }
+                if (j.error) { const e = new Error(j.error); e.definitivo = /clave|acción/i.test(j.error); throw e; }
+                return j;
+              } catch (e) {
+                if (e.definitivo || intento >= 4) throw e;
+                console.log(`Reintento ${intento}: ${e.message}`); await espera(5000 * intento);
+              }
+            }
+          }
+          const sql = v => v === null || v === undefined ? 'null' : "'" + String(v).replace(/'/g, "''") + "'";
+          function ejecutarSql(texto) {
+            const r = spawnSync('sh', ['-c', process.env.PSQL_CMD], { input: texto, encoding: 'utf8', maxBuffer: 50 * 1024 * 1024 });
+            if (r.status !== 0) throw new Error('Error en la base de datos: ' + (r.stderr || r.stdout).slice(0, 400));
+            return r.stdout.trim().split('\n').filter(Boolean);
+          }
+
+          (async () => {
+            const tipos = new Map(datos.tipos.map(t => [t.codigo, t]));
+            const existentes = new Map((datos.existentes || []).map(x => [`${x.sku_id}-${x.tipo}`, x.sha256]));
+            const archivos = await listaDelSitio();
+            console.log(`Archivos en el sitio: ${archivos.length}`);
+            const filas = [], omitidas = {};
+            for (const f of archivos) {
+              const codigo = CATEGORIAS[f.category];
+              if (!codigo) { omitidas[f.category] = (omitidas[f.category] || 0) + 1; continue; }
+              const tipo = tipos.get(codigo);
+              if (!tipo) throw new Error(`Falta el tipo de documento ${codigo}: ejecuta actualizacion_documentacion_tecnica.sql.`);
+              const a = asignar(f.original_name, codigo);
+              filas.push({ id: f.id, nombre: f.original_name, categoria: f.category, tipo, fecha: f.updated_at || f.created_at, ...a, estado: '' });
+            }
+            // Tamaños (para avisar de los que rebasan el límite)
+            let hechos = 0;
+            const cola = filas.filter(x => x.skus.length);
+            await Promise.all([0, 1, 2, 3].map(async () => { while (cola.length) { const x = cola.shift(); x.tamano = await tamanoRemoto(x.id); if (++hechos % 500 === 0) console.log(`Tamaños: ${hechos}`); } }));
+            // Un documento por SKU y tipo: gana la coincidencia exacta y, después, el más reciente
+            const elegido = new Map();
+            const rango = r => ({ 'exacta': 0, 'varios SKUs': 1, 'parcial': 2 }[r] ?? 9);
+            for (const x of filas) {
+              if (!x.skus.length) { x.estado = 'Sin SKU'; continue; }
+              if (SOLO_EXACTAS && x.regla === 'parcial') { x.estado = 'Coincidencia parcial (no se importa)'; continue; }
+              if (x.tamano && x.tamano > (x.tipo.max_mb || 25) * 1048576) { x.estado = `Pesa más de ${x.tipo.max_mb || 25} MB`; continue; }
+              for (const s of x.skus) {
+                const k = `${s.id}-${x.tipo.id}`, otro = elegido.get(k);
+                if (!otro || rango(x.regla) < rango(otro.regla) || (rango(x.regla) === rango(otro.regla) && String(x.fecha) > String(otro.fecha))) elegido.set(k, x);
+              }
+            }
+            for (const x of filas) {
+              if (x.estado) continue;
+              const ganan = x.skus.filter(s => elegido.get(`${s.id}-${x.tipo.id}`) === x);
+              if (!ganan.length) { x.estado = 'Duplicado (se usa otro más reciente)'; continue; }
+              x.destinos = ganan.filter(s => !existentes.has(`${s.id}-${x.tipo.id}`));
+              x.yaEstan = ganan.filter(s => existentes.has(`${s.id}-${x.tipo.id}`));
+              x.estado = !x.destinos.length ? 'Ya está en el aplicativo' : 'Por importar';
+            }
+
+            // ---------- 4. Importar ----------
+            let importados = 0, fallidos = 0, tandas = 0;
+            if (IMPORTAR) {
+              const pendientes = filas.filter(x => x.estado === 'Por importar').slice(0, LIMITE);
+              let lote = [], peso = 0;
+              const enviar = async () => {
+                if (!lote.length) return;
+                tandas++;
+                const r = await llamarDrive({ accion: 'restaurar', clave: CLAVE, archivos: lote.map((x, k) => ({ clave: k, carpetas: [x.destinos[0].clave, x.tipo.nombre], nombre: x.nombreDrive, contenido: x.gz.toString('base64') })) });
+                const sentencias = [];
+                for (const res of r.archivos || []) {
+                  const x = lote[res.clave];
+                  if (!res.drive_id) { x.estado = `Error al subir a Drive: ${res.error || 'sin respuesta'}`; fallidos++; continue; }
+                  x.drive_id = res.drive_id;
+                  for (const s of x.destinos) sentencias.push(`select ${sql(x.id + ':' + s.id)} || '|' || public.ing_importar_documento_tecnico(${s.id}, ${x.tipo.id}, ${sql(res.drive_id)}, ${sql(x.nombre)}, ${x.bytes}, ${x.gz.length}, ${sql(x.sha)}, ${sql(x.fecha)}, 'el sitio de documentación de ingeniería');`);
+                }
+                if (sentencias.length) {
+                  for (const linea of ejecutarSql(sentencias.join('\n'))) {
+                    const [clave, resultado] = linea.split('|'); const id = Number(clave.split(':')[0]);
+                    const x = lote.find(y => y.id === id); if (!x) continue;
+                    x.resultados = [...(x.resultados || []), resultado];
+                  }
+                }
+                for (const x of lote) if (x.drive_id) { const ok = (x.resultados || []).filter(z => z === 'importado').length; x.estado = ok ? `Importado (${ok} SKU${ok > 1 ? 's' : ''})` : `No se registró: ${(x.resultados || []).join(', ')}`; if (ok) importados++; }
+                for (const x of lote) { delete x.gz; }
+                console.log(`Tanda ${tandas}: ${importados} importados, ${fallidos} con error`);
+                lote = []; peso = 0;
+              };
+              for (const x of pendientes) {
+                try {
+                  const bytes = await bajar(x.id);
+                  if (bytes.length > (x.tipo.max_mb || 25) * 1048576) { x.estado = `Pesa más de ${x.tipo.max_mb || 25} MB`; continue; }
+                  if (bytes.slice(0, 4).toString() !== '%PDF') { x.estado = 'No es un PDF válido'; fallidos++; continue; }
+                  x.bytes = bytes.length; x.sha = crypto.createHash('sha256').update(bytes).digest('hex');
+                  x.gz = zlib.gzipSync(zlib.gzipSync(bytes, { level: 9 })); // igual que al subir desde el aplicativo
+                  const fecha = String(x.fecha || new Date().toISOString()).slice(0, 10);
+                  x.nombreDrive = `${x.destinos[0].clave}_${x.tipo.codigo} v1 (${fecha}).pdf`.replace(/[\/\\:*?"<>|]/g, '-');
+                  if (lote.length && (lote.length >= 15 || peso + x.gz.length > 6e6)) await enviar();
+                  lote.push(x); peso += x.gz.length;
+                } catch (e) { x.estado = `Error: ${e.message}`; fallidos++; }
+              }
+              await enviar();
+            }
+
+            // ---------- 5. Reporte ----------
+            const cuenta = {};
+            for (const x of filas) { const k = x.estado.replace(/^(Importado|Error|No se registró|Pesa más).*/, '$1'); cuenta[k] = (cuenta[k] || 0) + 1; }
+            const porTipo = {};
+            for (const x of filas) { const t = x.tipo.nombre; porTipo[t] = porTipo[t] || { archivos: 0, asignados: 0, sin: 0 }; porTipo[t].archivos++; if (x.skus.length) porTipo[t].asignados++; else porTipo[t].sin++; }
+            let texto = `## Documentación técnica · modo **${IMPORTAR ? 'importar' : 'revisar'}**\n\n`
+              + `| Documento | Archivos en el sitio | Con SKU | Sin SKU |\n|---|---|---|---|\n`
+              + Object.entries(porTipo).map(([t, v]) => `| ${t} | ${v.archivos} | ${v.asignados} | ${v.sin} |`).join('\n') + '\n\n'
+              + Object.entries(cuenta).map(([k, v]) => `- ${k}: **${v}**`).join('\n') + '\n'
+              + (Object.keys(omitidas).length ? `\nNo se toman en cuenta: ${Object.entries(omitidas).map(([k, v]) => `${k} (${v})`).join(', ')}.\n` : '')
+              + (IMPORTAR ? `\n**Importados en esta corrida: ${importados}**${fallidos ? ` · con error: ${fallidos} (vuelve a correr la tarea para reintentarlos)` : ''}\n` : `\nEl detalle archivo por archivo está en el reporte de Excel (abajo, en **Artifacts**).\n`)
+              + (IMPORTAR && filas.some(x => x.estado === 'Por importar') ? `\nQuedan por importar: ${filas.filter(x => x.estado === 'Por importar').length}. Vuelve a correr la tarea en modo importar.\n` : '');
+            if (process.env.GITHUB_STEP_SUMMARY) fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, texto);
+            console.log(texto);
+            fs.writeFileSync('reporte.json', JSON.stringify(filas.map(x => ({ archivo: x.nombre, categoria: x.categoria, documento: x.tipo.nombre, base: x.base, regla: x.regla,
+              skus: x.skus.map(s => s.clave).join(', '), tamano_mb: x.tamano ? +(x.tamano / 1048576).toFixed(2) : null, fecha: String(x.fecha || '').slice(0, 10), estado: x.estado, id_sitio: x.id })), null, 1));
+            try { await reporteExcel(filas); } catch (e) { console.log('No se pudo armar el Excel: ' + e.message); }
+            if (IMPORTAR && fallidos && !importados) process.exit(1);
+          })().catch(e => { console.log('::error::' + e.message); process.exit(1); });
+
+          async function reporteExcel() {
+            const ExcelJS = require('exceljs');
+            const filas = JSON.parse(fs.readFileSync('reporte.json', 'utf8'));
+            const wb = new ExcelJS.Workbook();
+            const AZUL = 'FF1E4E79';
+            const hoja = (nombre, lista, cols) => {
+              const ws = wb.addWorksheet(nombre, { views: [{ state: 'frozen', ySplit: 1 }] });
+              ws.columns = cols.map(([h, k, w]) => ({ header: h, key: k, width: w }));
+              lista.forEach(r => ws.addRow(r));
+              ws.getRow(1).eachCell(c => { c.font = { bold: true, color: { argb: 'FFFFFFFF' } }; c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: AZUL } }; });
+              if (lista.length) ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: cols.length } };
+              return ws;
+            };
+            const cols = [['Archivo', 'archivo', 46], ['Documento', 'documento', 24], ['SKU', 'skus', 18], ['Cómo se asignó', 'regla', 16], ['MB', 'tamano_mb', 8], ['Fecha', 'fecha', 12], ['Resultado', 'estado', 38]];
+            const color = { 'Por importar': 'FF1E4E79', 'Ya está en el aplicativo': 'FF5B6675', 'Sin SKU': 'FFB42318' };
+            const ws = hoja('Todos', filas, cols);
+            ws.eachRow((r, i) => { if (i > 1) { const e = String(r.getCell(7).value || ''); const c = e.startsWith('Importado') ? 'FF1F7A4D' : color[e] || (e.startsWith('Error') || e.startsWith('Pesa') ? 'FFB42318' : 'FF8A5A00'); r.getCell(7).font = { color: { argb: c }, bold: true }; } });
+            hoja('Sin SKU', filas.filter(x => x.estado === 'Sin SKU'), [['Archivo', 'archivo', 46], ['Documento', 'documento', 24], ['Texto que se buscó', 'base', 40], ['Fecha', 'fecha', 12]]);
+            hoja('Coincidencias parciales', filas.filter(x => x.regla === 'parcial'), cols);
+            hoja('Duplicados', filas.filter(x => x.estado.startsWith('Duplicado')), cols);
+            await wb.xlsx.writeFile('reporte-importacion.xlsx');
+          }
+
+          JS
+
+      - name: Guardar el reporte
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reporte-importacion-${{ inputs.modo }}
+          path: reporte-importacion.xlsx
+          retention-days: 30
+          if-no-files-found: ignore
