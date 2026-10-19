@@ -99,7 +99,7 @@ const CONFIG = Object.assign({
   DRIVE_URL: 'PEGA-AQUI-LA-DIRECCION-DEL-INTERMEDIARIO'
 }, (typeof window !== 'undefined' && window.CONFIG_APLICATIVO) || {});
 /* C2. Versión del aplicativo: cambia con cada actualización */
-const VERSION_APP = '2026.10.16.4';
+const VERSION_APP = '2026.10.16.5';
 const BUCKET_IMAGENES = 'ing-imagenes';
 const driveListo = () => /^https:\/\/script\.google\.com\//.test(CONFIG.DRIVE_URL);
 const LOGO_LINEA_ITALIA = 'data:image/png;base64,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'; // logo completo en negro; en modo oscuro se invierte a blanco
@@ -533,10 +533,11 @@ const DataService = {
   async coberturaTecnica() { // documentación técnica de todos los SKUs: para saber cuáles están en "No aplica"
     return leerTodo(() => SB.from('ing_v_cobertura_corte').select('sku_id,tipo_documento_id,estado').eq('categoria', 'tecnica').order('sku_id').order('tipo_documento_id'));
   },
-  async configurarTipoTecnico(tipoId, { visible_planta = null, max_mb = null } = {}) {
+  async configurarTipoTecnico(tipoId, { visible_planta = null, max_mb = null, planta_imprime = null } = {}) {
     exigirPermiso('administrar');
-    await ejecutar(SB.rpc('ing_configurar_tipo_tecnico', { p_tipo: tipoId, p_visible_planta: visible_planta, p_max_mb: max_mb }));
+    await ejecutar(SB.rpc('ing_configurar_tipo_tecnico', { p_tipo: tipoId, p_visible_planta: visible_planta, p_max_mb: max_mb, p_planta_imprime: planta_imprime }));
   },
+  async registrarImpresion(versionId) { await ejecutar(SB.rpc('ing_registrar_descarga', { p_version: versionId, p_accion: 'impresion' })); },
   async previsualizarCasillaTecnica(tipoId, entregableId) {
     exigirPermiso('administrar');
     const { data } = await ejecutar(SB.rpc('ing_previsualizar_casilla_tecnica', { p_tipo: tipoId, p_entregable: entregableId })); return data || {};
@@ -623,7 +624,9 @@ const DataService = {
     return (data && data[0]) || { resultado: 'desconocido' };
   },
   async listarDescargas(limite = 100) {
-    const { data } = await ejecutar(SB.from('ing_v_descargas').select('*').order('fecha', { ascending: false }).range(0, limite - 1));
+    let q = SB.from('ing_v_descargas').select('*').order('fecha', { ascending: false }).range(0, limite - 1);
+    if (hayCategorias()) q = q.neq('categoria', 'tecnica'); // aquí solo se listan las descargas de archivos de corte
+    const { data } = await ejecutar(q);
     return data || [];
   },
   /* C4. Estado del sistema: cada revisión se hace por separado, para que una falla no oculte las demás */
@@ -4482,11 +4485,52 @@ function cargarPdfJs() {
     document.head.append(sc);
   }));
 }
+/* Impresión: cada página se dibuja como imagen (unos 150 ppp) con un pie de "copia impresa" y se manda a la impresora.
+   Así se imprime sin entregar el archivo, y cada copia dice quién la imprimió y qué versión es. */
+async function imprimirPdf(pdf, d, avance) {
+  const zona = document.createElement('div'); zona.id = 'zona-impresion';
+  if (!document.getElementById('estilo-impresion')) {
+    const st = document.createElement('style'); st.id = 'estilo-impresion';
+    st.textContent = '#zona-impresion{display:none}@media print{body>*:not(#zona-impresion){display:none!important}#zona-impresion{display:block}'
+      + '#zona-impresion div{height:100vh;display:flex;align-items:center;justify-content:center;overflow:hidden;break-after:page;page-break-after:always}'
+      + '#zona-impresion div:last-child{break-after:auto;page-break-after:auto}#zona-impresion img{display:block;max-width:100%;max-height:100%;object-fit:contain}}@page{margin:6mm}';
+    document.head.append(st);
+  }
+  const pie = `Copia impresa · ${d.sku_clave} · ${d.tipo_nombre} v${d.version_vigente || d.version} · ${estado.sesion.nombre} · ${formatearFechaHora(new Date().toISOString())}`;
+  const urls = [];
+  try {
+    for (let n = 1; n <= pdf.numPages; n++) {
+      if (avance) avance(n);
+      const pagina = await pdf.getPage(n);
+      const vp = pagina.getViewport({ scale: 150 / 72 });
+      const franja = Math.round(vp.height * 0.025) + 8;
+      const canvas = document.createElement('canvas'); canvas.width = Math.round(vp.width); canvas.height = Math.round(vp.height) + franja;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#FFFFFF'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+      await pagina.render({ canvasContext: ctx, viewport: vp }).promise;
+      ctx.fillStyle = '#5B6675'; ctx.font = `${Math.max(11, Math.round(franja * 0.45))}px sans-serif`; ctx.textBaseline = 'middle';
+      let texto = `${pie} · página ${n} de ${pdf.numPages} · verifica que siga vigente antes de usarla`;
+      while (ctx.measureText(texto).width > canvas.width - 40 && texto.length > 20) texto = texto.slice(0, -2);
+      ctx.fillText(texto, 20, Math.round(vp.height) + franja / 2);
+      const blob = await new Promise(ok => canvas.toBlob(ok, 'image/png'));
+      const url = URL.createObjectURL(blob); urls.push(url);
+      const img = new Image(); img.src = url; img.alt = `Página ${n}`; const hoja = document.createElement('div'); hoja.append(img); zona.append(hoja);
+      pagina.cleanup();
+    }
+    document.body.append(zona);
+    await Promise.all([...zona.querySelectorAll('img')].map(i => i.decode().catch(() => {})));
+    await new Promise(ok => { const fin = () => { window.removeEventListener('afterprint', fin); ok(); }; window.addEventListener('afterprint', fin); window.print(); setTimeout(fin, 120000); });
+  } finally {
+    zona.remove(); urls.forEach(u => URL.revokeObjectURL(u));
+  }
+}
 /* El visor vive fuera de render(): así las páginas dibujadas no se pierden cuando cambia el resto de la pantalla. */
 async function verDocumentoPdf(d) {
   const s = estado.sesion, planta = s.rol_id === ROLES.PLANTA, descarga = puede(s.rol_id, 'doctec_descargar');
+  const tipoDoc = cache.tiposDocumento[String(d.tipo_documento_id)] || {};
+  const imprime = planta ? !!tipoDoc.planta_imprime : true;
   const marca = planta ? `CONSULTA · ${s.nombre} · ${new Date().toLocaleDateString('es-MX')}` : null;
-  let zoom = 1, pdf = null, cerrado = false, observador = null;
+  let zoom = 1, pdf = null, cerrado = false, observador = null, imprimiendo = false;
   const titulo = `${d.sku_clave} · ${d.tipo_nombre}`;
   const btn = (texto, accion, extra = '') => h('button', { type: 'button', class: `rounded-md px-3 py-1.5 text-sm font-medium text-white hover:bg-white/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-white ${extra}`, onClick: accion }, texto);
   const estadoTxt = h('p', { class: 'text-sm text-white/80', role: 'status' }, 'Cargando documento…');
@@ -4502,8 +4546,9 @@ async function verDocumentoPdf(d) {
     h('div', { class: 'flex flex-wrap items-center gap-2 border-b border-white/10 px-4 py-2' },
       h('div', { class: 'mr-auto min-w-0' },
         h('p', { class: 'truncate text-sm font-semibold text-white' }, titulo),
-        h('p', { class: 'truncate text-xs text-white/60' }, `Versión ${d.version_vigente || d.version}${d.subida_en ? ` · ${formatearFechaHora(d.subida_en)}` : ''}${planta ? ' · Solo consulta en pantalla' : ''}`)),
+        h('p', { class: 'truncate text-xs text-white/60' }, `Versión ${d.version_vigente || d.version}${d.subida_en ? ` · ${formatearFechaHora(d.subida_en)}` : ''}${planta ? (imprime ? ' · Consulta e impresión' : ' · Solo consulta en pantalla') : ''}`)),
       btn('−', () => cambiarZoom(-0.25), 'text-lg leading-none'), textoZoom, btn('+', () => cambiarZoom(0.25), 'text-lg leading-none'),
+      imprime ? btn('Imprimir', () => imprimir(), 'border border-white/30') : null,
       descarga ? btn('Descargar', () => descargarDocumento(d), 'border border-white/30') : null,
       btn('Cerrar', cerrar, 'border border-white/30')),
     contenedor);
@@ -4542,6 +4587,16 @@ async function verDocumentoPdf(d) {
       paginas.append(div); observador.observe(div);
     }
     estadoTxt.textContent = `${pdf.numPages} ${pdf.numPages === 1 ? 'página' : 'páginas'}`;
+  }
+  async function imprimir() {
+    if (!pdf || imprimiendo) return;
+    imprimiendo = true;
+    const antes = estadoTxt.textContent;
+    try {
+      await DataService.registrarImpresion(d.version_id); // la impresión queda registrada (y el servidor confirma el permiso)
+      await imprimirPdf(pdf, d, n => { estadoTxt.textContent = `Preparando impresión… página ${n} de ${pdf.numPages}`; });
+    } catch (e) { agregarAviso('error', `No se pudo imprimir. ${e.message || ''}`); }
+    finally { imprimiendo = false; if (!cerrado) estadoTxt.textContent = antes; }
   }
   function cambiarZoom(delta) {
     if (!pdf) return;
@@ -4586,7 +4641,7 @@ function DocumentacionTecnicaSku(s) {
             x ? h('span', { class: 'text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, `v${x.version_vigente} · ${formatearFechaHora(x.subida_en)} · ${formatoTamano(Number(x.tamano) || 0)}${x.subida_por_nombre ? ` · ${x.subida_por_nombre}` : ''}`)
               : na ? chip('No aplica', 'bg-[#EEF1F4] text-[#5B6675] dark:bg-[#243040] dark:text-[#9AA7B6]')
               : chip('Pendiente', 'bg-[#FFF4DB] text-[#B26A00] dark:bg-[#3A2F14] dark:text-[#E0A650]'),
-            t.visible_planta ? h('span', { class: 'text-[11px] text-[#7A8594] dark:text-[#7F8B99]', title: 'La cuenta de consulta de planta puede verlo en pantalla' }, '· visible en planta') : null),
+            t.visible_planta ? h('span', { class: 'text-[11px] text-[#7A8594] dark:text-[#7F8B99]', title: 'Lo que puede hacer la cuenta de consulta de planta' }, t.planta_imprime ? '· planta: ver e imprimir' : '· planta: solo ver') : null),
           x && x.cambios && x.version_vigente > 1 ? h('p', { class: 'mt-0.5 text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, `Cambios: ${x.cambios}`) : null,
           na && c.nota_no_aplica ? h('p', { class: 'mt-0.5 text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, c.nota_no_aplica) : null,
           h('div', { class: 'mt-1.5 flex flex-wrap gap-2' },
@@ -4725,7 +4780,7 @@ function VistaDocumentacion() {
   }
   const tiposFiltro = columnasDocumentacion();
   return h('section', null,
-    EncabezadoVista('Documentación técnica', planta ? 'Busca el SKU y abre su documento. Solo se puede consultar en pantalla.' : 'Documento vigente de cada SKU. Da clic en una versión para verla; en la clave del SKU, para subir o corregir.', null),
+    EncabezadoVista('Documentación técnica', planta ? 'Busca el SKU y abre su documento. Desde el documento puedes imprimirlo si está permitido.' : 'Documento vigente de cada SKU. Da clic en una versión para verla; en la clave del SKU, para subir o corregir.', null),
     h('div', { class: 'mb-4 flex flex-wrap items-end gap-3' },
       h('div', { class: 'w-full sm:w-72' },
         h('label', { for: 'doctec-busqueda', class: 'mb-1 block text-xs font-medium text-[#5B6675] dark:text-[#9AA7B6]' }, 'Buscar'),
@@ -4764,9 +4819,10 @@ function AdminDocTec() {
           h('td', { class: CLS.td }, h('div', { class: 'flex items-center gap-2' },
             h('input', { type: 'number', min: '1', max: '100', class: `${CLS.input} w-20`, value: limiteMbTipo(t), 'aria-label': `Límite en MB de ${t.nombre}`,
               onChange: ev => configurarTipoTecnico(t, { max_mb: Number(ev.target.value) }) }), 'MB')),
-          h('td', { class: CLS.td }, h('label', { class: 'flex items-center gap-2 text-sm' },
-            h('input', { type: 'checkbox', class: 'h-4 w-4 accent-[#1E4E79]', checked: !!t.visible_planta, onChange: ev => configurarTipoTecnico(t, { visible_planta: ev.target.checked }) }),
-            t.visible_planta ? 'Puede verlo' : 'No lo ve')),
+          h('td', { class: CLS.td }, h('select', { class: `${CLS.input} w-52`, 'aria-label': `Consulta de planta: ${t.nombre}`,
+              value: t.planta_imprime ? 'imprime' : t.visible_planta ? 'ver' : 'no',
+              onChange: ev => configurarTipoTecnico(t, { visible_planta: ev.target.value !== 'no', planta_imprime: ev.target.value === 'imprime' }) },
+            h('option', { value: 'no' }, 'No lo ve'), h('option', { value: 'ver' }, 'Solo en pantalla'), h('option', { value: 'imprime' }, 'En pantalla e imprimir'))),
           h('td', { class: CLS.td }, t.entregable_id
             ? h('div', { class: 'flex flex-wrap items-center gap-2' },
                 h('span', { class: 'rounded bg-[#E6F2EB] px-2 py-0.5 text-xs font-semibold text-[#1F7A4D] dark:bg-[#173526] dark:text-[#5CC48E]' }, `Activa: ${(ents.find(e => e.id === Number(t.entregable_id)) || {}).nombre || 'casilla'}`),
@@ -4776,7 +4832,7 @@ function AdminDocTec() {
                   h('option', { value: '' }, 'Elige la casilla…'), ents.filter(e => !ocupadas.has(e.id)).map(e => h('option', { value: e.id }, e.nombre))),
                 h('button', { type: 'button', class: CLS.btnChico, disabled: !sel, onClick: () => previsualizarCasillaTecnica(t, Number(sel)) }, 'Activar…'))));
       })),
-    h('p', { class: 'text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, 'La consulta de planta solo ve en pantalla el documento vigente de los tipos marcados; no puede descargarlos ni imprimirlos desde el aplicativo. Los ingenieros, el gerente y calidad los ven y descargan todos.'));
+    h('p', { class: 'text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, 'La consulta de planta solo ve el documento vigente de los tipos permitidos y nunca puede descargarlos. Si el tipo está en "En pantalla e imprimir", puede imprimirlo desde el visor: cada hoja lleva al pie quién la imprimió, cuándo y qué versión es, y la impresión queda registrada. Los ingenieros, el gerente y calidad ven, imprimen y descargan todo.'));
 }
 async function configurarTipoTecnico(t, cambio) {
   try {
