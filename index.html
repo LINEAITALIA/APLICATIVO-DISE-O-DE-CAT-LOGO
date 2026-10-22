@@ -99,7 +99,7 @@ const CONFIG = Object.assign({
   DRIVE_URL: 'PEGA-AQUI-LA-DIRECCION-DEL-INTERMEDIARIO'
 }, (typeof window !== 'undefined' && window.CONFIG_APLICATIVO) || {});
 /* C2. Versión del aplicativo: cambia con cada actualización */
-const VERSION_APP = '2026.10.22.4';
+const VERSION_APP = '2026.10.22.5';
 const BUCKET_IMAGENES = 'ing-imagenes';
 const driveListo = () => /^https:\/\/script\.google\.com\//.test(CONFIG.DRIVE_URL);
 const LOGO_LINEA_ITALIA = 'data:image/png;base64,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'; // logo completo en negro; en modo oscuro se invierte a blanco
@@ -393,7 +393,7 @@ const DataService = {
       await ejecutar(SB.rpc('ing_nomenclatura_pieza', { p_sku: skuId, p_tipo: tipoId, p_pieza: pieza, p_cantidad: Number(d.cantidad),
         p_espesor: atributo === 'espesor' ? Number(String(d.espesor).replace(',', '.')) : null,
         p_calibre: (atributo === 'calibre' && !esPlaca(d.calibre)) || atributo === 'tubular' ? Number(d.calibre) : null,
-        p_medida: atributo === 'tubular' ? normalizarMedida(d.medida) : atributo === 'calibre' && esPlaca(d.calibre) ? placaNormal(d.calibre) : null, p_nombre: limpiarNombrePieza(d.nombre) }));
+        p_medida: atributo === 'tubular' ? normalizarMedida(d.medida) : atributo === 'calibre' && esPlaca(d.calibre) ? placaNormal(d.calibre) : atributo === 'espuma' ? espumaNormal(d.grosor) : null, p_nombre: limpiarNombrePieza(d.nombre) }));
     } catch (e) { /* la actualización de nomenclatura aún no se ejecuta: el nombre ya quedó bien */ }
   },
   async agregarMedida(lista, valor) {
@@ -2254,6 +2254,7 @@ function ModalPrototipo() {
           atributo === 'espesor' ? menu('espesor', 'Espesor') : null,
           atributo === 'tubular' ? menu('medida', 'Tubular') : null,
           atributo === 'calibre' || atributo === 'tubular' ? menu('calibre', atributo === 'calibre' ? 'Calibre o placa' : 'Calibre') : null,
+          atributo === 'espuma' ? menu('grosor', 'Espesor') : null,
           texto('nombre', 'Nombre de la pieza', 'min-w-[10rem] flex-1', { maxlength: '80', placeholder: 'CUBIERTA' })),
         h('div', { class: 'mt-1.5 flex flex-wrap items-center justify-between gap-2' },
           h('code', { class: 'break-all text-xs font-semibold' }, nombre || '—'),
@@ -3220,7 +3221,7 @@ function formatoTamano(bytes) { return bytes >= 1048576 ? `${(bytes / 1048576).t
    Tubular: 1000_2PZAS_TUBULAR2X1_CAL18_LATERAL   Tela / Panel: 1000_2PZAS_TELA_FRENTE */
 const NOMEN_POR_DEFECTO = [ // si Supabase aún no tiene los códigos, se deducen del nombre del tipo
   [/melamina|laminado/i, 'LP', 'espesor'], [/l[aá]mina/i, 'LAMINA', 'calibre'], [/tubular|tubo/i, 'TUBULAR', 'tubular'],
-  [/tela/i, 'TELA', 'ninguno'], [/panel/i, 'PANEL', 'ninguno']];
+  [/espuma|hule/i, 'ESPUMA', 'espuma'], [/tela/i, 'TELA', 'ninguno'], [/panel/i, 'PANEL', 'ninguno']];
 function nomenDeTipo(tipo) {
   if (!tipo) return { codigo: 'PIEZA', atributo: 'ninguno' };
   if (tipo.codigo_material) return { codigo: String(tipo.codigo_material).toUpperCase(), atributo: tipo.atributo || 'ninguno' };
@@ -3260,7 +3261,8 @@ function nombreSeguroWindows(t) { return String(t || '').replace(/[\/\\:*?"<>|]/
 /* Para reconocer la misma pieza aunque su medida esté escrita distinto (0.75X1.75, 3/4X1 3/4 o 3-4X1 3-4). */
 function claveComparacion(pieza) {
   return normalizarTexto(pieza).replace(/tubular([0-9.\/\- ]+x[0-9.\/\- ]+?)(?=_cal)/, (todo, med) => 'tubular' + String(normalizarMedida(med) || med).toLowerCase())
-    .replace(/_placa(\d+(?: \d+)?[\/\-]\d+)(?=_)/, (todo, p) => '_placa' + (placaNormal(p) || p));
+    .replace(/_placa(\d+(?: \d+)?[\/\-]\d+)(?=_)/, (todo, p) => '_placa' + (placaNormal(p) || p))
+    .replace(/_espuma(\d+(?: \d+)?[\/\-]\d+)plg(?=_)/, (todo, p) => '_espuma' + (placaNormal(p) || p) + 'plg');
 }
 function medidaEnFraccion(v) { // "0.75X1.75" → "3/4 x 1 3/4"; null si es de números enteros
   const nums = String(v || '').split('X').map(Number);
@@ -3274,6 +3276,16 @@ function placaNormal(v) { // "3/8", "3-8", '3/8"', "1 1/4" → "3/8" · "1 1/4";
   return n > 0 && n <= 6 ? fraccionTexto(n) : null;
 }
 const esPlaca = v => placaNormal(v) !== null;
+/* Espuma: espesor con su unidad, como lo pide planta: 1CM, 1PLG, 2PLG, 1/2PLG, 15MM */
+function espumaNormal(v) {
+  const t = sinAcentos(String(v == null ? '' : v)).toUpperCase().replace(/\s+/g, ' ').trim();
+  const m = /^(\d+(?:[.,]\d+)?|\d+(?:\s+|\s*-\s*)\d+\s*[\/\-]\s*\d+|\d+\s*[\/\-]\s*\d+)\s*(CM|MM|PLG|PULG(?:ADAS?)?\.?|IN|["”″]+)$/.exec(t);
+  if (!m) return null;
+  const n = parteMedida(m[1].replace(',', '.')); if (!(n > 0)) return null;
+  const u = /^(PLG|PULG|IN|["”″])/.test(m[2]) ? 'PLG' : m[2];
+  return u === 'PLG' ? `${fraccionTexto(n)}PLG` : `${numeroTexto(n)}${u}`;
+}
+const textoEspuma = v => { const e = espumaNormal(v); return e ? e.replace(/(CM|MM|PLG)$/, ' $1').toLowerCase() : String(v || ''); };
 const textoCalibre = v => esPlaca(v) ? `Placa ${placaNormal(v)}"` : `Cal. ${v}`;
 function datosNomenValidos(d, atributo) {
   const e = {};
@@ -3283,6 +3295,7 @@ function datosNomenValidos(d, atributo) {
   if (atributo === 'calibre' && esPlaca(d.calibre)) { /* placa en pulgadas: válida */ }
   else if (atributo === 'calibre' || atributo === 'tubular') { const c = Number(d.calibre); if (!Number.isInteger(c) || c < 1 || c > 40) e.calibre = atributo === 'calibre' ? 'Calibre de 1 a 40, o placa como 3/8.' : 'Calibre de 1 a 40.'; }
   if (atributo === 'tubular' && !normalizarMedida(d.medida)) e.medida = 'Medida como 2X1, 3/4 X 1 3/4 o 0.75X1.75.';
+  if (atributo === 'espuma' && !espumaNormal(d.grosor)) e.grosor = 'Espesor con unidad: 1 cm, 1 plg o 2 plg.';
   if (!limpiarNombrePieza(d.nombre)) e.nombre = 'Nombre de la pieza.';
   return e;
 }
@@ -3293,6 +3306,7 @@ function nombreEstandar(skuClave, tipo, d) {
   if (atributo === 'espesor') partes.push(`${codigo}${numeroTexto(Number(String(d.espesor).replace(',', '.')))}MM`);
   else if (atributo === 'calibre') partes.push(codigo, esPlaca(d.calibre) ? `PLACA${placaNormal(d.calibre)}` : `CAL${Number(d.calibre)}`);
   else if (atributo === 'tubular') partes.push(`${codigo}${medidaParaNombre(normalizarMedida(d.medida))}`, `CAL${Number(d.calibre)}`);
+  else if (atributo === 'espuma') partes.push(`${codigo}${espumaNormal(d.grosor)}`);
   else partes.push(codigo);
   partes.push(limpiarNombrePieza(d.nombre));
   return partes.join('_');
@@ -3301,11 +3315,11 @@ function nombreEstandar(skuClave, tipo, d) {
 function datosDesdeArchivo(nombreArchivo, skuClave, tipo) {
   const { codigo, atributo } = nomenDeTipo(tipo);
   let t = ' ' + sinAcentos(String(nombreArchivo).replace(/\.[A-Za-z][A-Za-z0-9]{1,4}$/, '')).toUpperCase().replace(/_/g, ' ').replace(/\s+/g, ' ') + ' ';
-  const d = { cantidad: '1', espesor: '', calibre: '', medida: '', nombre: '' };
+  const d = { cantidad: '1', espesor: '', calibre: '', medida: '', grosor: '', nombre: '' };
   // Si ya trae el formato estándar (por ejemplo, un archivo descargado del aplicativo), se lee tal cual
-  const e = /^(?:[^_]+_)?(\d{1,3})PZAS?_(?:LP(\d+(?:\.\d+)?)MM|LAMINA_(?:CAL(\d{1,2})|PLACA(\d+(?: \d+)?[\/\-]\d+))|TUBULAR([0-9.\/\- ]+X[0-9.\/\- ]+?)_CAL(\d{1,2})|TELA|PANEL|[A-Z]+)_([A-Z0-9.\-]+)$/
+  const e = /^(?:[^_]+_)?(\d{1,3})PZAS?_(?:LP(\d+(?:\.\d+)?)MM|LAMINA_(?:CAL(\d{1,2})|PLACA(\d+(?: \d+)?[\/\-]\d+))|TUBULAR([0-9.\/\- ]+X[0-9.\/\- ]+?)_CAL(\d{1,2})|ESPUMA([0-9.\/\- ]+(?:CM|MM|PLG))|TELA|PANEL|[A-Z]+)_([A-Z0-9.\-]+)$/
     .exec(sinAcentos(String(nombreArchivo).replace(/\.[A-Za-z][A-Za-z0-9]{1,4}$/, '')).toUpperCase().replace(/\s+V\d+\s*\(.*$/, '').replace(/_V\d+$/, '').trim());
-  if (e && (!e[5] || normalizarMedida(e[5]))) return { cantidad: e[1], espesor: atributo === 'espesor' ? e[2] || '' : '', calibre: e[3] || (e[4] ? placaNormal(e[4]) : '') || e[6] || '', medida: e[5] ? normalizarMedida(e[5]) : '', nombre: e[7] };
+  if (e && (!e[5] || normalizarMedida(e[5])) && (!e[7] || espumaNormal(e[7]))) return { cantidad: e[1], espesor: atributo === 'espesor' ? e[2] || '' : '', calibre: e[3] || (e[4] ? placaNormal(e[4]) : '') || e[6] || '', medida: e[5] ? normalizarMedida(e[5]) : '', grosor: e[7] ? espumaNormal(e[7]) : '', nombre: e[8] };
   const quitar = re => { const m = re.exec(t); if (m) t = t.replace(m[0], ' '); return m; };
   const esc = x => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   let m = quitar(/\s(\d{1,3})\s*-?\s*PZ(?:A|AS|S)?\.?(?=\s)/); if (m) d.cantidad = m[1];
@@ -3319,9 +3333,13 @@ function datosDesdeArchivo(nombreArchivo, skuClave, tipo) {
     m = quitar(new RegExp(`\\s${dim}\\s*X\\s*${dim}(?=\\s)`));
     if (m && normalizarMedida(`${m[1]} X ${m[2]}`)) d.medida = `${m[1]} X ${m[2]}`;
   }
+  if (atributo === 'espuma') { // "ESPUMA 1 PLG", '2"', "1 CM", "1/2 PULG", "1-2PLG"
+    m = quitar(/\s(?:ESPUMA\s*)?(\d+(?:[.,]\d+)?|\d+\s*[\/\-]\s*\d+)\s*(CM|MM|PLG|PULG(?:ADAS?)?\.?|IN|["”″]+)(?=\s)/);
+    if (m && espumaNormal(`${m[1]}${m[2]}`)) d.grosor = espumaNormal(`${m[1]}${m[2]}`);
+  }
   m = quitar(/\s(\d+(?:[.,]\d+)?)\s*MM(?=\s)/) || (atributo === 'espesor' ? quitar(/\sLP\s?(\d+(?:[.,]\d+)?)(?:\s*MM)?(?=\s)/) : null);
   if (m && atributo === 'espesor') d.espesor = m[1].replace(',', '.');
-  [skuClave, codigo, 'LP', 'LAMINADO', 'PLASTICO', 'MELAMINA', 'LAMINA', 'PLACA', 'TUBULAR', 'TUBO', 'PTR', 'TELA', 'PANEL', 'ACUSTICO']
+  [skuClave, codigo, 'LP', 'LAMINADO', 'PLASTICO', 'MELAMINA', 'LAMINA', 'PLACA', 'TUBULAR', 'TUBO', 'PTR', 'ESPUMA', 'HULE', 'TELA', 'PANEL', 'ACUSTICO']
     .forEach(w => { if (w) t = t.replace(new RegExp(`\\s${esc(sinAcentos(w).toUpperCase())}(?=\\s)`, 'g'), ' '); });
   d.nombre = limpiarNombrePieza(t.replace(/\s-\s/g, ' ').trim()).replace(/^[0-9.\-]+$/, '');
   return d;
@@ -3336,6 +3354,7 @@ function detectarTipo(nombreArchivo, candidatos, preferidoId) {
   const porNombre = re => candidatos.find(t => re.test(normalizarTexto(t.nombre)));
   const porAtributo = a => candidatos.find(t => nomenDeTipo(t).atributo === a);
   const pistas = [
+    [/\s(ESPUMA|HULE|FOAM)\s/, () => porAtributo('espuma') || porNombre(/espuma|hule/)],
     [/\sTELA\s/, () => porNombre(/tela/)],
     [/\s(PANEL|ACUSTIC[OA]S?)\s/, () => porNombre(/panel|acust/)],
     [/\s(LP|MELAMINA|LAMINADO|MDF|MDP|AGLOMERADO)\s|\sLP\s?\d/, () => porAtributo('espesor')],
@@ -3348,28 +3367,31 @@ function detectarTipo(nombreArchivo, candidatos, preferidoId) {
 /* Datos guardados de una pieza (para su nueva versión o para renombrarla). */
 function datosDePieza(doc, skuClave, tipo) {
   if (doc && doc.nombre_base) {
-    const placa = nomenDeTipo(tipo).atributo === 'calibre' && doc.calibre == null && placaNormal(doc.medida); // la placa se guarda en "medida"
-    return { cantidad: String(doc.cantidad || 1), espesor: doc.espesor_mm != null ? numeroTexto(Number(doc.espesor_mm)) : '', calibre: placa || (doc.calibre != null ? String(doc.calibre) : ''), medida: placa ? '' : doc.medida || '', nombre: doc.nombre_base };
+    const at = nomenDeTipo(tipo).atributo;
+    const placa = at === 'calibre' && doc.calibre == null && placaNormal(doc.medida); // la placa se guarda en "medida"
+    const grosor = at === 'espuma' ? espumaNormal(doc.medida) || '' : '';                 // y el espesor de la espuma también
+    return { cantidad: String(doc.cantidad || 1), espesor: doc.espesor_mm != null ? numeroTexto(Number(doc.espesor_mm)) : '', calibre: placa || (doc.calibre != null ? String(doc.calibre) : ''), medida: placa || grosor ? '' : doc.medida || '', grosor, nombre: doc.nombre_base };
   }
   return datosDesdeArchivo(doc ? doc.pieza : '', skuClave, tipo);
 }
-const MEDIDAS_BASE = { espesor: ['5.5', '12', '16', '19', '28'], calibre_lamina: ['12', '14', '16', '18', '22', '24', '1/4', '5/16', '3/8'], calibre_tubular: ['14', '16', '18', '20'], medida_tubular: ['1X1', '2X1', '1.25X1.25', '1.5X1.5', '2X2', '3X1'] };
-const NOMBRES_LISTA = { espesor: 'Espesores de laminado plástico (mm)', calibre_lamina: 'Calibres y placas de lámina', calibre_tubular: 'Calibres de tubular', medida_tubular: 'Medidas de tubular' };
+const MEDIDAS_BASE = { espesor: ['5.5', '12', '16', '19', '28'], calibre_lamina: ['12', '14', '16', '18', '22', '24', '1/4', '5/16', '3/8'], espesor_espuma: ['1CM', '1PLG', '2PLG'], calibre_tubular: ['14', '16', '18', '20'], medida_tubular: ['1X1', '2X1', '1.25X1.25', '1.5X1.5', '2X2', '3X1'] };
+const NOMBRES_LISTA = { espesor: 'Espesores de laminado plástico (mm)', calibre_lamina: 'Calibres y placas de lámina', espesor_espuma: 'Espesores de espuma', calibre_tubular: 'Calibres de tubular', medida_tubular: 'Medidas de tubular' };
 function listaMedidas(lista) { // [{ id, valor }], ordenadas de menor a mayor
   const filas = cache.medidas ? cache.medidas.filter(x => x.lista === lista) : MEDIDAS_BASE[lista].map(v => ({ id: null, valor: v }));
-  const clave = v => { if (esPlaca(v)) return 1e7 + parteMedida(placaNormal(v)) * 1000; const n = String(v).split('X').map(Number); return n[0] * 1000 + (n[1] || 0); }; // placas después de los calibres
+  const clave = v => { if (espumaNormal(v)) { const e = espumaNormal(v), n = parteMedida(e.replace(/(CM|MM|PLG)$/, '')); return (/PLG$/.test(e) ? 25.4 : /CM$/.test(e) ? 10 : 1) * n; } if (esPlaca(v)) return 1e7 + parteMedida(placaNormal(v)) * 1000; const n = String(v).split('X').map(Number); return n[0] * 1000 + (n[1] || 0); }; // placas después de los calibres
   return filas.slice().sort((a, b) => clave(a.valor) - clave(b.valor));
 }
-const listaDeCampo = (k, atributo) => k === 'espesor' ? 'espesor' : k === 'medida' ? 'medida_tubular' : atributo === 'tubular' ? 'calibre_tubular' : 'calibre_lamina';
+const listaDeCampo = (k, atributo) => k === 'grosor' ? 'espesor_espuma' : k === 'espesor' ? 'espesor' : k === 'medida' ? 'medida_tubular' : atributo === 'tubular' ? 'calibre_tubular' : 'calibre_lamina';
 function valorEnLista(k, v) { // formato con el que se compara contra la lista
   if (v === '' || v == null) return '';
   if (k === 'medida') return normalizarMedida(v) || String(v).toUpperCase();
   if (k === 'calibre' && esPlaca(v)) return placaNormal(v);
+  if (k === 'grosor') return espumaNormal(v) || String(v).toUpperCase();
   const n = Number(String(v).replace(',', '.')); return isFinite(n) ? numeroTexto(n) : String(v);
 }
 function fueraDeLista(d, atributo) { // datos escritos que no están en la lista oficial
   const e = {};
-  const campos = atributo === 'espesor' ? ['espesor'] : atributo === 'calibre' ? ['calibre'] : atributo === 'tubular' ? ['medida', 'calibre'] : [];
+  const campos = atributo === 'espesor' ? ['espesor'] : atributo === 'calibre' ? ['calibre'] : atributo === 'tubular' ? ['medida', 'calibre'] : atributo === 'espuma' ? ['grosor'] : [];
   for (const k of campos) { const v = valorEnLista(k, d[k]); if (v && !listaMedidas(listaDeCampo(k, atributo)).some(x => x.valor === v)) e[k] = `${v} no está en la lista: agrégalo o elige otro.`; }
   return e;
 }
@@ -3380,7 +3402,7 @@ function SelectorMedida({ id, k, atributo, valor, clase, onElegir, alAgregar }) 
   return h('select', { id, class: clase, value: fuera ? `__fuera` : v, onChange: ev => { if (ev.target.value === '__nuevo') alAgregar(); else if (ev.target.value !== '__fuera') onElegir(ev.target.value); } },
     h('option', { value: '' }, 'Elige…'),
     fuera ? h('option', { value: '__fuera' }, `${v} (no está en la lista)`) : null,
-    lista.map(x => h('option', { value: x.valor }, k === 'espesor' ? `${x.valor} mm` : k === 'calibre' ? textoCalibre(x.valor) : medidaEnFraccion(x.valor) ? `${medidaEnFraccion(x.valor)}  (${x.valor})` : x.valor)),
+    lista.map(x => h('option', { value: x.valor }, k === 'espesor' ? `${x.valor} mm` : k === 'calibre' ? textoCalibre(x.valor) : k === 'grosor' ? textoEspuma(x.valor) : medidaEnFraccion(x.valor) ? `${medidaEnFraccion(x.valor)}  (${x.valor})` : x.valor)),
     h('option', { value: '__nuevo' }, '＋ Agregar a la lista…'));
 }
 function abrirModalMedidas({ lista = null, volver = null, alVolver = null } = {}) {
@@ -3390,7 +3412,7 @@ function abrirModalMedidas({ lista = null, volver = null, alVolver = null } = {}
 async function agregarMedida(lista) {
   const m = estado.modal, v = String((m.nuevo || {})[lista] || '').trim();
   if (!v) return;
-  const valor = lista === 'medida_tubular' ? (normalizarMedida(v) || v) : lista === 'calibre_lamina' && esPlaca(v) ? placaNormal(v) : v.replace(',', '.');
+  const valor = lista === 'medida_tubular' ? (normalizarMedida(v) || v) : lista === 'calibre_lamina' && esPlaca(v) ? placaNormal(v) : lista === 'espesor_espuma' ? (espumaNormal(v) || v) : v.replace(',', '.');
   m.enviando = true; m.error = null; render();
   try { await DataService.agregarMedida(lista, valor); m.nuevo = { ...m.nuevo, [lista]: '' }; m.ultimo = { lista, valor: String(valor).toUpperCase() }; agregarAviso('exito', `Agregado a la lista: ${String(valor).toUpperCase()}.`); }
   catch (e) { m.error = e.message; }
@@ -3415,17 +3437,17 @@ function ModalMedidas() {
     !cache.medidas ? h('p', { class: 'mt-3 rounded-md bg-[#FFF4DB] p-2 text-sm text-[#5C4410] dark:bg-[#3A2F14] dark:text-[#F0D9A0]' }, 'Falta ejecutar en Supabase el script actualizacion_catalogos_y_medidas.sql; mientras tanto se usan las medidas de siempre.') : null,
     h('div', { class: 'mt-4 space-y-4' }, listas.map(lista => h('div', null,
       h('p', { class: 'text-sm font-semibold' }, NOMBRES_LISTA[lista]),
-      h('ul', { class: 'mt-1.5 flex flex-wrap gap-1.5' }, listaMedidas(lista).map(x => h('li', { class: 'flex items-center gap-1 rounded-md border border-[#D5DBE2] px-2 py-0.5 text-sm tabular-nums dark:border-[#2E3A48]' }, x.valor,
+      h('ul', { class: 'mt-1.5 flex flex-wrap gap-1.5' }, listaMedidas(lista).map(x => h('li', { class: 'flex items-center gap-1 rounded-md border border-[#D5DBE2] px-2 py-0.5 text-sm tabular-nums dark:border-[#2E3A48]' }, lista === 'espesor_espuma' ? textoEspuma(x.valor) : x.valor,
         esJefe && x.id ? h('button', { type: 'button', class: 'text-[#B42318] dark:text-[#F28B82]', 'aria-label': `Quitar ${x.valor}`, title: 'Quitar de la lista', onClick: () => quitarMedida(x) }, icono('x', 'w-3 h-3')) : null))),
       cache.medidas ? h('div', { class: 'mt-2 flex gap-2' },
         h('label', { for: `medida-${lista}`, class: 'sr-only' }, `Nuevo valor para ${NOMBRES_LISTA[lista]}`),
-        h('input', { id: `medida-${lista}`, class: `${CLS.input} max-w-[10rem] py-1 text-sm`, placeholder: lista === 'medida_tubular' ? 'Ej. 1.5X1' : lista === 'espesor' ? 'Ej. 25' : lista === 'calibre_lamina' ? 'Ej. 20 o 3/8' : 'Ej. 20',
+        h('input', { id: `medida-${lista}`, class: `${CLS.input} max-w-[10rem] py-1 text-sm`, placeholder: lista === 'medida_tubular' ? 'Ej. 1.5X1' : lista === 'espesor' ? 'Ej. 25' : lista === 'calibre_lamina' ? 'Ej. 20 o 3/8' : lista === 'espesor_espuma' ? 'Ej. 3 plg o 2 cm' : 'Ej. 20',
           value: (m.nuevo || {})[lista] || '', disabled: m.enviando, onInput: ev => { estado.modal.nuevo = { ...(estado.modal.nuevo || {}), [lista]: ev.target.value }; }, onKeydown: ev => { if (ev.key === 'Enter') { ev.preventDefault(); agregarMedida(lista); } } }),
         h('button', { type: 'button', class: CLS.btnChico, disabled: m.enviando, onClick: () => agregarMedida(lista) }, icono('mas', 'w-3.5 h-3.5'), 'Agregar')) : null))),
     ErrorModal(m.error),
     h('div', { class: 'mt-6 flex justify-end' }, h('button', { type: 'button', id: 'confirmar-cancelar', class: CLS.btnPrimario, onClick: cerrarModalMedidas }, m.volver ? 'Listo, regresar' : 'Cerrar')));
 }
-const SUGERENCIAS_NOMEN = { espesor: ['3', '6', '9', '12', '15', '16', '18', '19', '25', '28'], calibre: ['10', '12', '14', '16', '18', '20', '22'], medida: ['1X1', '2X1', '1.25X1.25', '1.5X1.5', '2X2', '3X1'] };
+const SUGERENCIAS_NOMEN = { grosor: ['1CM', '1PLG', '2PLG'], espesor: ['3', '6', '9', '12', '15', '16', '18', '19', '25', '28'], calibre: ['10', '12', '14', '16', '18', '20', '22'], medida: ['1X1', '2X1', '1.25X1.25', '1.5X1.5', '2X2', '3X1'] };
 
 /* Avance: completados ÷ entregables activos, redondeado a entero. Un SKU está completo solo al 100 %. */
 function calcularPorcentaje(completados, total) { return total ? Math.round((completados * 100) / total) : 0; }
@@ -5268,12 +5290,13 @@ function ModalDocumento() {
   };
   const camposAtributo = (i, atributo) => atributo === 'espesor' ? [menu(i, 'espesor', 'Espesor', 'w-28')]
     : atributo === 'calibre' ? [menu(i, 'calibre', 'Calibre o placa', 'w-32')]
-    : atributo === 'tubular' ? [menu(i, 'medida', 'Tubular', 'w-48'), menu(i, 'calibre', 'Calibre', 'w-28')] : [];
+    : atributo === 'tubular' ? [menu(i, 'medida', 'Tubular', 'w-48'), menu(i, 'calibre', 'Calibre', 'w-28')]
+    : atributo === 'espuma' ? [menu(i, 'grosor', 'Espesor', 'w-28')] : [];
   // Dato común por material: si todas las piezas de un material llevan el mismo espesor, calibre o medida
-  const NOMBRE_ATRIB = { espesor: 'Laminado', calibre: 'Lámina', tubular: 'Tubular' };
+  const NOMBRE_ATRIB = { espesor: 'Laminado', calibre: 'Lámina', tubular: 'Tubular', espuma: 'Espuma' };
   const atributosPresentes = [...new Set(plan.filas.map(f => f.atributo))].filter(a => a !== 'ninguno');
-  const camposComunes = a => a === 'espesor' ? [['espesor', 'Espesor']] : a === 'calibre' ? [['calibre', 'Calibre o placa']] : [['medida', 'Tubular'], ['calibre', 'Calibre']];
-  const aplicarATodas = a => { const c = (estado.modal.comun || {})[a] || {}; plan.filas.forEach((f, i) => { if (f.atributo !== a) return; const d = { ...(estado.modal.datos[i] || {}) }; ['espesor', 'calibre', 'medida'].forEach(k => { if (c[k]) d[k] = c[k]; }); estado.modal.datos[i] = d; }); render(); };
+  const camposComunes = a => a === 'espesor' ? [['espesor', 'Espesor']] : a === 'calibre' ? [['calibre', 'Calibre o placa']] : a === 'espuma' ? [['grosor', 'Espesor']] : [['medida', 'Tubular'], ['calibre', 'Calibre']];
+  const aplicarATodas = a => { const c = (estado.modal.comun || {})[a] || {}; plan.filas.forEach((f, i) => { if (f.atributo !== a) return; const d = { ...(estado.modal.datos[i] || {}) }; ['espesor', 'calibre', 'medida', 'grosor'].forEach(k => { if (c[k]) d[k] = c[k]; }); estado.modal.datos[i] = d; }); render(); };
   const barraComun = m.archivos.length > 1 && atributosPresentes.length ? h('div', { class: 'space-y-2 rounded-md bg-[#F4F6F8] p-2 dark:bg-[#1F2833]' },
     h('p', { class: 'text-xs font-medium' }, 'Si todas las piezas de un material llevan el mismo dato, elígelo una vez:'),
     atributosPresentes.filter(a => plan.filas.filter(f => f.atributo === a).length > 1).map(a => h('div', { class: 'flex flex-wrap items-end gap-2' },
@@ -5498,6 +5521,7 @@ function ModalCargaMasiva() {
         f.tipo ? [texto('cantidad', 'Piezas', 'w-16', { type: 'number', min: '1', max: '999' }),
           f.atributo === 'espesor' ? menu('espesor', 'Espesor') : null, f.atributo === 'tubular' ? menu('medida', 'Tubular') : null,
           f.atributo === 'calibre' || f.atributo === 'tubular' ? menu('calibre', f.atributo === 'calibre' ? 'Calibre o placa' : 'Calibre') : null,
+          f.atributo === 'espuma' ? menu('grosor', 'Espesor') : null,
           texto('nombre', 'Nombre de la pieza', 'min-w-[10rem] flex-1', { maxlength: '80' })] : null) : null,
       h('div', { class: 'mt-1.5 flex flex-wrap items-center justify-between gap-2' }, h('code', { class: 'break-all text-xs font-semibold' }, f.pieza || '—'), etiqueta));
   };
@@ -5642,7 +5666,7 @@ function ModalCorteCatalogo() {
           h('input', { id: 'corte-codigo', class: CLS.input, maxlength: '20', placeholder: 'LP, LAMINA, TUBULAR…', value: m.datos.codigo_material, onInput: ev => campo('codigo_material', ev.target.value) })),
         h('div', null, h('label', { for: 'corte-atributo', class: CLS.etiqueta }, 'Dato que se pide'),
           h('select', { id: 'corte-atributo', class: CLS.input, value: m.datos.atributo, onChange: ev => campo('atributo', ev.target.value) },
-            [['ninguno', 'Ninguno (tela, panel)'], ['espesor', 'Espesor en mm (laminado plástico)'], ['calibre', 'Calibre o placa (lámina)'], ['tubular', 'Medida y calibre (tubular)']].map(([v, t]) => h('option', { value: v }, t))))) : null,
+            [['ninguno', 'Ninguno (tela, panel)'], ['espesor', 'Espesor en mm (laminado plástico)'], ['calibre', 'Calibre o placa (lámina)'], ['tubular', 'Medida y calibre (tubular)'], ['espuma', 'Espesor con unidad (espuma: 1 cm, 1 plg…)']].map(([v, t]) => h('option', { value: v }, t))))) : null,
       m.entidad === 'tipo' ? h('div', null, h('label', { for: 'corte-ext', class: CLS.etiqueta }, 'Formatos permitidos'),
         h('input', { id: 'corte-ext', class: e.extensiones ? CLS.inputError : CLS.input, placeholder: 'dxf   o   igs,iges', value: m.datos.extensiones, onInput: ev => campo('extensiones', ev.target.value) }),
         e.extensiones ? ErrorCampo(e.extensiones, 'corte-ext-error') : h('p', { class: 'mt-1 text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, 'Extensiones sin punto, separadas por coma.')) : null),
@@ -6053,7 +6077,7 @@ function ModalRenombrarPieza() {
     h('div', { class: 'mt-4 flex flex-wrap items-start gap-3' },
       campo('cantidad', 'Piezas', 'w-20', { type: 'number', min: '1', max: '999' }),
       h('div', { class: 'pt-8 text-sm font-semibold' }, codigo),
-      ...[['espesor', 'Espesor', atributo === 'espesor'], ['medida', 'Tubular', atributo === 'tubular'], ['calibre', atributo === 'calibre' ? 'Calibre o placa' : 'Calibre', atributo === 'calibre' || atributo === 'tubular']]
+      ...[['espesor', 'Espesor', atributo === 'espesor'], ['medida', 'Tubular', atributo === 'tubular'], ['calibre', atributo === 'calibre' ? 'Calibre o placa' : 'Calibre', atributo === 'calibre' || atributo === 'tubular'], ['grosor', 'Espesor', atributo === 'espuma']]
         .filter(([, , ok]) => ok).map(([k, et]) => h('div', { class: 'w-32' }, h('label', { for: `rn-${k}`, class: CLS.etiqueta }, et),
           SelectorMedida({ id: `rn-${k}`, k, atributo, valor: m.datos[k], clase: (e[k] || fl[k]) ? CLS.inputError : CLS.input,
             onElegir: v => { estado.modal.datos = { ...estado.modal.datos, [k]: v }; render(); },
