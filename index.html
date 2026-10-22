@@ -99,7 +99,7 @@ const CONFIG = Object.assign({
   DRIVE_URL: 'PEGA-AQUI-LA-DIRECCION-DEL-INTERMEDIARIO'
 }, (typeof window !== 'undefined' && window.CONFIG_APLICATIVO) || {});
 /* C2. Versión del aplicativo: cambia con cada actualización */
-const VERSION_APP = '2026.10.22';
+const VERSION_APP = '2026.10.22.2';
 const BUCKET_IMAGENES = 'ing-imagenes';
 const driveListo = () => /^https:\/\/script\.google\.com\//.test(CONFIG.DRIVE_URL);
 const LOGO_LINEA_ITALIA = 'data:image/png;base64,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'; // logo completo en negro; en modo oscuro se invierte a blanco
@@ -428,7 +428,7 @@ const DataService = {
     exigirPermiso('prototipos');
     const err = validarArchivoDocumento(archivo, tipo); if (err) throw new ErrorApi(err, { tipo: 'validacion' });
     const bytes = new Uint8Array(await archivo.arrayBuffer()), sha = await sha256Bytes(bytes), comprimido = pako.gzip(bytes, { level: 9 });
-    const subida = await llamarDrive('subir', { contenido: aBase64(comprimido), nombre: archivo.name, nombre_drive: `${cantidad}PZ_${nombreSeguroWindows(pieza)}.${extensionDe(archivo.name)}`,
+    const subida = await llamarDrive('subir', { contenido: aBase64(comprimido), nombre: archivo.name, nombre_drive: tipo.categoria === 'tecnica' ? 'ESPECIFICACION.pdf' : `${cantidad}PZ_${nombreSeguroWindows(pieza)}.${extensionDe(archivo.name)}`,
       carpetas: ['Prototipos', `${proto.id} ${proto.nombre}`.slice(0, 100), tipo.nombre], pieza });
     await ejecutar(SB.rpc('ing_agregar_archivo_prototipo', { p_prototipo: proto.id, p_tipo: tipo.id, p_pieza: pieza, p_cantidad: Number(cantidad) || 1,
       p_drive_id: subida.drive_id, p_nombre_original: archivo.name, p_tamano: archivo.size, p_tamano_guardado: subida.tamano_guardado || comprimido.length, p_sha256: sha }))
@@ -443,6 +443,11 @@ const DataService = {
       return r.data || 0;
     } catch (e) { return 0; } // si aún no se instala el borrado automático, o Drive no responde, se intenta la próxima vez
   },
+  async quitarEspecificacionPrototipo(id) { // la especificación anterior se borra de Drive
+    exigirPermiso('prototipos');
+    const { data } = await ejecutar(SB.rpc('ing_quitar_especificacion_prototipo', { p_prototipo: id }));
+    if (data) llamarDrive('borrar', { drive_ids: [data] }).catch(() => {});
+  },
   async cancelarPrototipo(id) { exigirPermiso('prototipos'); await ejecutar(SB.rpc('ing_cancelar_prototipo', { p_id: id })); },
   async marcarPrototipoCortado(id, nota) { const { data } = await ejecutar(SB.rpc('ing_marcar_prototipo_cortado', { p_prototipo: id, p_nota: String(nota || '').trim() || null })); return data; },
   async bytesPrototipo(a) { const res = await llamarDrive('descargar', { drive_id: a.drive_id }); return pako.ungzip(deBase64(res.contenido)); },
@@ -452,6 +457,13 @@ const DataService = {
   },
   async estadoParaSolicitud(clave, tipoId) { // qué hay de ese tipo de archivo en el SKU; null si aún no se instala la actualización
     try { const { data } = await ejecutar(SB.rpc('ing_estado_para_solicitud', { p_sku_clave: String(clave || '').trim(), p_tipo: Number(tipoId) })); return data || null; }
+    catch (e) { return null; }
+  },
+  async reportarProblema(documentoId, detalle) {
+    await ejecutar(SB.rpc('ing_reportar_problema', { p_documento: documentoId, p_detalle: String(detalle || '').trim() }));
+  },
+  async problemasPendientes() { // piezas con un problema reportado sin resolver; null si aún no se instala la actualización
+    try { const { data } = await ejecutar(SB.rpc('ing_problemas_pendientes')); return data || []; }
     catch (e) { return null; }
   },
   async crearSolicitud(clave, tipoId, detalle) {
@@ -1828,10 +1840,10 @@ function avisosCampana() {
     for (const d of cambiosOperador()) lista.push({ id: `pz-${d.version_id}`, fecha: d.subida_en, icono: 'descarga', titulo: `${d.version_vigente > 1 ? 'Pieza actualizada' : 'Pieza nueva'} · ${d.sku_clave}`,
       texto: `${d.pieza} · versión ${d.version_vigente}. Descárgala y reemplázala en tu USB.`, accion: () => { (estado.corte.abiertos || (estado.corte.abiertos = new Set())).add(d.sku_id); irA('corte'); } });
   }
-  if (puede(s.rol_id, 'subir_documentos')) for (const x of solicitudesPendientes()) lista.push({ id: `so-${x.id}`, fecha: x.created_at, icono: 'descarga', titulo: `Solicitud de archivo · ${x.sku_clave}`,
-      texto: `${x.maquina_nombre || x.solicitante_nombre || 'Un operador'} pide ${x.tipo_nombre}: ${x.detalle.slice(0, 90)}`, accion: () => irA('corte') });
+  if (puede(s.rol_id, 'subir_documentos')) for (const x of solicitudesPendientes()) lista.push({ id: `so-${x.id}`, fecha: x.created_at, icono: 'descarga', titulo: x.motivo === 'problema' ? `Problema con una pieza · ${x.sku_clave}` : `Solicitud de archivo · ${x.sku_clave}`,
+      texto: x.motivo === 'problema' ? `${x.maquina_nombre || x.solicitante_nombre || 'Un operador'} reporta un problema con ${x.pieza || 'una pieza'}: ${x.detalle.slice(0, 90)}` : `${x.maquina_nombre || x.solicitante_nombre || 'Un operador'} pide ${x.tipo_nombre}: ${x.detalle.slice(0, 90)}`, accion: () => irA('corte') });
   if (s.rol_id === ROLES.OPERADOR) for (const x of (estado.solicitudes.lista || []).filter(y => y.estado !== 'pendiente').slice(0, 20)) lista.push({ id: `sr-${x.id}`, fecha: x.atendida_en, icono: x.estado === 'atendida' ? 'check' : 'x',
-      titulo: `Solicitud ${x.estado} · ${x.sku_clave}`, texto: `${x.tipo_nombre}${x.respuesta ? `: ${x.respuesta.slice(0, 90)}` : ''}`, accion: () => irA('corte') });
+      titulo: x.motivo === 'problema' ? `${x.estado === 'atendida' ? 'Problema resuelto' : 'Reporte rechazado'} · ${x.sku_clave}` : `Solicitud ${x.estado} · ${x.sku_clave}`, texto: `${x.motivo === 'problema' ? x.pieza || x.tipo_nombre : x.tipo_nombre}${x.respuesta ? `: ${x.respuesta.slice(0, 90)}` : ''}`, accion: () => irA('corte') });
   if (s.rol_id === ROLES.OPERADOR) for (const p of protosPorCortar()) lista.push({ id: `pp-${p.id}`, fecha: p.created_at, icono: 'campana', titulo: `Prototipo por cortar · ${p.nombre}`,
       texto: `${p.ingeniero_nombre || 'Ingeniería'} lo mandó a cortar${p.fecha_requerida ? `; se necesita para el ${p.fecha_requerida.split('-').reverse().join('/')}` : ''}.`, accion: () => irA('corte') });
   if (s.rol_id === ROLES.INGENIERO) for (const p of (estado.proto.lista || []).filter(x => x.created_by === s.user_id)) for (const a of p.areas.filter(x => x.corte)) lista.push({ id: `pc-${a.corte.id}`, fecha: a.corte.created_at, icono: 'check',
@@ -1934,9 +1946,12 @@ async function guardarAtenderObs() {
 function armarPrototipos(d) { // une prototipos con sus archivos y cortes
   if (!d) return null;
   return d.protos.map(p => {
-    const archivos = d.archivos.filter(a => a.prototipo_id === p.id), cortes = d.cortes.filter(c => c.prototipo_id === p.id);
+    const todos = d.archivos.filter(a => a.prototipo_id === p.id), cortes = d.cortes.filter(c => c.prototipo_id === p.id);
+    const archivos = todos.filter(a => a.categoria !== 'tecnica'); // la especificación no es una pieza ni un área de corte
+    const especs = todos.filter(a => a.categoria === 'tecnica').sort((a, b) => b.id - a.id);
+    const espec = especs.find(a => !a.archivo_borrado) || especs[0] || null;
     const areas = [...new Map(archivos.map(a => [a.area_id, a.area_nombre])).entries()].map(([id, nombre]) => ({ id, nombre, corte: cortes.find(c => c.area_id === id) || null }));
-    return { ...p, archivos, cortes, areas };
+    return { ...p, archivos, cortes, areas, espec };
   });
 }
 function miAreaId() { const s = estado.sesion; const m = s && s.maquina_id ? cache.maquinas[String(s.maquina_id)] : null; return m ? m.area_id : null; }
@@ -1963,7 +1978,7 @@ async function cargarPrototipos({ primera = false } = {}) {
   estado.proto.conocidos = claves; estado.proto.lista = lista;
   render();
 }
-const nombreArchivoProto = (p, a) => /^PROTO_/i.test(a.pieza)
+const nombreArchivoProto = (p, a) => a.categoria === 'tecnica' ? `PROTOTIPO_${limpiarNombrePieza(p.nombre)}_ESPECIFICACION.pdf` : /^PROTO_/i.test(a.pieza)
   ? `PROTOTIPO_${limpiarNombrePieza(p.nombre)}_${nombreSeguroWindows(String(a.pieza).replace(/^PROTO_/i, ''))}.${extensionDe(a.nombre_original) || 'dat'}`
   : `PROTOTIPO_${limpiarNombrePieza(p.nombre)}_${a.cantidad}${a.cantidad === 1 ? 'PZA' : 'PZAS'}_${limpiarNombrePieza(a.pieza)}.${extensionDe(a.nombre_original) || 'dat'}`;
 async function descargarArchivoProto(p, a) {
@@ -1985,6 +2000,49 @@ function verArchivoProto(p, a) {
   if (!window.VisorCorte) return;
   window.VisorCorte.abrir({ nombre: nombreArchivoProto(p, a), subtitulo: `Prototipo ${p.nombre} · ${a.tipo_nombre} · ${a.cantidad} ${a.cantidad === 1 ? 'pieza' : 'piezas'}`, obtenerBytes: () => DataService.bytesPrototipo(a) });
 }
+/* ---------- Especificación temporal del prototipo ---------- */
+const tipoEspecificacion = () => tiposTecnicos().find(t => t.codigo_material === 'ESPEC') || null;
+function verEspecProto(p, a) {
+  verDocumentoPdf({ sku_clave: `Prototipo ${p.nombre}`, tipo_nombre: 'Especificación temporal', tipo_documento_id: a.tipo_documento_id, version_vigente: 1, subida_en: a.created_at,
+    obtenerBytes: () => DataService.bytesPrototipo(a), descargar: () => descargarArchivoProto(p, a) });
+}
+async function subirEspecProto(p, archivo) {
+  const tipo = tipoEspecificacion();
+  if (!tipo || !archivo) return;
+  const err = validarArchivoDocumento(archivo, tipo); if (err) { agregarAviso('error', err); return; }
+  estado.proto.subiendoEspec = p.id; render();
+  try {
+    if (p.espec && !p.espec.archivo_borrado) await DataService.quitarEspecificacionPrototipo(p.id);
+    await DataService.subirArchivoPrototipo(p, tipo, archivo, 'ESPECIFICACION', 1);
+    agregarAviso('exito', `Especificación de ${p.nombre} guardada. Se elimina sola en 30 días.`);
+  } catch (e) { agregarAviso('error', e.message); }
+  finally { estado.proto.subiendoEspec = null; await cargarPrototipos(); render(); }
+}
+function pedirQuitarEspecProto(p) {
+  abrirConfirmacion({ titulo: `Quitar la especificación de ${p.nombre}`, textoBoton: 'Quitar', peligro: true,
+    mensaje: 'Se borra el PDF y los operadores dejan de verlo. Las piezas del prototipo no cambian.',
+    accion: async () => { await DataService.quitarEspecificacionPrototipo(p.id); agregarAviso('exito', 'Especificación quitada.'); await cargarPrototipos(); } });
+}
+function EspecProto(p, { editable }) {
+  const a = p.espec, tipo = tipoEspecificacion();
+  if (!tipo || (!a && !editable)) return null;
+  const subiendo = estado.proto.subiendoEspec === p.id, idInput = `espec-proto-${p.id}`;
+  const entrada = h('input', { id: idInput, type: 'file', accept: '.pdf,application/pdf', class: 'sr-only', tabindex: '-1', 'aria-hidden': 'true', onChange: ev => { const f = ev.target.files[0]; ev.target.value = ''; subirEspecProto(p, f); } });
+  const elegir = texto => h('button', { type: 'button', class: CLS.btnChico, disabled: subiendo, onClick: () => document.getElementById(idInput).click() }, subiendo ? [Spinner('w-3.5 h-3.5'), 'Subiendo…'] : [icono('subir', 'w-3.5 h-3.5'), texto]);
+  const activa = a && !a.archivo_borrado;
+  return h('div', { class: 'mt-3 flex flex-wrap items-center gap-2 rounded-md border border-[#D5DBE2] bg-[#F7F9FA] px-3 py-2 text-sm dark:border-[#2E3A48] dark:bg-[#1F2833]' },
+    icono('reporte', 'w-4 h-4 text-[#1E4E79] dark:text-[#7FB2E5]'),
+    h('div', { class: 'min-w-0 flex-1' },
+      h('p', { class: 'font-medium' }, activa ? 'Especificación temporal' : a ? 'Especificación eliminada' : 'Sin especificación (opcional)'),
+      h('p', { class: 'text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, activa ? `${a.nombre_original} · Se elimina el ${fechaCorta(a.se_borra_en)}`
+        : a ? `Se eliminó el ${fechaCorta(a.borrado_en)}` : 'Si la subes, los operadores de las áreas de este prototipo la ven en pantalla. Se elimina sola en 30 días.')),
+    activa ? h('button', { type: 'button', class: CLS.btnChico, onClick: () => verEspecProto(p, a) }, icono('ojo', 'w-3.5 h-3.5'), 'Ver') : null,
+    editable ? entrada : null,
+    editable ? elegir(activa ? 'Cambiar' : a ? 'Subir otra' : 'Agregar especificación') : null,
+    editable && activa ? h('button', { type: 'button', class: CLS.btnChico, disabled: subiendo, onClick: () => pedirQuitarEspecProto(p) }, 'Quitar') : null);
+}
+const botonEspecOperador = p => p.espec && !p.espec.archivo_borrado
+  ? h('button', { type: 'button', class: CLS.btnSecundario, onClick: () => verEspecProto(p, p.espec) }, icono('reporte'), 'Ver especificación') : null;
 function erroresFilaProto(f) {
   const tipo = DataService.catalogosCorte().tipos.find(t => t.id === Number(f.tipo_id)), { atributo } = nomenDeTipo(tipo);
   return { ...datosNomenValidos(f.datos || {}, atributo), ...fueraDeLista(f.datos || {}, atributo) };
@@ -2020,6 +2078,10 @@ async function guardarPrototipo() {
       try { await DataService.subirArchivoPrototipo(proto, tipo, f.archivo, nombreEstandar('PROTO', tipo, f.datos), Number(f.datos.cantidad)); }
       catch (e) { m.errores.push(`${f.archivo.name}: ${e.message}`); fallidas.push(f); }
       m.hecho++; render();
+    }
+    if (m.espec && !m.especSubida) { // la especificación es opcional: si falla, el prototipo sigue y se puede agregar desde su tarjeta
+      try { await DataService.subirArchivoPrototipo(proto, tipoEspecificacion(), m.espec, 'ESPECIFICACION', 1); m.especSubida = true; }
+      catch (e) { m.errores.push(`Especificación (${m.espec.name}): ${e.message}. Puedes agregarla desde la tarjeta del prototipo.`); }
     }
     m.fallidas = fallidas;
     m.fase = 'listo'; m.enviando = false;
@@ -2081,6 +2143,7 @@ function VistaPrototipos() {
         h('button', { type: 'button', class: CLS.btnChico, disabled: o.descargando === p.id, onClick: () => descargarTodoProto(p, p.archivos) }, icono('descarga', 'w-3.5 h-3.5'), 'Descargar todo')),
       h('ul', { class: 'mt-3 flex flex-wrap gap-2' }, p.areas.map(a => h('li', { class: `rounded-md px-2.5 py-1 text-xs font-medium ${a.corte ? 'bg-[#E6F2EB] text-[#1F7A4D] dark:bg-[#173526] dark:text-[#5CC48E]' : p.estado === 'cancelado' ? 'bg-[#EEF1F4] text-[#5B6675] dark:bg-[#243040] dark:text-[#9AA7B6]' : 'bg-[#FFF4DB] text-[#B26A00] dark:bg-[#3A2F14] dark:text-[#E0A650]'}` },
         a.corte ? `✓ ${a.nombre}: cortado por ${a.corte.maquina_nombre || a.corte.cortado_por_nombre || '—'} · ${formatearFechaHora(a.corte.created_at)}${a.corte.nota ? ` · "${a.corte.nota}"` : ''}` : `${a.nombre}: ${p.estado === 'cancelado' ? 'cancelado' : 'por cortar'}`))),
+      EspecProto(p, { editable: p.created_by === yo && p.estado !== 'cancelado' }),
       h('div', { class: 'mt-3' }, ListaArchivosProto(p, p.archivos))))) : null);
 }
 /* Operadores: prototipos por cortar de su área */
@@ -2103,6 +2166,7 @@ function PrototiposOperador() {
             h('p', { class: 'text-base font-semibold' }, p.nombre),
             p.descripcion ? h('p', { class: 'text-sm' }, p.descripcion) : null,
             h('p', { class: 'text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, `Pidió ${p.ingeniero_nombre || 'ingeniería'} · ${formatearFechaHora(p.created_at)} · ${mios.reduce((t, a) => t + a.cantidad, 0)} piezas a cortar${p.fecha_requerida ? ` · Se necesita para el ${p.fecha_requerida.split('-').reverse().join('/')}` : ''}`)),
+          botonEspecOperador(p),
           h('button', { type: 'button', class: CLS.btnSecundario, disabled: estado.proto.descargando === p.id, onClick: () => descargarTodoProto(p, mios) }, icono('descarga'), `Descargar todo (${mios.length})`),
           h('button', { type: 'button', class: `${CLS.btnPrimario} py-3`, onClick: () => abrirModalCortado(p) }, icono('check'), 'Ya corté las piezas')),
         h('div', { class: 'mt-2' }, ListaArchivosProto(p, mios)));
@@ -2116,6 +2180,7 @@ function PrototiposOperador() {
             h('div', { class: 'min-w-0 flex-1' },
               h('p', { class: 'flex flex-wrap items-center gap-2 text-base font-semibold' }, h('span', { class: 'rounded bg-[#E6F2EB] px-1.5 py-0.5 text-xs font-semibold text-[#1F7A4D] dark:bg-[#173526] dark:text-[#5CC48E]' }, 'YA CORTADO'), p.nombre),
               h('p', { class: 'text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, `Pidió ${p.ingeniero_nombre || 'ingeniería'} · cortado ${formatearFechaHora(a.corte.created_at)}${a.corte.nota ? ` · "${a.corte.nota}"` : ''}`)),
+            botonEspecOperador(p),
             mios.some(x => !x.archivo_borrado) ? h('button', { type: 'button', class: CLS.btnSecundario, disabled: estado.proto.descargando === p.id, onClick: () => descargarTodoProto(p, mios) }, icono('descarga'), 'Descargar todo') : null),
           h('div', { class: 'mt-2' }, ListaArchivosProto(p, mios)));
       }))) : null);
@@ -2152,6 +2217,15 @@ function ModalPrototipo() {
       h('div', { class: 'sm:col-span-3' }, h('label', { for: 'pr-desc', class: CLS.etiqueta }, 'Indicaciones para el operador (opcional)'),
         h('textarea', { id: 'pr-desc', rows: '2', maxlength: '1000', class: CLS.input, placeholder: 'Ej. Cortar con prioridad; es para la revisión del viernes.', value: m.descripcion, onInput: ev => { estado.modal.descripcion = ev.target.value; } }))),
     h('div', { class: 'mt-4' }, zona),
+    tipoEspecificacion() ? h('div', { class: 'mt-3 flex flex-wrap items-center gap-2 rounded-md border border-[#D5DBE2] px-3 py-2 text-sm dark:border-[#2E3A48]' },
+      icono('reporte', 'w-4 h-4 text-[#1E4E79] dark:text-[#7FB2E5]'),
+      h('div', { class: 'min-w-0 flex-1' },
+        h('p', { class: 'font-medium' }, 'Especificación (PDF, opcional)'),
+        h('p', { class: 'text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, m.espec ? `${m.espec.name} · ${(m.espec.size / 1048576).toFixed(1)} MB` : 'Los operadores la ven en pantalla, sin descargarla. Se elimina con las piezas a los 30 días.')),
+      h('input', { id: 'pr-espec', type: 'file', accept: '.pdf,application/pdf', class: 'sr-only', tabindex: '-1', 'aria-hidden': 'true',
+        onChange: ev => { const f = ev.target.files[0]; ev.target.value = ''; if (!f) return; const e = validarArchivoDocumento(f, tipoEspecificacion()); if (e) { estado.modal.error = e; render(); return; } estado.modal.espec = f; estado.modal.error = null; render(); } }),
+      h('button', { type: 'button', class: CLS.btnChico, onClick: () => document.getElementById('pr-espec').click() }, icono('subir', 'w-3.5 h-3.5'), m.espec ? 'Cambiar' : 'Elegir PDF'),
+      m.espec ? h('button', { type: 'button', class: CLS.btnChico, 'aria-label': 'Quitar la especificación', onClick: () => { estado.modal.espec = null; render(); } }, icono('x', 'w-3.5 h-3.5')) : null) : null,
     m.filas.length ? h('div', { 'data-scroll-id': 'proto-filas', class: 'mt-3 max-h-80 space-y-2 overflow-y-auto rounded-md border border-[#D5DBE2] p-2 dark:border-[#2E3A48]' }, m.filas.map((f, i) => {
       const opciones = tipos.filter(t => String(t.extensiones || '').split(/[,\s]+/).includes(extensionDe(f.archivo.name)));
       const tipo = tipos.find(t => t.id === Number(f.tipo_id)), { atributo, codigo } = nomenDeTipo(tipo), e = erroresFilaProto(f);
@@ -2208,11 +2282,13 @@ async function cargarSolicitudes({ primera = false } = {}) {
   if (!primera && antes) {
     if (puede(estado.sesion.rol_id, 'subir_documentos')) {
       const nuevas = lista.filter(x => x.estado === 'pendiente' && !antes.has(x.id));
-      if (nuevas.length) notificar('Solicitud de archivo', nuevas.length === 1 ? `${nuevas[0].maquina_nombre || nuevas[0].solicitante_nombre} pide ${nuevas[0].tipo_nombre} de ${nuevas[0].sku_clave}: ${nuevas[0].detalle.slice(0, 80)}` : `${nuevas.length} solicitudes nuevas de archivos.`);
+      if (nuevas.length) notificar(nuevas.length === 1 && nuevas[0].motivo === 'problema' ? 'Problema con una pieza' : 'Solicitud de archivo', nuevas.length === 1
+        ? (nuevas[0].motivo === 'problema' ? `${nuevas[0].maquina_nombre || nuevas[0].solicitante_nombre} reporta un problema con ${nuevas[0].pieza || 'una pieza'} de ${nuevas[0].sku_clave}: ${nuevas[0].detalle.slice(0, 80)}` : `${nuevas[0].maquina_nombre || nuevas[0].solicitante_nombre} pide ${nuevas[0].tipo_nombre} de ${nuevas[0].sku_clave}: ${nuevas[0].detalle.slice(0, 80)}`)
+        : `${nuevas.length} solicitudes o reportes nuevos.`);
     }
     if (estado.sesion.rol_id === ROLES.OPERADOR) {
       const cambiadas = lista.filter(x => x.estado !== 'pendiente' && antes.get(x.id) === 'pendiente');
-      for (const x of cambiadas) notificar(x.estado === 'atendida' ? 'Solicitud atendida' : 'Solicitud rechazada', `${x.sku_clave} · ${x.tipo_nombre}${x.respuesta ? `: ${x.respuesta.slice(0, 80)}` : ''}`);
+      for (const x of cambiadas) notificar(x.motivo === 'problema' ? (x.estado === 'atendida' ? 'Problema resuelto' : 'Reporte rechazado') : x.estado === 'atendida' ? 'Solicitud atendida' : 'Solicitud rechazada', `${x.sku_clave} · ${x.motivo === 'problema' ? x.pieza || x.tipo_nombre : x.tipo_nombre}${x.respuesta ? `: ${x.respuesta.slice(0, 80)}` : ''}`);
     }
   }
   estado.solicitudes.conocidas = ahora; estado.solicitudes.lista = lista;
@@ -2326,9 +2402,13 @@ async function guardarAtenderSolicitud() {
   render();
 }
 function EtiquetaSolicitud(x) {
+  if (x.motivo === 'problema' && x.estado === 'pendiente') return h('span', { class: 'rounded bg-[#B42318] px-1.5 py-0.5 text-xs font-semibold text-white' }, 'PROBLEMA');
   const e = { pendiente: ['PENDIENTE', 'bg-[#FFF4DB] text-[#B26A00] dark:bg-[#3A2F14] dark:text-[#E0A650]'], atendida: ['ATENDIDA', 'bg-[#E6F2EB] text-[#1F7A4D] dark:bg-[#173526] dark:text-[#5CC48E]'], rechazada: ['RECHAZADA', 'bg-[#FDF3F2] text-[#B42318] dark:bg-[#3A1D1B] dark:text-[#F28B82]'] }[x.estado];
   return h('span', { class: `rounded px-1.5 py-0.5 text-xs font-semibold ${e[1]}` }, e[0]);
 }
+const textoSolicitud = x => x.motivo === 'problema'
+  ? ` · Problema con ${x.pieza || 'una pieza'}${x.version_reportada ? ` (v${x.version_reportada})` : ''}: ${x.detalle}`
+  : ` · ${x.tipo_nombre}: ${x.detalle}`;
 /* Operador: sus solicitudes */
 function MisSolicitudes() {
   const lista = estado.solicitudes.lista;
@@ -2343,7 +2423,7 @@ function MisSolicitudes() {
       h('p', { class: 'mb-1.5 text-xs font-semibold text-[#5B6675] dark:text-[#9AA7B6]' }, 'Mis solicitudes'),
       h('ul', { class: 'divide-y divide-[#E3E7EC] rounded-md border border-[#E3E7EC] dark:divide-[#26313D] dark:border-[#26313D]' }, lista.slice(0, 8).map(x => h('li', { class: 'flex flex-wrap items-center gap-2 px-3 py-2 text-sm' },
         EtiquetaSolicitud(x),
-        h('span', { class: 'min-w-0 flex-1' }, h('span', { class: 'font-semibold tabular-nums' }, x.sku_clave), ` · ${x.tipo_nombre} · ${x.detalle}`,
+        h('span', { class: 'min-w-0 flex-1' }, h('span', { class: 'font-semibold tabular-nums' }, x.sku_clave), textoSolicitud(x),
           x.respuesta ? h('span', { class: 'block text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, `Ingeniería: ${x.respuesta}`) : null),
         h('span', { class: 'text-xs text-[#7A8594]' }, formatearFechaHora(x.atendida_en || x.created_at)))))) : null);
 }
@@ -2357,15 +2437,15 @@ function SolicitudesIngenieria() {
   const fila = x => h('li', { class: 'flex flex-wrap items-center gap-2 px-3 py-2.5 text-sm' },
     EtiquetaSolicitud(x),
     h('div', { class: 'min-w-0 flex-1' },
-      h('p', null, h('button', { type: 'button', class: `${CLS.enlace} font-semibold tabular-nums`, onClick: () => abrirDetalle(x.sku_id) }, x.sku_clave), ` · ${x.tipo_nombre}: ${x.detalle}`),
-      h('p', { class: 'text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, `Pidió ${x.maquina_nombre || x.solicitante_nombre || '—'} · ${formatearFechaHora(x.created_at)}${x.estado !== 'pendiente' ? ` · ${x.estado === 'atendida' ? 'Atendió' : 'Rechazó'} ${x.atendida_por_nombre || '—'}${x.respuesta ? `: ${x.respuesta}` : ''}` : ''}`)),
+      h('p', null, h('button', { type: 'button', class: `${CLS.enlace} font-semibold tabular-nums`, onClick: () => abrirDetalle(x.sku_id) }, x.sku_clave), textoSolicitud(x)),
+      h('p', { class: 'text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, `${x.motivo === 'problema' ? 'Reportó' : 'Pidió'} ${x.maquina_nombre || x.solicitante_nombre || '—'} · ${formatearFechaHora(x.created_at)}${x.estado !== 'pendiente' ? ` · ${x.estado === 'atendida' ? 'Atendió' : 'Rechazó'} ${x.atendida_por_nombre || '—'}${x.respuesta ? `: ${x.respuesta}` : ''}` : ''}`)),
     x.estado === 'pendiente' && editable ? h('div', { class: 'flex gap-2' },
-      h('button', { type: 'button', class: CLS.btnChico, onClick: () => abrirModalAtenderSolicitud(x, 'atendida') }, icono('check', 'w-3.5 h-3.5'), 'Marcar como atendida'),
+      h('button', { type: 'button', class: CLS.btnChico, onClick: () => abrirModalAtenderSolicitud(x, 'atendida') }, icono('check', 'w-3.5 h-3.5'), x.motivo === 'problema' ? 'Marcar como resuelto' : 'Marcar como atendida'),
       h('button', { type: 'button', class: CLS.btnChico, onClick: () => abrirModalAtenderSolicitud(x, 'rechazada') }, 'Rechazar')) : null);
   return h('section', { class: `${CLS.panel} p-4 ${pend.length ? 'border-[#C98A1B] dark:border-[#D9A03A]' : ''}` },
     h('h2', { class: 'flex items-center gap-2 text-base font-semibold' }, 'Solicitudes de archivos',
       pend.length ? h('span', { class: 'rounded bg-[#B26A00] px-1.5 text-xs text-white' }, `${pend.length} ${pend.length === 1 ? 'pendiente' : 'pendientes'}`) : null),
-    h('p', { class: 'text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, 'Archivos que los operadores necesitan y no encuentran. Sube la pieza desde el detalle del SKU (clic en su clave) y después márcala como atendida.'),
+    h('p', { class: 'text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, 'Archivos que los operadores necesitan y no encuentran, y problemas que reportan con una pieza (en rojo). Corrige o sube la pieza desde el detalle del SKU (clic en su clave) y después márcala como atendida o resuelta.'),
     pend.length ? h('ul', { class: 'mt-3 divide-y divide-[#E3E7EC] rounded-md border border-[#E3E7EC] dark:divide-[#26313D] dark:border-[#26313D]' }, pend.map(fila)) : h('p', { class: 'mt-2 text-sm' }, 'No hay solicitudes pendientes.'),
     hechas.length ? h('details', { class: 'mt-2' }, h('summary', { class: 'cursor-pointer text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, `Atendidas recientemente (${hechas.length})`),
       h('ul', { class: 'mt-2 divide-y divide-[#E3E7EC] rounded-md border border-[#E3E7EC] dark:divide-[#26313D] dark:border-[#26313D]' }, hechas.map(fila))) : null);
@@ -2395,13 +2475,51 @@ function ModalSolicitud() {
     solicitudBloqueada(m) ? h('div', { class: 'mt-6 flex justify-end' }, h('button', { type: 'button', id: 'confirmar-cancelar', class: CLS.btnSecundario, onClick: cerrarModal }, 'Cerrar'))
       : h('fieldset', { disabled: !!(m.skuElegido && m.estadoSku === undefined), class: 'contents' }, PieModal('Enviar solicitud', guardarSolicitud, { enviando: m.enviando })));
 }
+/* ---------- Reportar un problema con una pieza ---------- */
+const problemasDe = d => (estado.corte.problemas && estado.corte.problemas.get(Number(d.id))) || [];
+const MOTIVOS_PROBLEMA = ['Medida incorrecta', 'Cantidad incorrecta', 'Material o espesor incorrecto', 'Falta o sobra un corte o barreno', 'El archivo no abre o está dañado', 'Otro'];
+function abrirModalProblema(d) {
+  estado.modal = { tipo: 'problema', doc: d, motivo: '', texto: '', error: null, enviando: false };
+  render();
+}
+async function guardarProblema() {
+  const m = estado.modal;
+  if (!m.motivo) { m.error = 'Elige qué tipo de problema es.'; render(); return; }
+  if (String(m.texto).trim().length < 5) { m.error = 'Describe el problema (mínimo 5 caracteres): qué medida, qué pieza, qué viste.'; render(); return; }
+  m.enviando = true; m.error = null; render();
+  try {
+    await DataService.reportarProblema(m.doc.id, `${m.motivo}: ${String(m.texto).trim()}`);
+    estado.modal = null;
+    agregarAviso('exito', `Problema reportado con ${m.doc.pieza}. Ingeniería ya recibió el aviso; no cortes esa pieza hasta que te respondan.`);
+    await cargarCorte({ silencioso: true });
+    cargarSolicitudes();
+  } catch (e) { if (estado.modal) { estado.modal.error = e.message; estado.modal.enviando = false; } }
+  render();
+}
+function ModalProblema() {
+  const m = estado.modal, d = m.doc;
+  return h('form', { novalidate: true, onSubmit: ev => { ev.preventDefault(); guardarProblema(); } },
+    h('h2', { id: 'titulo-modal', class: 'text-lg font-semibold' }, 'Reportar un problema con la pieza'),
+    h('p', { class: 'mt-2 rounded bg-[#F4F6F8] px-3 py-2 text-sm dark:bg-[#1F2833]' },
+      h('span', { class: 'font-semibold' }, `${d.sku_clave} · ${d.pieza}`), ` · ${d.tipo_nombre} · versión ${d.version_vigente}`),
+    problemasDe(d).length ? h('p', { class: 'mt-2 text-sm text-[#B42318] dark:text-[#F28B82]' }, `Ya hay ${problemasDe(d).length === 1 ? 'un problema reportado' : `${problemasDe(d).length} problemas reportados`} con esta pieza: ${problemasDe(d).map(x => x.detalle).join(' · ')}. Repórtalo solo si es algo distinto.`) : null,
+    h('fieldset', { class: 'mt-4' }, h('legend', { class: CLS.etiqueta }, '¿Qué está mal?'),
+      h('div', { class: 'flex flex-wrap gap-2' }, MOTIVOS_PROBLEMA.map(x => h('button', { type: 'button', disabled: m.enviando, 'aria-pressed': String(m.motivo === x),
+        class: `rounded-full border px-3 py-1.5 text-sm ${m.motivo === x ? 'border-[#1E4E79] bg-[#1E4E79] text-white dark:border-[#7FB2E5] dark:bg-[#7FB2E5] dark:text-[#11161C]' : 'border-[#D5DBE2] hover:bg-[#F4F6F8] dark:border-[#2E3A48] dark:hover:bg-[#1F2833]'}`,
+        onClick: () => { estado.modal.motivo = x; enfocarDespues = 'prob-texto'; render(); } }, x)))),
+    h('div', { class: 'mt-4' }, h('label', { for: 'prob-texto', class: CLS.etiqueta }, 'Describe el problema (obligatorio)'),
+      h('textarea', { id: 'prob-texto', rows: '3', maxlength: '440', class: CLS.input, disabled: m.enviando, placeholder: 'Ej. El archivo marca 600 mm de ancho y el plano dice 598 mm.', value: m.texto, onInput: ev => { estado.modal.texto = ev.target.value; } })),
+    h('p', { class: 'mt-2 text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, 'Ingeniería recibe el aviso al momento. Los demás operadores de tu área verán la pieza marcada hasta que se resuelva.'),
+    ErrorModal(m.error),
+    PieModal('Enviar reporte', guardarProblema, { enviando: m.enviando, textoEnviando: 'Enviando…' }));
+}
 function ModalAtenderSolicitud() {
   const m = estado.modal, x = m.sol, atender = m.accion === 'atendida';
   return h('form', { novalidate: true, onSubmit: ev => { ev.preventDefault(); guardarAtenderSolicitud(); } },
-    h('h2', { id: 'titulo-modal', class: 'text-lg font-semibold' }, atender ? 'Marcar solicitud como atendida' : 'Rechazar solicitud'),
-    h('p', { class: 'mt-2 rounded bg-[#F4F6F8] px-3 py-2 text-sm dark:bg-[#1F2833]' }, h('span', { class: 'font-semibold' }, `${x.sku_clave} · ${x.tipo_nombre}: `), x.detalle,
+    h('h2', { id: 'titulo-modal', class: 'text-lg font-semibold' }, x.motivo === 'problema' ? (atender ? 'Marcar el problema como resuelto' : 'Rechazar el reporte') : atender ? 'Marcar solicitud como atendida' : 'Rechazar solicitud'),
+    h('p', { class: 'mt-2 rounded bg-[#F4F6F8] px-3 py-2 text-sm dark:bg-[#1F2833]' }, h('span', { class: 'font-semibold' }, x.sku_clave), textoSolicitud(x),
       h('span', { class: 'block text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, `Pidió ${x.maquina_nombre || x.solicitante_nombre || '—'} · ${formatearFechaHora(x.created_at)}`)),
-    atender ? h('p', { class: 'mt-3 text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, 'Antes de marcarla, confirma que ya subiste la pieza en el detalle del SKU: el operador la buscará en su pantalla.') : null,
+    atender ? h('p', { class: 'mt-3 text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, x.motivo === 'problema' ? 'Antes de marcarlo, sube la versión corregida de la pieza (o explica en el mensaje por qué estaba bien). Al marcarlo, la pieza deja de aparecer como "Problema reportado" para los operadores.' : 'Antes de marcarla, confirma que ya subiste la pieza en el detalle del SKU: el operador la buscará en su pantalla.') : null,
     h('div', { class: 'mt-4' }, h('label', { for: 'sol-respuesta', class: CLS.etiqueta }, atender ? 'Mensaje para el operador (opcional)' : '¿Por qué se rechaza? (obligatorio)'),
       h('textarea', { id: 'sol-respuesta', rows: '3', maxlength: '500', class: CLS.input, disabled: m.enviando,
         placeholder: atender ? 'Ej. Ya está disponible como 1000_2PZAS_TUBULAR2X1_CAL18_TRAVESANO.' : 'Ej. Esa pieza ya viene incluida en el archivo LATERAL.', value: m.respuesta, onInput: ev => { estado.modal.respuesta = ev.target.value; } })),
@@ -2441,6 +2559,9 @@ async function cargarCorte({ silencioso = false } = {}) {
     const operador = estado.sesion.rol_id === ROLES.OPERADOR;
     const [docs, descargas, esperadas, tecnicos] = await Promise.all([DataService.listarDocumentos({ categoria: 'corte' }), puede(estado.sesion.rol_id, 'documentos') ? DataService.listarDescargas(60) : Promise.resolve(null), DataService.piezasEsperadas(),
       operador ? DataService.listarDocumentos({ categoria: 'tecnica' }).catch(() => []) : Promise.resolve([])]);
+    const problemas = await DataService.problemasPendientes();
+    c.problemas = problemas === null ? null : new Map();
+    for (const x of problemas || []) { const k = Number(x.documento_id); if (!c.problemas.has(k)) c.problemas.set(k, []); c.problemas.get(k).push(x); }
     c.datos = hayCategorias() ? docs : docs.filter(d => d.categoria !== 'tecnica'); c.descargas = descargas; c.esperadas = esperadas; c.error = null;
     c.tecnicos = new Map(); // operador: la especificación (y otros documentos permitidos) de los SKUs de su área, solo para ver
     for (const d of tecnicos) if (d.categoria === 'tecnica') { if (!c.tecnicos.has(d.sku_id)) c.tecnicos.set(d.sku_id, []); c.tecnicos.get(d.sku_id).push(d); }
@@ -4122,7 +4243,7 @@ function AdminEntregables() {
 function Modal() {
   const m = estado.modal;
   if (!m) return null;
-  const contenido = { desmarcar: ModalDesmarcar, sku: ModalSku, catalogo: ModalCatalogo, aprobar: ModalAprobar, reporte: ModalReporte, importarImagenes: ModalImportarImagenes, documento: ModalDocumento, retirarDocumento: ModalRetirarDocumento, versionesDocumento: ModalVersionesDocumento, corteCatalogo: ModalCorteCatalogo, noAplica: ModalNoAplica, solicitud: ModalSolicitud, cargaMasiva: ModalCargaMasiva, prototipo: ModalPrototipo, protoCortado: ModalProtoCortado, atenderSolicitud: ModalAtenderSolicitud, renombrarPieza: ModalRenombrarPieza, compartir: ModalCompartirPieza, copiarConfig: ModalCopiarConfig, tecnico: ModalTecnico, medidas: ModalMedidas, observacion: ModalObservacion, atenderObs: ModalAtenderObs, confirmar: ModalConfirmacion }[m.tipo]();
+  const contenido = { desmarcar: ModalDesmarcar, sku: ModalSku, catalogo: ModalCatalogo, aprobar: ModalAprobar, reporte: ModalReporte, importarImagenes: ModalImportarImagenes, documento: ModalDocumento, retirarDocumento: ModalRetirarDocumento, versionesDocumento: ModalVersionesDocumento, corteCatalogo: ModalCorteCatalogo, noAplica: ModalNoAplica, solicitud: ModalSolicitud, problema: ModalProblema, cargaMasiva: ModalCargaMasiva, prototipo: ModalPrototipo, protoCortado: ModalProtoCortado, atenderSolicitud: ModalAtenderSolicitud, renombrarPieza: ModalRenombrarPieza, compartir: ModalCompartirPieza, copiarConfig: ModalCopiarConfig, tecnico: ModalTecnico, medidas: ModalMedidas, observacion: ModalObservacion, atenderObs: ModalAtenderObs, confirmar: ModalConfirmacion }[m.tipo]();
   return h('div', { class: 'fixed inset-0 z-50 flex items-center justify-center p-4' },
     h('button', { type: 'button', class: 'absolute inset-0 h-full w-full cursor-default bg-[#1B2430]/40 dark:bg-[#000000]/40', 'aria-label': 'Cerrar diálogo', tabindex: '-1', onClick: cerrarModal }),
     h('div', { 'data-scroll-id': `modal-${m.tipo}`, class: `relative max-h-[90vh] w-full ${m.tipo === 'documento' || m.tipo === 'prototipo' || m.tipo === 'cargaMasiva' ? 'max-w-3xl' : m.tipo === 'renombrarPieza' ? 'max-w-xl' : 'max-w-md'} overflow-y-auto rounded-lg bg-white dark:bg-[#18202A] p-6 shadow-xl`, role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'titulo-modal' }, contenido));
@@ -4378,11 +4499,15 @@ function VistaCorteOperador() {
           h('ul', { class: 'divide-y divide-[#E3E7EC] dark:divide-[#26313D]' }, piezas.sort((a, b) => compararNatural(a.pieza, b.pieza)).map(d => h('li', { class: 'flex flex-wrap items-center gap-3 px-4 py-2.5' },
             h('div', { class: 'min-w-0 flex-1' },
               h('p', { class: 'text-base font-medium' }, d.pieza, cambiosOperador().some(x => x.version_id === d.version_id)
-                ? h('span', { class: 'ml-2 rounded bg-[#FFF4DB] px-1.5 py-0.5 text-xs font-semibold text-[#B26A00] dark:bg-[#3A2F14] dark:text-[#E0A650]' }, d.version_vigente > 1 ? 'ACTUALIZADA' : 'NUEVA') : null),
-              h('p', { class: 'text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, `Subida ${formatearFechaHora(d.subida_en)}`)),
+                ? h('span', { class: 'ml-2 rounded bg-[#FFF4DB] px-1.5 py-0.5 text-xs font-semibold text-[#B26A00] dark:bg-[#3A2F14] dark:text-[#E0A650]' }, d.version_vigente > 1 ? 'ACTUALIZADA' : 'NUEVA') : null,
+                problemasDe(d).length ? h('span', { class: 'ml-2 rounded bg-[#B42318] px-1.5 py-0.5 text-xs font-semibold text-white' }, 'PROBLEMA REPORTADO') : null),
+              h('p', { class: 'text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, `Subida ${formatearFechaHora(d.subida_en)}`),
+              problemasDe(d).length ? h('p', { class: 'mt-1 rounded bg-[#FDF3F2] px-2 py-1 text-sm text-[#8F1C13] dark:bg-[#3A1D1B] dark:text-[#F5B3AC]', role: 'alert' },
+                h('span', { class: 'font-semibold' }, 'Ingeniería está revisando: '), problemasDe(d).map(x => x.detalle).join(' · '), '. Confirma con ingeniería antes de cortar.') : null),
             h('span', { class: 'rounded-md bg-[#EEF3F8] px-2 py-0.5 text-sm font-semibold tabular-nums text-[#1E4E79] dark:bg-[#1C2A3A] dark:text-[#7FB2E5]', title: 'Piezas que se cortan con este archivo' }, `× ${cantidadACortar(d)}`),
             h('span', { class: 'inline-flex items-center gap-1 rounded-md bg-[#E6F2EB] px-2 py-0.5 text-sm font-semibold text-[#1F7A4D] dark:bg-[#173526] dark:text-[#5CC48E]' }, icono('check', 'w-3.5 h-3.5'), `v${d.version_vigente}`),
             visorDisponible(d) ? h('button', { type: 'button', class: CLS.btnSecundario, onClick: () => verPieza(d), 'aria-label': `Ver pieza ${d.pieza}` }, icono('ojo'), 'Ver pieza') : null,
+            c.problemas ? h('button', { type: 'button', class: CLS.btnSecundario, onClick: () => abrirModalProblema(d), 'aria-label': `Reportar un problema con ${d.pieza}` }, icono('bandera'), 'Reportar problema') : null,
             h('button', { type: 'button', class: CLS.btnSecundario, disabled: !!c.descargando, onClick: () => descargarDocumento(d), 'aria-label': `Descargar ${d.pieza}` },
               c.descargando === String(d.version_id) ? [Spinner('w-4 h-4'), 'Descargando…'] : [icono('descarga'), 'Descargar']))))))) : null);
   }));
@@ -4584,7 +4709,7 @@ async function imprimirPdf(pdf, d, avance) {
 /* El visor vive fuera de render(): así las páginas dibujadas no se pierden cuando cambia el resto de la pantalla. */
 async function verDocumentoPdf(d) {
   const s = estado.sesion, operador = s.rol_id === ROLES.OPERADOR, planta = s.rol_id === ROLES.PLANTA || operador; // el operador solo consulta en pantalla
-  const descarga = puede(s.rol_id, 'doctec_descargar');
+  const descarga = puede(s.rol_id, 'doctec_descargar') || (!!d.descargar && puede(s.rol_id, 'prototipos'));
   const tipoDoc = cache.tiposDocumento[String(d.tipo_documento_id)] || {};
   const imprime = operador ? false : planta ? !!tipoDoc.planta_imprime : true;
   const marca = planta ? `CONSULTA · ${s.nombre} · ${new Date().toLocaleDateString('es-MX')}` : null;
@@ -4607,7 +4732,7 @@ async function verDocumentoPdf(d) {
         h('p', { class: 'truncate text-xs text-white/60' }, `Versión ${d.version_vigente || d.version}${d.subida_en ? ` · ${formatearFechaHora(d.subida_en)}` : ''}${planta ? (imprime ? ' · Consulta e impresión' : ' · Solo consulta en pantalla') : ''}`)),
       btn('−', () => cambiarZoom(-0.25), 'text-lg leading-none'), textoZoom, btn('+', () => cambiarZoom(0.25), 'text-lg leading-none'),
       imprime ? btn('Imprimir', () => imprimir(), 'border border-white/30') : null,
-      descarga ? btn('Descargar', () => descargarDocumento(d), 'border border-white/30') : null,
+      descarga ? btn('Descargar', () => d.descargar ? d.descargar() : descargarDocumento(d), 'border border-white/30') : null,
       btn('Cerrar', cerrar, 'border border-white/30')),
     contenedor);
   document.body.append(capa);
@@ -4651,7 +4776,7 @@ async function verDocumentoPdf(d) {
     imprimiendo = true;
     const antes = estadoTxt.textContent;
     try {
-      await DataService.registrarImpresion(d.version_id); // la impresión queda registrada (y el servidor confirma el permiso)
+      if (!d.obtenerBytes) await DataService.registrarImpresion(d.version_id); // la impresión queda registrada (y el servidor confirma el permiso)
       await imprimirPdf(pdf, d, n => { estadoTxt.textContent = `Preparando impresión… página ${n} de ${pdf.numPages}`; });
     } catch (e) { agregarAviso('error', `No se pudo imprimir. ${e.message || ''}`); }
     finally { imprimiendo = false; if (!cerrado) estadoTxt.textContent = antes; }
@@ -4663,7 +4788,7 @@ async function verDocumentoPdf(d) {
   }
   try {
     // La consulta de planta queda registrada; al personal de ingeniería y calidad, ver no cuenta como descarga
-    const [lib, bytes] = await Promise.all([cargarPdfJs(), DataService.bytesDocumento(d, { registrar: planta })]);
+    const [lib, bytes] = await Promise.all([cargarPdfJs(), d.obtenerBytes ? d.obtenerBytes() : DataService.bytesDocumento(d, { registrar: planta })]);
     if (cerrado) return;
     pdf = await lib.getDocument({ data: bytes }).promise;
     if (cerrado) { pdf.destroy(); return; }
