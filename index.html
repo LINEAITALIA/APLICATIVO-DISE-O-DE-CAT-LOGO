@@ -99,7 +99,7 @@ const CONFIG = Object.assign({
   DRIVE_URL: 'PEGA-AQUI-LA-DIRECCION-DEL-INTERMEDIARIO'
 }, (typeof window !== 'undefined' && window.CONFIG_APLICATIVO) || {});
 /* C2. Versión del aplicativo: cambia con cada actualización */
-const VERSION_APP = '2026.10.16.5';
+const VERSION_APP = '2026.10.22';
 const BUCKET_IMAGENES = 'ing-imagenes';
 const driveListo = () => /^https:\/\/script\.google\.com\//.test(CONFIG.DRIVE_URL);
 const LOGO_LINEA_ITALIA = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAYoAAABgCAYAAAAD1jVAAAAnO0lEQVR42u2debhkVXHAf728WRlmAEccQPaR3WETBBVBNOAGAdQIKohbCKggisHdoF9IUHEBYqISESNoRBOVGDQqqAgi+z5sMgybwGzArO/1kj+q6ut6h3tv3369vO7Xp77vfv1e9z33nlOnTm2nTlUBeIYIWVAADgRuB4pALaIkQoQIwwRlYE5EQ1MoRhREiBAhMsAIESJEiBAhxaJIgjrD6WIpROEZIUKECPkERQEoRfREiBAhQoRygiVRAB4Hbhki7boAVIGFwI4ODxEiRIgQQZmiXWP6+d0hxcWZAR7sWqS/R7dUhAgRht6iMBhBXE9F1bSHAQ9VYPokWDJJLr6qCqiJzF+NGMIbIRlKKZZyXnobJrzUM3hf2rqdsmsvazO76gY/1aE2SYulDlTaaF8hQoT8UI0o6Ahe6sO29sqRRiYF7ODeIuA4JVT7rgRcDNxJ9gG/InAGsKneU9fvbgUuJR4OjPBcejsW2FPpraBXDfgSsFz/H0bL4nTg+TRczSVgCfD1ACeGxz2Atyes28uA66fq2kvao7jUmWTDJDA/TW/2KOx9xwfvsetvMvBvZvJ+KW1PiUpAhASaAfhZCs28qMP0PQjgXU2PJuDkjoT7bE29bYqtvQJNgnciM5lc2KAmbIXGPklJv8+a1DrwDr1/zAmP5WqNRDdDhCR4Wuml4mimQnRhrlCLouYsipUZ969XPNp6tfW7bsCsTNuDricoFdUoKPpLkpfdXBRI33DELeyNgGMYH3BQBn4OPKvfR0ERIcmyGAnorKk2OSR4KQeCotSEyY7oZ8mt4+IAjbdKwz1m49/g+IbRRH3YTM2p5EI4DFjAeF8zDG9Yc4QIEfJbElVgW8TVfr1aVCuAPwMXAa+i4U4rdsuiSNNOurVJ1uv3TSaYBuD3NmxD7T7gahqHByNECOnmI8Dn9X+vMT4c3BchGWxd/QLY3eHRGOqjwX395r2w4IUPA2erVbQE+D+1JnYGTtDrx8DfAU8CxW4IiskIMR0WTaAGbA+8nvFuK5AAhDH9LobNRkhaI486ZhZh4nh8BolKHCSeZJbEV4EPAvcD7wZ+F9y3owqRNyGZKg4FlndaUMxAwjXrTtIWgFXA2i4MfgSYn/C+Z4DVU5RIVyH1MWrBmBf3sTYTob+0yjSLI0J7eKz3qZCwPYnjVUjcrgJgA7A/8Dwdz8NIeP2bgfORKK5vAEf5wbUTHmsC50hgjTLqNUiUxRoknAw65+qyvZVF+vzVwfs+2uL7Jis89q3B+yr6eVSL+I8QIULrzN7gLhpuXFuD1yTcN8hCbSPgEeU1++lv1/DcEN+rgReoEm54OazTm9llYBZSDMl/jnRRUs4CZgfvmzbFCbyUcMUkhhEiREhSquvAIcCWwK+BP9EoqVAH9kZcTj8CXgacqALlAv393Z0WFPVAM6502RyzZ9d69L5+ANN8wqse10SECBFSLCc7oPsLGi5rc1vfCjxAY99lmX5v+xcv7VbUU3j1AhExJjxChM6D5xFRIRlcmK+88Qk3h7Y3dQ3ildkV+ALwbb1nGTAKPC+eo4gQIUIWVNwVhcTgwrM6f3MCZbqOhNY/qt/v6H6fgWwbrI4nsyNEiJAGM5CY+1nKPC5UF0VMODl4cJvO4YHAvzlhsAFJBwTwv0ggzT7IPsaL9b7boqAYPGg1d36ECAZF0utReDAf9kzgH2hE3y1HMs0Ou6CwjeAQan1oddk8/Qo5onAkktXhccQdNUP/fxK4AjgceCPwR+AkHeul0fU0eFAN3AGVKCQitMA0kgIh0qAOPOXobD/3/TDDIAWUWAr0x4GvAXOB8/S38/S71SoQfqL/34ScpTgcyaJ7SbQoBg8+BmzB+FwsS5FNqEJcxBFSLIkacoDqABppXyzdyxmqUSbRT5nGhvY+iM96bEhpzQ6u7Q98gPH1KMrAN4Gr6L+knDXt51nAy5GEopciJ7P9QeglwKlI3ZJL9LcTgXVRUAwe/C2wTfDdvSoo0szkcPNqIgu8EHzW+0C7zDoh26m+TdTq7gf8hHN3mLoVQvh8hqDw49kW2AG4h+bup3qO/tAmbicLjzvSOETs4RoVFIUujb3eZrt1wBHAd5DDvscA30cO2a1BUna8BdgFOZx3PHADUIqCYvBgBXJwJm/u/IkKBstX78+pJBFr2n3dWKRFx8yqOcZm+znt1DLuhC++6ATOZNZVfpaGG8nXo8ij/VbUmtgLSRfTjsZc7wA+C44Wer03sMHhzdejWN+jsRfds/KO3c5MrFRh8Ta1it5BYzMbxEX1j8BXELdjCahGQTGY5m8rufNnI5tVZn4+kkHQBUf4IUPbCAmtm6nfr0VStawP7uu02e1dJOFzN6ZxGr+s+Fin/VoV3G+CppW+FYAXIif96xn3hMy2pnhZp3hKEg5leu/XLjo3UinBSswDhyKbnlnJJ2s6B/UU+t3MKRdZMBYoKKOK01oGnfRCaFhCzoJbe+UceJwOzMvx7GqA25oKp/UptJRYbChDWAB8T68tgK1UCXgKSTVecTitQixcNNUFSlUX9o+V0KYD70UO1PiF7pmofbc78ErEp72LEtQcxzTXKzNeguS0vwK4kobftt0T8iFj3xjxDb9ctdrtkaiNjZDIjaLT9tYgB4vuUXfAL5HTp3n7Zprqxkj0h1U/K2Qs7Kr7vaZMbY1agI9qX25SXN3t8DwoRaaMV7wTODpDQBSBx4B9lUZ8Gu6auq9u1HFn4bSewCzXq1W0DNmXu0txepPON32KU1trRyOhqdUM5c6EXTWw5kwBehJ4ENlkvhG4RXEC41OJN7NoDP+P6RXyjnECKQqKqQ+m9Yzo56EqKMJFVUWSgR2L+C/3Jds/P00Z6dbAQUi8/a3AOchGmF/wExVyVRUK70N861vmaDtdr01VwP018M+I7/hc4HKnLdVy4G56Dqst6bdZqj1uCeyBRJCY1ncL8EOk0NRjbeJqMhSQTXK4ZgoZTHNuh/u0CvgD8B+qFI32qQCerspWnc5lkHgUyd/0HeA3zsvQbOzVwBKD8TVunmOuRZj64DXo/ZzryrThLZTB367MdD/9zczdUXUD+KvqNB9zVS1Sc/ZSdVFNZEGUnND6lmrgJ9HYlxnVfo0mEHRN+zLm3EEV7cMhwM+0b5s47ZccC6rmPvNe1o9Rhz/TJPcB/gk5BHWmflcfoPWYFmZrY9zQhBbH3NxUc14enxscTmsqkF+vc3ujau5h9cd+wttoC+NOG7udlN8S2XT+NVKAaN8mFkvWXKa67aKgGC6roq4um51oxFefrhruGUhe+g2OuU5Xt840tUj85X3cZaehj6lF8lNtV2xhsZrf/hAVEO+msWdScZbMdP0sOQ3IGH9Z+1dm/MEoWwxvVetiQU5hYW4tq0+e97J+THP484Kngvjqz9YFPr8F4TXZUCQ5g7HRxUZNaNHuK6c8J+ny+JzucFoLmN3uSBbU8wJ3TD+AjXt6C+NOG3spQYl5tVpWJ7UoLHL7HSMMB1R1zl+sjOpiGoeoNji3Dcim9w2IL3Qp4gcdQfz1OwMv1UVZckRpTHJUifZLSGRFHlPYBMIRwGX6rgrP3TRcrNrTdUg6ieU0ong2QcI3D0BCQRc6rcnaj+n4/wvZg6kkuH3s72eR+sGtrJO69n1jtdReBOypmt4mwTyYH/4QZB/lYH1nv7qhbJ6vAj6b4L6rO0t0Q4BLu2+p4r3QgsVZUoFtrryd1SW5h5sb65sJjvfrHJzQB24oe/flOsetWNplJCBlU3Xz7qZjX+jGbgpGVWnv6zrmCzo59k4WLjqa8em+7XkndFgwmda1F+NDxOx9n2jxfYNUuOhWnltk5XqnPRG0PdI92/C0WP269cCMHUPiqg9vohUaLg5G0haH4ao1N6b9ctCS4XV/ZTA19zzr2406lry1RmYAb0c228MU9KP6+ekW6bwd2FwtpNsT8LVBPy/pkqVv47vUzbNfMzsE7zU6modEwoRzekmfCK5dkENkT2XM8QdS5ngihYts3b45hc+9p0cK+DQkZ9OFrg/VYAw1XU8doe/oeho+FxTqepqrBG7m8I+Bl6jwugI51m9mb9JVU83yMOAzjI9Q8ovr73P2aY4yoGmBhlRSN8JLkRQDo64PoTvI93c9srm5v5rjJafVWv8/guyFVDPWQrFFN0HoMjC33BO6sPdF6hZ7fE3TxX2sCt8a/V3d0GhmWsbYmwmudvBpjPhuFfZ7q/vOz7H9/TkV0tU+cEEVOjD2kq6Ba1TxeCUSBWXRfF7Yn9sp6zQKiuEE85Fb7PRxyCnNWxhfMS8pr5TfL7B7z1Ki9Gau7R8cri6YNGZs7ouPIfsnlcCd9WWkzq93Q/kcV34D2ffXfOFPIBFTD9IIHbTPOchGYNZaSNu4zbsJWXHvLOsiPw341wS3gNeA+xnqOcbezBXTDj59nP8IUuv59aoQFBmfWmOum+PSAOCt2dhN4NnY/wC8JrD8TEgeqApW24pHFBTDC2V1WR2gLomSW2R5D4JVHRGeieS1LwXMeBbig0+iN3vfAsSnXAuExLXIZrtpkK3URKg7i2klksOmEGh3dRWQ0P3T0nUnwIpIOPFjDl8mnA9Rl08/aMCDoPCMKX2MIZu4Y067tjk+skdz3EuBY2OfhuzVfYbxhxhrwdjboqUoKIYPjAH9EtmofYBGtFFtgkRbUKI9L1iQ5i8+oAn9Ha/avQkYEzIfCp4zETDGcTmyv1N0rq0CsrG9Fb2LOLL3rEWic3DjriMb3rvE9dkSmBV6hyoXhWCOd6UREj3VhK8laPw+su9YcmuygLiT2xaSkRCHD4yILkL2IaaRnoqhFeZXAH7uNDxPrDunEKsJrbe4+81tcDUS2dRq2o00Oq8jkU4EFs8MJHqLHjORAnKiOMQjyOnlXvdn0MFo7YaAzlELbcEUxakpUCuR5KAEAvGFTjkqtLOAIgwnzKb5cf9WiLWORBgtSVioWyS8y5j3jjQqaZUc4f+A9AIxE11M1wZ0b/1Z2GMmYvhaFby37hhbhInh9ZkUxWjjKSx8bUxrEn6zFDdta1oRhhM6mTyt7jT/hwOmhy7SmQFRG+3ZSfFwE/wPNHyxnRIUS0k+Ab1lny78CO3jzuc2Gqax+3XW9tjjgbsInSbSZxK+G8mgtb0CLbuARHA8yMSym2b17xlkb2B2IMhazT3k01z7vtcTxp50MrhIZ/P9TAVIw2kanRUSFJXCgK6b0HLOGnshxWLq6gHNKCgi9AJGErQaI2zv9jGif9wJnE4sAHvGaIqFMiPngvZpE/K+MwuGvYStnX+pdMByrHaQXno99k5ZzlFQRJhyYAtjQQJzfZpGnqhOFQ6ycxPljL6kCYgwBft2yL7KLvr35si+wgxnLYwhJ65Xq9BbhqSIfgQJi32AhjtuGK3PYiB0t0OCCnZCNvOfr5beDHfvKHKQcrXSyDLgLzRSZT9I/7uYwgJWZR3zbvq5NZIDbA6STsciCq0Wx2pk43qZKlSP6tiXREERYSoyCkuHPC9gHiCnlxd30KS255Sd9eBN+LVNBEwVCaE9DkmvsheNnFgTBatXAcPhP0/C6XZIpbUjkLxN7W66Ps34k9n9Bv6A5X469sOQfGDtus2WIWeW7D0dtayioIgwmTAtRaueqUykV7Ayg6GNIKfGT2N8HQafljnvovT+aMsqO0zgLbvPIPXfN+oATm3Ddm7wfT8KiYVIxuBjgt/bGXsZyfwcLYoIU9aySFrQ5rrppukPDVfSXxL6VUPyQP0Qqapn9/t6xSNt9MOXsh0mIbETkh149y7g1E6+9xtOTUgcgRQYmkcjnYc/TT3RsftndSWStdxDIim1aRL1uoB6hMkVIL3Qto3+H08QXnOQzLgvpnGI0MJ4S26B348cdHoUORfhXR+z1Dqap9dmqvlt1gE3y6AJiTpy+OvXSDhyGk5ritM/I7731U7LNtfhRmo9bKK43Ez/7kfF14TE4ciBT9vADscO4gK9F9lreYLxpWStNswcHfumbuxzuj32XiF2DfmShUUYLghpwkc9/Te9q8twk+uPbZx+zQkJX3SohGxK/yuSguMuWjvZPgspUrQlkq76NAanYFG7cLETEiFOH1Kc/lSZZV6cmstpAbANcArwuj7BqQm+zZFMxkZbZUfvJSQDwb+pEF3awvOnqYDcAkmoeTbi2up4qpJuCwrr7D7IZkt5AsLCYqRvRHzJMfZ86oDf0DWrsQTcA5w8SQu7imymn0CjEIzv2+WIb/2xgFkVmtCwhUCuVab4EHKe47QpbimXlekfjaRQryQIiYuQvF6rgrkoZuDT5qQKrNDrTmRTvJ8ERQXZ49rMWRJ1x9fOAL6YIPwKTWjJam48odfNSFLEhXThjE63BYWZVB/Vqx04FCkeXowuqIGHutO2VgSLH2dK98qiqAaL671Bn4yh/Q7JxmlhjeYObUX5Kbi2Gw/BXJsr7uQAx4bTS4ETHT+qOaFay4lPVPhUVfj2A1g6/HlIAS2/H2VKxweRRJo+rX8r9FQI+OxItwZT7iFjaGdvokj7iesi9BcYkT8SCA/UnLb48V4Ji4LTdl/lNELrl6WxrjkteaJrwde4mOpzbK6X/WlE6RhOlyPp5QttrPHQuuiXg2tmnR6o1kRYjOv3KiSs5G+9zbF3dQ+32EOCKbZ5RZfT1BQUixO+20KZy2T0ZyvE1+0ZXQHJPXU3jdreEfLzl12QDeia05wLSMXCFUx+Tetu0pMv1+yZ+zedEtT3HpJOWxRWnKXawcHXSHc3+bq1BbeAa3GN9j3YfN7sFpYxkRnAnkgkUa8Ysy3sBarlhTl0/kh6OG+E5sLXr2UCnE5l2Ibn1rKvK933feqObgmK6YyvadtJGEnpfzlhPLPjGh0YQXE9kppgZqBdHYVsHPda25rt+ucX+HLi3thEYW6KAHlyUDTqNuh7VvBdAdmEfnqQBtMphm5S8Trg7+jsrrs96+4Ea2GJvi+0Pv4ULYu+B5urx1RYvILGJp+VKP04kkm22MO5rPdIqRpGpSCEaYHgGCZLa6AOWnZaUDyIxEL3iuiWNXlfFBT9DSYALgUOcouoqlroWUgo6kgP53J1CvPaqksMYxjg6ZQ1/MIpjINCQE/2nZ0+f74quoVBWaidRk65S1ehhffFgkyDAbaB+QMV+kVnVVSB9yGH0qyIfDcXlTGvx9U1UAgs4wM7rHyUBkCRCUNUfWnRLEshxOnDAb+x57yczrmewgqJ/QIPBX0ymj+gg8qCjyYbCEFhm8vduOotvC9aEoPjkigjBym/zPhyqSY0voucXRh1VnChS30B2UBf4r4zhr4nEuJZa8MSN2ZmVtNIn8/PWqcRe6G5K7If2czFbHO5WJ/jQ2PrwF+ppVZrwxXjz6X0E06Nnm5hfGZk+3xnByxLG7uFBXct7U3UvCP0g1VRBL6CnMg2wrcIo+lIjpxPMT7mvOSsx0KHFradj7gqYHTGEL9KIwprJMe7fWZTO5FrdS2OBc4luTRrPzA5O9fwWPBdDUnD8RqaJ/GzNk8i+1AW5WMKwWwkVYrhJY8S4DOmlpyyWABORfYs2xE8nbTGQCK7VjoL1c5S7Al8WPteovnp/nDsRTf2+cAFwEvoUqLJKCgi9IvmtRZ4B41DdjXGh6eeBdygmthcx3D9QSOffDLvVUjoy4WBpmdWxf7Aj5EDVGOMzwBbcsyr5Ppec32dCfw1cCVwCQ0ffT/6qY033JzgHqoDX9B5GHWWUtnhIHzOt4L5NPfiUUieoxmB5yB8XohTC8Ofi6RbuU6VjU3pj3NXRhcrkQzEBed2MmFxDnJi3R8pSMKlz65bc3S/DfAJ4FZ9Ttfcs1FQROgHMA3wehUWRbeY/PmKPYBvIzl9LgKO1+/muudUW7xC/3EJiZq7TP8eCxb3EUgSwdOBHV3fqm7B23Nn6D1vUo3vdrWODnZ97XcB/rNAmJkmuzOSUucVgaVUCcZlacR/qHjzp9r9XtT1wHtUeJLwPMPpbOQA39sCWtib/jvtboz/bCSnWdEpQCb4LgCuULraNAWXZp1sguQhOwU5rHg78Hnk7E9XXe4x5C9CP7mgysjGdkUX/0aO0ZScBr+lapEnaNunkJoSy5Cyo63UsvgQkkbEn5Itqoa2D1JAybKdGmPbGviSMoD7kQ3LlW4MGyPpxBfQOMDnx1lzY+p3l+BVwB1I/YgwHfjeSP6rW5GMr6sUjytV0/XzMKaC/Vokl1eI092R08prgPuQLKpP63xMU5zOR07tLwiU3KpTNor0TzZe69MSdYld7BSEkrOcD9PrKR3744qHgiob85DaKFuoNUsgiL0LsCtjj4IiQj+BZdf8kTKeC1RjtQVQc4zAa2bz9ZoInBUICnvHU7p4f4YU2/HFYez905CN3V1zjMu0vREnIO6jke2zH8HybZ2KpMAuuDny2vEivQxWA58N3IhF1f7foNba/IQ5NYthT73y4LQQ4PQena9+ERYmFL6rlu/XnHVKYDnnoWOfjaLoePio0vH2jk677nrqZphrP1+9Jqx6DndIEuElXZ18R7taVCv9S2IAJTWrD0L2JG5m/CZe0TH2MRrF50eBDS1elZQxFJWRH6iabjXh/WNN3jnq2lnp04K6tt6jbrP3O/dVpc/mxpjcb5CEiDYHdceoq4qHDcgJ+w00Tlwnade/Q/Z6/iuYUz+fWTi1vSHDqZ2x+TWy37EHcD6NRI4TXVO1Dq4pw+P5SMLJGxi/72LCNGvso85CG9Gxl4FnkVoX+6uwvlafO9ppV5zPbz6mn98ZUo32jAAPdi1qIlgnasm9I3iPXW9xPtwQHki4/24n4AnavinlHSd12Kq09/0i4V0V9b+GfcyrxBSBV6uFcacugnqHrj0y5tZ/twgJ4V08gXesUeZwDvCyQCED+EBw/2ldmpv/Tunfwib0be1fCfw2x3hX0UhdUUh5FmotfktdM63i9GngaqT29qKEPl8Q3H9Q8H7fr6UJz7814T6bj+NS+nRyk3kruc836Xwsm8DYnwD+R9+3dfCOeSosPO1t3OLaa+p6sgftpEyszHCcSbBQwE4egmkmnNEF8tPApVGiUeUqSUO5HNiW8RE392W84+GUd9yf8Y52xnQVUsKx6jTF1TTOQbSi/eJ82L/Sq6jm9U7IRvFWyH7AbCYWR74qAw/m2igq4/gQUldlF2A34EX6/nnKGEuqVa/WxfyQukIW89zKZSWnGZ+n373BKQPdmJvrkMiripubKuPPSmRpxL9VYbEvclhuV3WVzHTtzW1XyXiWCaTf6zVLn7WbCq0t1E0zU/u4TjXnx3XNGE7DErbeHXaKCpN9tF/LM8Z4BRJB5NfUXU3W1C8ZXxGxjJRvzYPHqrrfLkP2HPbQ8W+PZE3eSMdeRaIBVyFhyg/ouO9lfJEnf9BwFfBatV7m67jbrj/fq1z/gw57KqPoZc6hCM9lAgUmL8V3kfbrovizFOGzB4GufEBBJy2daht0YX2qDRBv8yepa23SY9Lp+Y6Pu9zEBzdsUKS3+xSFlPdlLcakGPEsgpvIO9rFYSFFm2pHI6668fiLNrXvvP3yG+ghTuvuM6lfPv497dml4Dndmpss6y0vrvw6qWdYY3mfNxGc1pxbM41m8uK0VbyknX3JO28hPRdTaKaQ4OHw1f9qKc8OU3q0rYSUMxARI6K6DxMRyLUevKMdqPUAZ/VJnrNu1BGoDtDc1Do8/snGaW0SabAb67PjzywPqeUwEcRHiBAhwlBCeNw+QjJEHEWIEGGoBcUbIxqaQqejUCJEiBAhQoQIESJEmBowcCX5Jgm6FSEUIUKECBEiRIgQIUKECBEiRIgQIUKECBEiRIgQIUKECBEiRIgQIUKECBEiRIgQoaNQiCiYdPynhSdX2mifp/jNRNpm9bfZO8stjCt8X6u5aybaT98u6T5fyzsrwVxWYslW8iT5cpndyKFVzonbckbfszK4ThRKjjdVmvSpFdooJfC8vP1OoymfoDAL0rK90iF8ZtFdhQhDC8VJahthuJW4woDistDl9VCIxBihG0y+hhRqOYZGQRNLETyKFB5ZTXJ+eWs/HTgCqd61OfAXpLrVVfo3GW1nAkciVcbmI0VgrkGK0zwRtLU+zEOqavkqYZYi+1KkoIqvrWDtZiFFf1YAX89Jl3WkqMsp+tzv0zzXvv2+I3As49N3W18vAFYGz7K/FyAlSmvAhYqHgtM8D0YK93xD8eWfYePeU+fEF+gpuP9/BtxCvhoUf4sURvoJcKMbQ7tr3mpTfwgpW/qNjPvKSDXETZHqhdfRSGFdRwr+vFN/+yOdqa3xXp2Lv6T0rax0MRd4EKlHnUYb/vtDgb9CCgStQ6oO/gQpMJXWb2u/FXAijeJMNcXdncAfEt4VrrdFSKnW/3U4rCXctxCpoHctUhypGT7t95fq2EJeslp5ySix/tDAgZnNx5Ne7nBBijA35rMbUkzJ7t/g/v548J6w7SLgjpS2pye0tXY7ZPT3KGfeh4rI5nrP4y1aPLtqu98lPDvNtYAy6rR+JpX9tHYHuPv+0/1muPii/rZ/Qn/snpPJLmPZrASt9Ws71+bnOcffinK4QJ/9UJP7ZiJV0+rKlDeiUesa4DX62yebjKsVWJIyXzb+l7nfb8iwCqwuw2zgR67Nevf3s8qY055h73xFxpz+WpWoJMvF8HGS3ntmCp7sPUfpfd/IiU/7/ROkl+FtuxRqdEFMLqxB/IdfVM1sR2UQ26i2EloEXrP/KfBipIzm9kg50B2Q+sv/ofdXE9puqlrtbsC5+r7n6bs/qJp72NZgTK9rkXKs2+vndkg5ybR2NRVGy1rET0WvVS22W6vtvhngdVtldqRoaWPabgPwZuB1NMpc+vlKKi1p4/4esDNSJnUX/TxaNdj7gR86CyNrTR5Lo3bzwarRVju4Zq2Q0oom91kZ0THF32ecpYZqqhXFeafgaeAZ/fsYhxdjdO/Q/qxz92Vp21/WObgaKeP6PL3eBYwAFwN70yh2lATrdZyXKU0tBA5RS+9VwNubtF+XE0+Gz9Ut4uxZbffJgOZ3pnmp2wh9blG8KbAA8rY7TdtdNoF3/r22/d4EFIqtte2VLWqv85WI727xfTvp+/6nRYvCtNwv5HyftbP6yhfrgn5ANeoR/f1z+vs+LWr4V2q7V+VoZ1rwA3q9Udue2iGNPbTybmty34gKkyvVCh1DajwbHKzP+UgHLYo/KwO22tieJmZqf36lFuofU5Re+397pb0nlQ5DOD1YD6UU2niJ3vftAD/HKk7+OWX89r+5rU5rYlG8Qe/7SosWxana7n3dYFjRougPKOU0DWsBMZ2vczjiGEw55Tlh2wtaaJvGRKYKXkMc/VYX/vYqxFspTm+4nKb/f0qZ6deA35BdLKzkBNH2wOUqJFcjfnuYnEJj09SqOE37fz7pJW87NW/rgEtUWdjNzc2hwCbKsKfTvLzpgfq8XwBP6VgssqikLsYKss83XfFbyEn789TiKSP7e/2gtZe6sUajoOgPy+I0YKm6RR7WBRLOj9843lb/f1C/s3BNcyfUE4i7pkJhG/17Sc62IRFWkI2zh/R6WLXSuX0kRAyv71K8LtF+XpHDzWLa9tnIZvYZ6uIr5FwvPiBhT+DTqhWfqfir5mBC79TPy3ReLlNmuaiJe6NbMKaur18hm7EHAe+msdndaagheyE/0P/f6n57nwqtXyG+92aCcyv9vNetg7qj/eV6ba4CKI2G/R7CvepGXKoW30eQTfEik1cx1ObhLO3Xn5Xmv96i9RsFRR+CMablSnz3qbn9SIZ24uuZVycw36bRViagAdm967Sv1t8H6H6t7IngdWWA16U5289QRn+GapnntYAn77K5UPH9bsVZFr4LOiezlTE+CNykz7lE5+z4SRbGBWQfa60K0jl0dm/CC4rZKmDvBU5wGvzhio8VNM4b5NGwKxnvqtD8/IvBGl2fS5SuasBhyF5AfRJ5qtHVkwHNP9YJS6dMhMkEY/TfAs7JmHyvqdoG5Da6cB4LGEchpS3K/FYgES+bIJvLfmO1WfhcTWnmJuDVTQi2H/D6AxpRJq1ARXHxXeBtyghe6xZdM8ZUUUtib+Cf1C1RJvvgk1kbr0UCDjYFHnXzWQL+Rl1Za+l9qKNZnvcDnwf+Edmz+WaXmJ4x+Iv0XdurhWYCeHrOZz1FI4qwHqyVoloumyIb6M9m0LDR1M+REGqDk1Rr/yLi1i1OMs1/Cfj3lLUbLYoBh1nKSGaQXcfcvr9JiflwJQALHfTx7Ult60gMfx3Z8DVXlm+bB0a0n9P0M+/ehgkjf9HFdjMDvJZbZFamQW8AvurcGMUmQuIlKihuAz6r76016bfN24n6/y9UwFyLxOnfC2yJ+Ogns+BYWZnRXcD7gdd3SemsOfcbapW9Czlbcasy+Dwatp0/eY1zo5WVhmtISPQMXRfP5lgHRkuz9P//VCb9ogla+Z2m+dk5eUkUFAPmerK47or7rDYh/ouUcD6GxHePaZuaEvDMjHf+u7b9FLLXMOrazm7S1vpgYauj7u96jnY1nhvnnQdHVffees532fkQj9dKC3OCaq33ItFTC5EN5TT3gmn4M1XjXY3E51sfstI8mG97gQqCe1UJeJ37PEXvfXsLuGtlrHnvs/2XDygTOrOD/QnnHHWh3KgC+7WKWxNMWe+1UOKbVeDurJZJ0dHuDmrJF2j48otN+mXzaVbdexQPjzZpX2+Rdo3Wx1psl5eXRBgAMO3rOJ3cx5CDQzfqdTVyKhnSD9x9zhHH71Wz+Q0SV/7KwAIJ257j2v5W216lGtXLE9qGh8DWa39vAq7Xz4MSFooPxTSCv0OvW1Ur/VzG+3Zz77sDOQVr7d6b0M7+fp22eyrA659SrAJrt5e2O8tZTiXVzu5yODsg4d3hwad1yqTuDMZ7RkZbC13+pPZvurOEZiLhoDXghW0oejYnL9B3LW5y34gyxevdO62/33Y4+VgHLQsLQDD4oBMeu+p3W+p312bgwiKzdqZxiO8+tVKuUGFRR/ag0p5h83Sg3vu0oyd75hok9DnJ0jN8vEfv/XAKnsIDdysczd+mtHN4Bu2coe2WOpq/Cfg/Z/0U2mVYEXpvSYAcJLtHCfQFzt2xJoMJmKvpU7rI369EXHQLeinJPmxr+1ElwJPVIrF3XodESqT5v8eA25Vxbk5jf6NEw2ecRIwVNe03pnFKtOpM5LR2G3SMpYR20zLarXbtPF4rpCd2Q5n7PTTSn5j7Yz0Sb3+uwxUk7wNB47zIfPcM63cSniwkc5G2/ZG2G3PuwXXAvyCHzfZ18zRRGKOxWdyMVm9HAhY8HRWQ0OFdkYi3pAOiE4W7Ge9T/wmyF3CnMkyUyS9G9kxoslYWK51/HDl4d4xzS12gAi+N5u27tY6mnu/o4GJ9xp9IPkhp7Vcorp9qgqdn9D1FR/NGAyMJtGPPWaa0G9J83mi9TPh/9OGzCJwmx3IAAAAASUVORK5CYII='; // logo completo en negro; en modo oscuro se invierte a blanco
@@ -450,6 +450,10 @@ const DataService = {
     try { return await leerTodo(() => SB.from('ing_v_solicitudes').select('*').order('created_at', { ascending: false }).order('id', { ascending: false })); }
     catch (e) { return null; } // la actualización de solicitudes aún no se ejecuta en Supabase
   },
+  async estadoParaSolicitud(clave, tipoId) { // qué hay de ese tipo de archivo en el SKU; null si aún no se instala la actualización
+    try { const { data } = await ejecutar(SB.rpc('ing_estado_para_solicitud', { p_sku_clave: String(clave || '').trim(), p_tipo: Number(tipoId) })); return data || null; }
+    catch (e) { return null; }
+  },
   async crearSolicitud(clave, tipoId, detalle) {
     await ejecutar(SB.rpc('ing_crear_solicitud', { p_sku_clave: String(clave || '').trim(), p_tipo: Number(tipoId), p_detalle: String(detalle || '').trim() }));
   },
@@ -533,9 +537,11 @@ const DataService = {
   async coberturaTecnica() { // documentación técnica de todos los SKUs: para saber cuáles están en "No aplica"
     return leerTodo(() => SB.from('ing_v_cobertura_corte').select('sku_id,tipo_documento_id,estado').eq('categoria', 'tecnica').order('sku_id').order('tipo_documento_id'));
   },
-  async configurarTipoTecnico(tipoId, { visible_planta = null, max_mb = null, planta_imprime = null } = {}) {
+  async configurarTipoTecnico(tipoId, { visible_planta = null, max_mb = null, planta_imprime = null, visible_operador = null } = {}) {
     exigirPermiso('administrar');
-    await ejecutar(SB.rpc('ing_configurar_tipo_tecnico', { p_tipo: tipoId, p_visible_planta: visible_planta, p_max_mb: max_mb, p_planta_imprime: planta_imprime }));
+    const params = { p_tipo: tipoId, p_visible_planta: visible_planta, p_max_mb: max_mb, p_planta_imprime: planta_imprime };
+    if (visible_operador !== null) params.p_visible_operador = visible_operador;
+    await ejecutar(SB.rpc('ing_configurar_tipo_tecnico', params));
   },
   async registrarImpresion(versionId) { await ejecutar(SB.rpc('ing_registrar_descarga', { p_version: versionId, p_accion: 'impresion' })); },
   async previsualizarCasillaTecnica(tipoId, entregableId) {
@@ -2221,7 +2227,7 @@ function tiposParaSolicitar() {
 }
 function buscarSkusSolicitud(q) {
   const m = estado.modal, t = String(q || '').trim();
-  m.skuElegido = null;
+  m.skuElegido = null; m.estadoSku = undefined; m.estadoLlave = null; m.confirmaRevisado = false;
   if (!t) { m.sugerencias = []; render(); return; }
   conRetraso('solsku', async () => {
     let res = [];
@@ -2242,6 +2248,46 @@ function buscarSkusSolicitud(q) {
 function elegirSkuSolicitud(sk) {
   const m = estado.modal; m.clave = sk.clave; m.skuElegido = sk; m.sugerencias = [];
   enfocarDespues = 'sol-detalle'; render();
+  revisarEstadoSolicitud();
+}
+/* Antes de pedir: qué hay ya de ese tipo de archivo en el SKU. El operador no puede pedir lo que ya está completo. */
+async function revisarEstadoSolicitud() {
+  const m = estado.modal;
+  if (!m || m.tipo !== 'solicitud' || !m.skuElegido) return;
+  const llave = `${m.skuElegido.clave}|${m.tipo_id}`;
+  if (m.estadoLlave === llave) return;
+  m.estadoLlave = llave; m.estadoSku = undefined; m.confirmaRevisado = false; render();
+  const r = await DataService.estadoParaSolicitud(m.skuElegido.clave, m.tipo_id);
+  if (estado.modal === m && m.estadoLlave === llave) { m.estadoSku = r; render(); }
+}
+const solicitudBloqueada = m => estado.sesion.rol_id === ROLES.OPERADOR && !!(m.estadoSku && (m.estadoSku.completo || m.estadoSku.no_aplica));
+function verArchivosDeSolicitud(clave) {
+  estado.modal = null;
+  estado.corte.filtros.busqueda = clave;
+  render();
+}
+function EstadoSkuSolicitud(m) {
+  if (!m.skuElegido) return null;
+  if (m.estadoSku === undefined) return h('p', { class: 'flex items-center gap-2 text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, Spinner('w-4 h-4'), 'Revisando qué archivos tiene ese SKU…');
+  const e = m.estadoSku;
+  if (!e) return null;
+  const caja = (color, ...hijos) => h('div', { class: `rounded-md border px-3 py-2.5 text-sm ${color}`, role: 'status' }, ...hijos);
+  const botonVer = h('button', { type: 'button', class: `${CLS.btnChico} mt-2`, onClick: () => verArchivosDeSolicitud(e.sku) }, icono('buscar', 'w-3.5 h-3.5'), 'Ver los archivos de este SKU');
+  if (e.no_aplica) return caja('border-[#D5DBE2] bg-[#F4F6F8] dark:border-[#2E3A48] dark:bg-[#1F2833]',
+    h('p', { class: 'font-semibold' }, `Ingeniería marcó que el SKU ${e.sku} no lleva ${e.tipo}.`),
+    e.nota_no_aplica ? h('p', { class: 'mt-0.5 text-[#5B6675] dark:text-[#9AA7B6]' }, `Nota: ${e.nota_no_aplica}`) : null,
+    h('p', { class: 'mt-0.5 text-[#5B6675] dark:text-[#9AA7B6]' }, 'Si crees que es un error, coméntalo con ingeniería.'));
+  if (e.completo) return caja('border-[#A9D3BC] bg-[#E6F2EB] text-[#1F5E3D] dark:border-[#2C5E43] dark:bg-[#173526] dark:text-[#9FDDBB]',
+    h('p', { class: 'font-semibold' }, `El SKU ${e.sku} ya tiene completos sus archivos de ${e.tipo} (${e.piezas}).`),
+    h('p', { class: 'mt-0.5' }, 'No hace falta pedirlos: búscalos en tu lista de archivos de corte. Si un archivo está mal, coméntalo con ingeniería.'),
+    botonVer);
+  if (e.piezas > 0) return caja('border-[#E8C98A] bg-[#FFF8E8] dark:border-[#6B5520] dark:bg-[#3A2F14]',
+    h('p', { class: 'font-semibold' }, `El SKU ${e.sku} ya tiene ${e.piezas} ${e.piezas === 1 ? 'archivo' : 'archivos'} de ${e.tipo}${e.esperadas ? ` de ${e.esperadas}` : ''}. Revisa que tu pieza no esté aquí:`),
+    h('ul', { class: 'mt-1.5 max-h-40 list-disc overflow-y-auto pl-5 tabular-nums' }, (e.archivos || []).map(x => h('li', null, x))),
+    h('label', { class: 'mt-2 flex items-start gap-2 font-medium' },
+      h('input', { type: 'checkbox', class: 'mt-0.5 h-4 w-4', checked: !!m.confirmaRevisado, disabled: m.enviando, onChange: ev => { estado.modal.confirmaRevisado = ev.target.checked; render(); } }),
+      'Ya revisé la lista y la pieza que necesito no está.'));
+  return caja('border-[#D5DBE2] bg-[#F4F6F8] dark:border-[#2E3A48] dark:bg-[#1F2833]', h('p', null, `El SKU ${e.sku} todavía no tiene archivos de ${e.tipo}.`));
 }
 function abrirModalSolicitud(clave) {
   const tipos = tiposParaSolicitar();
@@ -2254,6 +2300,8 @@ async function guardarSolicitud() {
   const m = estado.modal;
   if (!String(m.clave).trim()) { m.error = 'Escribe la clave del SKU.'; render(); return; }
   if (String(m.detalle).trim().length < 5) { m.error = 'Describe qué pieza necesitas (mínimo 5 caracteres).'; render(); return; }
+  if (solicitudBloqueada(m)) { m.error = m.estadoSku.no_aplica ? `Ese SKU no lleva ${m.estadoSku.tipo}.` : 'Ese SKU ya tiene completos esos archivos. Búscalos en tu lista de archivos de corte.'; render(); return; }
+  if (m.estadoSku && m.estadoSku.piezas > 0 && !m.confirmaRevisado) { m.error = 'Revisa la lista de archivos que ya tiene el SKU y marca la casilla de confirmación.'; render(); return; }
   m.enviando = true; m.error = null; render();
   try {
     await DataService.crearSolicitud(m.clave, m.tipo_id, m.detalle);
@@ -2339,11 +2387,13 @@ function ModalSolicitud() {
               h('span', { class: 'min-w-0' }, h('span', { class: 'block text-sm font-semibold tabular-nums' }, sk.clave), h('span', { class: 'block truncate text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, sk.descripcion))))))
         : m.clave && m.buscado === String(m.clave).trim() ? h('p', { class: 'mt-1.5 text-xs text-[#B26A00] dark:text-[#E0A650]' }, 'Ningún SKU coincide. Revisa la clave o busca por la descripción.') : null),
       h('div', null, h('label', { for: 'sol-tipo', class: CLS.etiqueta }, 'Tipo de archivo'),
-        h('select', { id: 'sol-tipo', class: CLS.input, value: m.tipo_id, disabled: m.enviando, onChange: ev => { estado.modal.tipo_id = ev.target.value; } }, tipos.map(t => h('option', { value: t.id }, t.nombre)))),
+        h('select', { id: 'sol-tipo', class: CLS.input, value: m.tipo_id, disabled: m.enviando, onChange: ev => { estado.modal.tipo_id = ev.target.value; revisarEstadoSolicitud(); } }, tipos.map(t => h('option', { value: t.id }, t.nombre)))),
+      EstadoSkuSolicitud(m),
       h('div', null, h('label', { for: 'sol-detalle', class: CLS.etiqueta }, '¿Qué pieza necesitas? (obligatorio)'),
-        h('textarea', { id: 'sol-detalle', rows: '3', maxlength: '500', class: CLS.input, disabled: m.enviando, placeholder: 'Ej. Falta el travesaño inferior; en el plano aparece como 2 piezas.', value: m.detalle, onInput: ev => { estado.modal.detalle = ev.target.value; } }))),
+        h('textarea', { id: 'sol-detalle', rows: '3', maxlength: '500', class: CLS.input, disabled: m.enviando || solicitudBloqueada(m), placeholder: 'Ej. Falta el travesaño inferior; en el plano aparece como 2 piezas.', value: m.detalle, onInput: ev => { estado.modal.detalle = ev.target.value; } }))),
     ErrorModal(m.error),
-    PieModal('Enviar solicitud', guardarSolicitud, { enviando: m.enviando }));
+    solicitudBloqueada(m) ? h('div', { class: 'mt-6 flex justify-end' }, h('button', { type: 'button', id: 'confirmar-cancelar', class: CLS.btnSecundario, onClick: cerrarModal }, 'Cerrar'))
+      : h('fieldset', { disabled: !!(m.skuElegido && m.estadoSku === undefined), class: 'contents' }, PieModal('Enviar solicitud', guardarSolicitud, { enviando: m.enviando })));
 }
 function ModalAtenderSolicitud() {
   const m = estado.modal, x = m.sol, atender = m.accion === 'atendida';
@@ -2388,8 +2438,12 @@ async function cargarCorte({ silencioso = false } = {}) {
   const c = estado.corte;
   if (!silencioso) { c.cargando = true; c.error = null; render(); }
   try {
-    const [docs, descargas, esperadas] = await Promise.all([DataService.listarDocumentos({ categoria: estado.sesion.rol_id === ROLES.OPERADOR ? null : 'corte' }), puede(estado.sesion.rol_id, 'documentos') ? DataService.listarDescargas(60) : Promise.resolve(null), DataService.piezasEsperadas()]);
-    c.datos = docs; c.descargas = descargas; c.esperadas = esperadas; c.error = null;
+    const operador = estado.sesion.rol_id === ROLES.OPERADOR;
+    const [docs, descargas, esperadas, tecnicos] = await Promise.all([DataService.listarDocumentos({ categoria: 'corte' }), puede(estado.sesion.rol_id, 'documentos') ? DataService.listarDescargas(60) : Promise.resolve(null), DataService.piezasEsperadas(),
+      operador ? DataService.listarDocumentos({ categoria: 'tecnica' }).catch(() => []) : Promise.resolve([])]);
+    c.datos = hayCategorias() ? docs : docs.filter(d => d.categoria !== 'tecnica'); c.descargas = descargas; c.esperadas = esperadas; c.error = null;
+    c.tecnicos = new Map(); // operador: la especificación (y otros documentos permitidos) de los SKUs de su área, solo para ver
+    for (const d of tecnicos) if (d.categoria === 'tecnica') { if (!c.tecnicos.has(d.sku_id)) c.tecnicos.set(d.sku_id, []); c.tecnicos.get(d.sku_id).push(d); }
     revisarCambiosOperador();
     cargarSolicitudes({ primera: estado.solicitudes.conocidas === null });
     cargarPrototipos({ primera: estado.proto.conocidos === null });
@@ -4313,6 +4367,9 @@ function VistaCorteOperador() {
             h('span', { class: 'block text-lg font-semibold tabular-nums' }, k.clave),
             h('span', { class: 'block truncate text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, k.descripcion),
             ResumenSkuOperador(k, tipos, c.esperadas || new Map()))),
+        ...((c.tecnicos && c.tecnicos.get(k.sku_id)) || []).sort((a, b) => a.tipo_orden - b.tipo_orden).map(d =>
+          h('button', { type: 'button', class: `${CLS.btnSecundario} w-full py-3 sm:w-auto`, onClick: () => verDocumentoPdf(d), 'aria-label': `Ver ${d.tipo_nombre} del SKU ${k.clave}` },
+            icono('reporte'), `Ver ${d.tipo_nombre.toLowerCase()}`)),
         h('button', { type: 'button', class: `${CLS.btnPrimario} w-full py-3 sm:w-auto`, disabled: !!c.descargando, onClick: () => descargarTodasLasPiezas(k.clave, k.piezas) },
           lote ? [Spinner('w-4 h-4 border-white border-t-transparent'), `Preparando ${lote.hecho} de ${lote.total}…`] : [icono('descarga'), `Descargar todo (${k.piezas.length})`])),
       abierto ? h('div', { id: `piezas-${k.sku_id}`, class: 'border-t border-[#E3E7EC] dark:border-[#26313D]' },
@@ -4526,9 +4583,10 @@ async function imprimirPdf(pdf, d, avance) {
 }
 /* El visor vive fuera de render(): así las páginas dibujadas no se pierden cuando cambia el resto de la pantalla. */
 async function verDocumentoPdf(d) {
-  const s = estado.sesion, planta = s.rol_id === ROLES.PLANTA, descarga = puede(s.rol_id, 'doctec_descargar');
+  const s = estado.sesion, operador = s.rol_id === ROLES.OPERADOR, planta = s.rol_id === ROLES.PLANTA || operador; // el operador solo consulta en pantalla
+  const descarga = puede(s.rol_id, 'doctec_descargar');
   const tipoDoc = cache.tiposDocumento[String(d.tipo_documento_id)] || {};
-  const imprime = planta ? !!tipoDoc.planta_imprime : true;
+  const imprime = operador ? false : planta ? !!tipoDoc.planta_imprime : true;
   const marca = planta ? `CONSULTA · ${s.nombre} · ${new Date().toLocaleDateString('es-MX')}` : null;
   let zoom = 1, pdf = null, cerrado = false, observador = null, imprimiendo = false;
   const titulo = `${d.sku_clave} · ${d.tipo_nombre}`;
@@ -4810,7 +4868,7 @@ function AdminDocTec() {
         h('li', null, 'Carga los documentos: la importación desde el sitio de documentación (tarea de GitHub) o uno por uno desde el detalle de cada SKU.'),
         h('li', null, 'Revisa en la pestaña Documentación técnica qué SKUs tienen documentos faltantes.'),
         h('li', null, 'Cuando estén cargados, activa la casilla automática de cada documento. Antes de activarla verás cuántas casillas cambiarían.'))),
-    TablaAdmin([['Documento'], ['Cargados', 'text-right'], ['Límite por archivo'], ['Consulta de planta'], ['Casilla automática']],
+    TablaAdmin([['Documento'], ['Cargados', 'text-right'], ['Límite por archivo'], ['Consulta de planta'], ['Operadores'], ['Casilla automática']],
       tipos.map(t => {
         const sel = a.seleccion && a.seleccion[t.id] !== undefined ? a.seleccion[t.id] : String(t.entregable_sugerido_id || '');
         return h('tr', null,
@@ -4823,6 +4881,9 @@ function AdminDocTec() {
               value: t.planta_imprime ? 'imprime' : t.visible_planta ? 'ver' : 'no',
               onChange: ev => configurarTipoTecnico(t, { visible_planta: ev.target.value !== 'no', planta_imprime: ev.target.value === 'imprime' }) },
             h('option', { value: 'no' }, 'No lo ve'), h('option', { value: 'ver' }, 'Solo en pantalla'), h('option', { value: 'imprime' }, 'En pantalla e imprimir'))),
+          h('td', { class: CLS.td }, t.visible_operador === undefined ? h('span', { class: 'text-xs text-[#7A8594]' }, 'Falta actualización') :
+            h('label', { class: 'inline-flex items-center gap-2 whitespace-nowrap text-sm' },
+              h('input', { type: 'checkbox', class: 'h-4 w-4', checked: !!t.visible_operador, onChange: ev => configurarTipoTecnico(t, { visible_operador: ev.target.checked }) }), 'Lo ven en pantalla')),
           h('td', { class: CLS.td }, t.entregable_id
             ? h('div', { class: 'flex flex-wrap items-center gap-2' },
                 h('span', { class: 'rounded bg-[#E6F2EB] px-2 py-0.5 text-xs font-semibold text-[#1F7A4D] dark:bg-[#173526] dark:text-[#5CC48E]' }, `Activa: ${(ents.find(e => e.id === Number(t.entregable_id)) || {}).nombre || 'casilla'}`),
@@ -4832,7 +4893,7 @@ function AdminDocTec() {
                   h('option', { value: '' }, 'Elige la casilla…'), ents.filter(e => !ocupadas.has(e.id)).map(e => h('option', { value: e.id }, e.nombre))),
                 h('button', { type: 'button', class: CLS.btnChico, disabled: !sel, onClick: () => previsualizarCasillaTecnica(t, Number(sel)) }, 'Activar…'))));
       })),
-    h('p', { class: 'text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, 'La consulta de planta solo ve el documento vigente de los tipos permitidos y nunca puede descargarlos. Si el tipo está en "En pantalla e imprimir", puede imprimirlo desde el visor: cada hoja lleva al pie quién la imprimió, cuándo y qué versión es, y la impresión queda registrada. Los ingenieros, el gerente y calidad ven, imprimen y descargan todo.'));
+    h('p', { class: 'text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, 'La consulta de planta solo ve el documento vigente de los tipos permitidos y nunca puede descargarlos. Si el tipo está en "En pantalla e imprimir", puede imprimirlo desde el visor: cada hoja lleva al pie quién la imprimió, cuándo y qué versión es, y la impresión queda registrada. Los operadores ven en pantalla los tipos marcados en "Operadores", solo de los SKUs que tienen archivos de corte de su área, sin descargar ni imprimir. Los ingenieros, el gerente y calidad ven, imprimen y descargan todo.'));
 }
 async function configurarTipoTecnico(t, cambio) {
   try {
