@@ -1,8 +1,13 @@
 {
-  "version": "2.0.0",
-  "minVersion": "2.0.0",
+  "version": "2.3.0",
+  "minVersion": "2.3.0",
   "url": "https://github.com/LINEAITALIA/APLICATIVO-DISE-O-DE-CAT-LOGO/raw/Instructivo/Generador%20de%20instructivos%20HTML/github/generador-instructivos/Instructivo-standalone.html",
   "notes": [
-    "Primera versión publicada con aviso de actualización."
+    "Ya se puede pegar texto copiado de Word, Excel o PDF en notas y cuadros de texto.",
+    "Clic derecho en una pieza o herraje ▸ Convertir en herraje / pieza (también se puede arrastrar de un apartado al otro).",
+    "Las notas fuera de los pasos tienen menú con clic derecho: alineación del texto, tamaño de letra y eliminar. Su texto ahora sale en el PDF.",
+    "Clic derecho en cualquier imagen ▸ Reemplazar con imagen del portapapeles.",
+    "Todos los menús de texto (cuadros de texto de los pasos y notas) tienen las mismas opciones: letra, alineación, color, contorno, fondo, capas, fijar y eliminar.",
+    "Notas fuera de los pasos: Ctrl+clic para seleccionar varias y, con clic derecho, alinearlas, distribuirlas o igualar su tamaño."
   ]
 }
