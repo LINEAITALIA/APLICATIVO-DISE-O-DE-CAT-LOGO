@@ -1,14 +1,15 @@
 {
-  "version": "2.3.2",
-  "minVersion": "2.3.0",
-  "url": "https://github.com/LINEAITALIA/APLICATIVO-DISE-O-DE-CAT-LOGO/raw/Instructivo/Generador%20de%20instructivos%20HTML/github/generador-instructivos/Instructivo-standalone.html",
+  "version": "2.4.0",
+  "minVersion": "2.4.0",
+  "url": "https://github.com/LINEAITALIA/APLICATIVO-DISE-O-DE-CAT-LOGO/raw/Instructivo/Generador%20de%20instructivos%20HTML/github/generador-instructivos/Instructivo-standalone-2.4.0.html",
   "notes": [
-    "Ya se puede pegar texto copiado de Word, Excel o PDF en notas y cuadros de texto.",
-    "Clic derecho en una pieza o herraje ▸ Convertir en herraje / pieza (también se puede arrastrar de un apartado al otro).",
-    "Las notas fuera de los pasos tienen menú con clic derecho: alineación del texto, tamaño de letra y eliminar. Su texto ahora sale en el PDF.",
+    "SI SE DESCARGA LA VERSIÓN ANTERIOR: es la caché del navegador. Abre una ventana de incógnito (Ctrl+Shift+N), pega este link y descarga desde ahí: https://github.com/LINEAITALIA/APLICATIVO-DISE-O-DE-CAT-LOGO/raw/Instructivo/Generador%20de%20instructivos%20HTML/github/generador-instructivos/Instructivo-standalone-2.4.0.html",
+    "El aviso de actualización ahora aparece al centro; con «Más tarde» queda una barra fija arriba con el botón Descargar.",
+    "El aviso incluye el botón Copiar link para descargar desde una ventana de incógnito.",
+    "Pegar texto de Word, Excel o PDF en notas y cuadros de texto.",
+    "Clic derecho en pieza o herraje ▸ Convertir en herraje / pieza (o arrastrar entre apartados).",
     "Clic derecho en cualquier imagen ▸ Reemplazar con imagen del portapapeles.",
-    "Todos los menús de texto (cuadros de texto de los pasos y notas) tienen las mismas opciones: letra, alineación, color, contorno, fondo, capas, fijar y eliminar.",
-    "Notas fuera de los pasos: Ctrl+clic para seleccionar varias y, con clic derecho, alinearlas, distribuirlas o igualar su tamaño.",
-    "El botón Descargar versión nueva ahora baja siempre la versión más reciente y avisa si GitHub aún no se actualiza."
+    "Todos los menús de texto tienen las mismas opciones: letra, alineación, color, contorno, fondo, capas, fijar y eliminar.",
+    "Notas: Ctrl+clic para seleccionar varias y alinearlas, distribuirlas o igualar su tamaño. Su texto ya sale en el PDF."
   ]
 }
