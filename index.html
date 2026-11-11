@@ -99,7 +99,7 @@ const CONFIG = Object.assign({
   DRIVE_URL: 'PEGA-AQUI-LA-DIRECCION-DEL-INTERMEDIARIO'
 }, (typeof window !== 'undefined' && window.CONFIG_APLICATIVO) || {});
 /* C2. Versión del aplicativo: cambia con cada actualización */
-const VERSION_APP = '2026.11.10';
+const VERSION_APP = '2026.11.11';
 const BUCKET_IMAGENES = 'ing-imagenes';
 const driveListo = () => /^https:\/\/script\.google\.com\//.test(CONFIG.DRIVE_URL);
 const LOGO_LINEA_ITALIA = 'data:image/png;base64,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'; // logo completo en negro; en modo oscuro se invierte a blanco
@@ -479,6 +479,47 @@ const DataService = {
   async problemasPendientes() { // piezas con un problema reportado sin resolver; null si aún no se instala la actualización
     try { const { data } = await ejecutar(SB.rpc('ing_problemas_pendientes')); return data || []; }
     catch (e) { return null; }
+  },
+  /* ---------- Materia prima: componentes con su especificación vigente ---------- */
+  async listarComponentes() {
+    return leerTodo(() => SB.from('ing_v_componentes').select('*').order('codigo'));
+  },
+  async guardarComponente(id, d) {
+    exigirPermiso('mp_editar');
+    const { data } = await ejecutar(SB.rpc('ing_guardar_componente', { p_id: id || null, p_codigo: String(d.codigo || '').trim(), p_descripcion: String(d.descripcion || '').trim(),
+      p_categoria: String(d.categoria || '').trim() || null, p_unidad: String(d.unidad || '').trim() || null, p_notas: String(d.notas || '').trim() || null }));
+    return Number(data);
+  },
+  async activarComponente(id, activo) { exigirPermiso('mp_editar'); await ejecutar(SB.rpc('ing_activar_componente', { p_id: id, p_activo: !!activo })); },
+  async eliminarComponente(id) {
+    exigirPermiso('mp_eliminar');
+    const { data } = await ejecutar(SB.rpc('ing_eliminar_componente', { p_id: id }));
+    if (data) llamarDrive('borrar', { drive_ids: [data] }).catch(() => {});
+  },
+  async subirEspecComponente(c, archivo, cambios) {
+    exigirPermiso('mp_editar');
+    const err = validarPdfMateria(archivo); if (err) throw new ErrorApi(err, { tipo: 'validacion' });
+    const bytes = new Uint8Array(await archivo.arrayBuffer());
+    const sha = await sha256Bytes(bytes), comprimido = pako.gzip(bytes, { level: 9 }), pieza = `${c.codigo}_ESPEC`;
+    const subida = await llamarDrive('subir', { contenido: aBase64(comprimido), nombre: archivo.name, nombre_drive: `${nombreSeguroWindows(pieza)} (subiendo).pdf`, carpetas: ['Materia prima', nombreSeguroWindows(c.codigo)], sku: c.codigo, pieza });
+    const { data } = await ejecutar(SB.rpc('ing_registrar_espec_componente', { p_componente: c.id, p_drive_id: subida.drive_id, p_nombre: archivo.name, p_tamano: archivo.size,
+      p_tamano_guardado: subida.tamano_guardado || comprimido.length, p_sha256: sha, p_cambios: String(cambios || '').trim() || null }))
+      .catch(async e => { llamarDrive('borrar', { drive_ids: [subida.drive_id] }).catch(() => {}); throw e; });
+    const fila = (data && data[0]) || {};
+    if (fila.liberar_drive_id) llamarDrive('borrar', { drive_ids: [fila.liberar_drive_id] }).catch(() => {}); // solo se guarda la vigente
+    if (fila.version) llamarDrive('renombrar', { drive_id: subida.drive_id, nombre: nombreDrive(pieza, fila.version, archivo.name) }).catch(() => {});
+    return fila.version;
+  },
+  async registrarConsultaComponente(especId, accion) { await ejecutar(SB.rpc('ing_registrar_consulta_componente', { p_espec: especId, p_accion: accion })); },
+  async bytesEspecComponente(c, accion) { // accion: 'consulta' o 'descarga' quedan registradas; null = ver sin registrar (ingeniería y calidad)
+    if (!c.drive_id || c.archivo_borrado) throw new ErrorApi('De esta versión solo queda el registro; su archivo ya se liberó.', { tipo: 'no_encontrado' });
+    if (accion) await DataService.registrarConsultaComponente(c.espec_id, accion);
+    const res = await llamarDrive('descargar', { drive_id: c.drive_id });
+    return pako.ungzip(deBase64(res.contenido));
+  },
+  async versionesComponente(id) {
+    const { data } = await ejecutar(SB.from('ing_v_especs_componente').select('*').eq('componente_id', id).order('version', { ascending: false }));
+    return data || [];
   },
   async crearSolicitud(clave, tipoId, detalle) {
     await ejecutar(SB.rpc('ing_crear_solicitud', { p_sku_clave: String(clave || '').trim(), p_tipo: Number(tipoId), p_detalle: String(detalle || '').trim() }));
@@ -1090,6 +1131,7 @@ const estado = {
   proto: { datos: null, conocidos: null, filtro: 'mios' },
   corte: { cargando: false, error: null, datos: null, filtros: { busqueda: '', tipo_id: '' }, descargas: null, verificacion: null, descargando: null, lote: null, espacio: null },
   doctec: { cargando: false, error: null, datos: null, porSku: new Map(), na: new Set(), filtros: { busqueda: '', tipo_id: '', estado: 'todos', descontinuados: false } },
+  mp: { cargando: false, error: null, datos: null, instalado: true, filtros: { busqueda: '', categoria: '', estado: 'todos', obsoletos: false } },
   modal: null,
   tema: temaInicial(),
   avisos: []
@@ -1164,6 +1206,8 @@ async function entrarConSesion(usuario) {
       await DataService.recargarTodo();
       await cargarCatalogos();
       estado.vista = 'documentacion';
+    } else if (estado.sesion.rol_id === ROLES.MATERIA) { // incoming y compras: solo la pantalla de materia prima
+      estado.vista = 'materia';
     } else {
       await DataService.recargarTodo();
       await cargarCatalogos();
@@ -1249,7 +1293,7 @@ async function reenviarConfirmacion() {
 function suscribirCambios() {
   if (canal) SB.removeChannel(canal);
   canal = SB.channel('ing-cambios');
-  for (const tabla of ['ing_sku_entregables', 'ing_skus', 'ing_familias', 'ing_lineas', 'ing_entregables', 'ing_perfiles', 'ing_documentos_corte', 'ing_versiones_documento', 'ing_maquinas', 'ing_tipos_documento', 'ing_areas_corte', 'ing_sku_tipo_na', 'ing_sku_tipo_piezas', 'ing_observaciones', 'ing_medidas', 'ing_solicitudes', 'ing_prototipos', 'ing_prototipo_archivos', 'ing_prototipo_cortes']) {
+  for (const tabla of ['ing_sku_entregables', 'ing_skus', 'ing_familias', 'ing_lineas', 'ing_entregables', 'ing_perfiles', 'ing_documentos_corte', 'ing_versiones_documento', 'ing_maquinas', 'ing_tipos_documento', 'ing_areas_corte', 'ing_sku_tipo_na', 'ing_sku_tipo_piezas', 'ing_observaciones', 'ing_medidas', 'ing_solicitudes', 'ing_prototipos', 'ing_prototipo_archivos', 'ing_prototipo_cortes', 'ing_componentes', 'ing_especs_componente']) {
     canal.on('postgres_changes', { event: '*', schema: 'public', table: tabla }, cambio => atenderCambio(tabla, cambio));
   }
   canal.subscribe();
@@ -1262,6 +1306,8 @@ const TABLAS_CATALOGO = ['ing_familias', 'ing_lineas', 'ing_entregables', 'ing_p
 function atenderCambio(tabla, cambio) {
   if (!estado.sesion) return;
   if (estado.sesion.rol_id === ROLES.OPERADOR) { programarRecarga(); return; } // la pantalla del operador ya es ligera
+  if (['ing_componentes', 'ing_especs_componente'].includes(tabla)) { if (estado.vista === 'materia') conRetraso('materia', () => cargarMateria({ silencioso: true }), 800); return; }
+  if (estado.sesion.rol_id === ROLES.MATERIA) return;
   if (estado.sesion.rol_id === ROLES.PLANTA) { if (['ing_documentos_corte', 'ing_versiones_documento', 'ing_tipos_documento', 'ing_skus'].includes(tabla)) programarRecarga(1500); return; }
   const fila = (cambio && (cambio.new && Object.keys(cambio.new).length ? cambio.new : cambio.old)) || {};
   if (TABLAS_SKU.includes(tabla)) {
@@ -1297,6 +1343,7 @@ async function recargarYRefrescar() {
   if (estado.fase !== 'app') return;
   if (estado.sesion.rol_id === ROLES.OPERADOR) { await DataService.recargarCatalogosCorte(); cargarCorte({ silencioso: true }); return; }
   if (estado.sesion.rol_id === ROLES.PLANTA) { try { await DataService.recargarTodo(); } catch (e) { return; } cargarDocumentacion({ silencioso: true }); return; }
+  if (estado.sesion.rol_id === ROLES.MATERIA) { cargarMateria({ silencioso: true }); return; }
   try { await DataService.recargarTodo(); } catch (e) { return; }
   cargarObservacionesGlobal(); cargarSolicitudes(); cargarPrototipos();
   const yo = cache.perfiles[estado.sesion.user_id];
@@ -1314,6 +1361,7 @@ function refrescarVistas() {
   else if (estado.vista === 'historial') cargarHistorial({ silencioso: true });
   else if (estado.vista === 'corte') cargarCorte({ silencioso: true });
   else if (estado.vista === 'documentacion') cargarDocumentacion({ silencioso: true });
+  else if (estado.vista === 'materia') cargarMateria({ silencioso: true });
   else if (estado.vista === 'admin' && puede(estado.sesion.rol_id, 'administrar')) recargarAdminSilencioso();
   if (estado.detalle.abierto) refrescarDetalleSi(estado.detalle.sku_id);
 }
@@ -1351,6 +1399,7 @@ function cargarVista() {
   else if (estado.vista === 'observaciones') { cargarObservacionesGlobal(); DataService.indicadores().then(d => { estado.indicadores = d; render(); }); }
   else if (estado.vista === 'prototipos') cargarPrototipos();
   else if (estado.vista === 'documentacion') cargarDocumentacion();
+  else if (estado.vista === 'materia') cargarMateria();
   else if (estado.vista === 'admin') { if (puede(estado.sesion.rol_id, 'administrar')) cargarAdmin(); else render(); }
 }
 async function cargarCatalogos() {
@@ -3069,9 +3118,9 @@ function cerrarModal() { if (estado.modal && estado.modal.enviando) return; esta
 
 <!-- ===== 5. REGLAS DE NEGOCIO Y VALIDACIONES ===== -->
 <script>
-const ROLES = { INGENIERO: 1, JEFE: 2, CONSULTA: 3, OPERADOR: 4, PLANTA: 5 };
+const ROLES = { INGENIERO: 1, JEFE: 2, CONSULTA: 3, OPERADOR: 4, PLANTA: 5, MATERIA: 6 };
 const ESTATUS_SKU = { ACTIVO: 1, DESCONTINUADO: 2 };
-const NOMBRES_ROL = { 1: 'Ingeniero', 2: 'Gerente de ingeniería', 3: 'Auditor de calidad', 4: 'Operador', 5: 'Consulta de planta' };
+const NOMBRES_ROL = { 1: 'Ingeniero', 2: 'Gerente de ingeniería', 3: 'Auditor de calidad', 4: 'Operador', 5: 'Consulta de planta', 6: 'Consulta de materia prima' };
 
 /* Quién puede hacer qué. ver: los tres roles; marcar/desmarcar: ingeniero y jefe; administrar: solo jefe. */
 const PERMISOS = {
@@ -3085,7 +3134,11 @@ const PERMISOS = {
   observar: [ROLES.CONSULTA],                  // señalar y reabrir observaciones de calidad (solo el auditor)
   resolver: [ROLES.INGENIERO, ROLES.JEFE],     // marcar observaciones como resueltas
   doctec_ver: [ROLES.INGENIERO, ROLES.JEFE, ROLES.CONSULTA, ROLES.PLANTA], // documentación técnica: ver en pantalla
-  doctec_descargar: [ROLES.INGENIERO, ROLES.JEFE, ROLES.CONSULTA]        // documentación técnica: descargar (la consulta de planta no)
+  doctec_descargar: [ROLES.INGENIERO, ROLES.JEFE, ROLES.CONSULTA],       // documentación técnica: descargar (la consulta de planta no)
+  mp_ver: [ROLES.INGENIERO, ROLES.JEFE, ROLES.CONSULTA, ROLES.MATERIA],  // especificaciones de materia prima: ver e imprimir
+  mp_descargar: [ROLES.INGENIERO, ROLES.JEFE, ROLES.CONSULTA],          // incoming y compras no descargan
+  mp_editar: [ROLES.INGENIERO, ROLES.JEFE],                             // dar de alta componentes y subir especificaciones
+  mp_eliminar: [ROLES.JEFE]
 };
 function puede(rolId, accion) { return (PERMISOS[accion] || []).includes(rolId); }
 /* Cancelar una observación abierta: el auditor que la registró o el gerente. Reabrir una cancelada: auditor o gerente. */
@@ -3756,16 +3809,17 @@ function FormularioAuth() {
 /* FIN COMPONENTE: FormularioAuth */
 
 /* COMPONENTE: BarraSuperior */
-const NOMBRE_CORTO_SECCION = { skus: 'Avance', corte: 'Corte', documentacion: 'Documentación', admin: 'Admin.' };
+const NOMBRE_CORTO_SECCION = { skus: 'Avance', corte: 'Corte', documentacion: 'Documentación', materia: 'M. prima', admin: 'Admin.' };
 function BarraSuperior() {
   const s = estado.sesion;
-  const esOperador = s.rol_id === ROLES.OPERADOR, esPlanta = s.rol_id === ROLES.PLANTA;
-  const secciones = esOperador ? [{ vista: 'corte', texto: 'Archivos de corte' }] : esPlanta ? [{ vista: 'documentacion', texto: 'Documentación técnica' }] : [
+  const esOperador = s.rol_id === ROLES.OPERADOR, esMateria = s.rol_id === ROLES.MATERIA, esPlanta = s.rol_id === ROLES.PLANTA || esMateria;
+  const secciones = esOperador ? [{ vista: 'corte', texto: 'Archivos de corte' }] : esMateria ? [{ vista: 'materia', texto: 'Materia prima' }] : esPlanta ? [{ vista: 'documentacion', texto: 'Documentación técnica' }] : [
     { vista: 'skus', texto: 'Avance por SKU' }, ...(s.rol_id === ROLES.CONSULTA ? [] : [{ vista: 'tablero', texto: 'Tablero' }]), { vista: 'historial', texto: 'Historial' }
   ];
   if (!esOperador && puede(s.rol_id, 'documentos') && estado.obs.lista) { const n = estado.obs.lista.filter(o => o.estado === 'abierta').length; secciones.push({ vista: 'observaciones', texto: n ? `Observaciones (${n})` : 'Observaciones' }); }
   if (!esOperador && puede(s.rol_id, 'documentos') && DataService.catalogosCorte().tipos.length) { const n = puede(s.rol_id, 'subir_documentos') ? solicitudesPendientes().length : 0; secciones.push({ vista: 'corte', texto: n ? `Archivos de corte (${n})` : 'Archivos de corte' }); }
   if (!esOperador && !esPlanta && puede(s.rol_id, 'doctec_ver') && tiposTecnicos().length) secciones.push({ vista: 'documentacion', texto: 'Documentación técnica' });
+  if (!esPlanta && !esOperador && puede(s.rol_id, 'mp_ver') && estado.mp.instalado) secciones.push({ vista: 'materia', texto: 'Materia prima' });
   if (puede(s.rol_id, 'prototipos') && DataService.catalogosCorte().tipos.length) secciones.push({ vista: 'prototipos', texto: 'Prototipos' });
   if (puede(s.rol_id, 'administrar')) secciones.push({ vista: 'admin', texto: estado.pendientes ? `Administración (${estado.pendientes})` : 'Administración' });
   return h('header', { class: 'border-b border-[#D5DBE2] dark:border-[#2E3A48] bg-white dark:bg-[#18202A]' },
@@ -4213,7 +4267,7 @@ function AdminSkus() {
 /* COMPONENTE: AdminUsuarios */
 function AdminUsuarios() {
   const lista = estado.admin.usuarios;
-  const roles = [ROLES.INGENIERO, ROLES.JEFE, ROLES.CONSULTA, ...(DataService.catalogosCorte().maquinas.length ? [ROLES.OPERADOR] : []), ...(tiposTecnicos().length ? [ROLES.PLANTA] : [])];
+  const roles = [ROLES.INGENIERO, ROLES.JEFE, ROLES.CONSULTA, ...(DataService.catalogosCorte().maquinas.length ? [ROLES.OPERADOR] : []), ...(tiposTecnicos().length ? [ROLES.PLANTA] : []), ROLES.MATERIA];
   const maquinaDe = id => (DataService.catalogosCorte().maquinas.find(x => x.id === Number(id)) || {}).nombre;
   return h('div', null,
     BarraAdmin('Cada persona crea su cuenta desde la pantalla de inicio con "Crear cuenta". Aquí apruebas su acceso, eliges su rol o se lo quitas.', null),
@@ -4300,7 +4354,7 @@ function AdminEntregables() {
 function Modal() {
   const m = estado.modal;
   if (!m) return null;
-  const contenido = { desmarcar: ModalDesmarcar, sku: ModalSku, catalogo: ModalCatalogo, aprobar: ModalAprobar, reporte: ModalReporte, importarImagenes: ModalImportarImagenes, documento: ModalDocumento, retirarDocumento: ModalRetirarDocumento, versionesDocumento: ModalVersionesDocumento, corteCatalogo: ModalCorteCatalogo, noAplica: ModalNoAplica, solicitud: ModalSolicitud, problema: ModalProblema, cargaMasiva: ModalCargaMasiva, prototipo: ModalPrototipo, protoCortado: ModalProtoCortado, atenderSolicitud: ModalAtenderSolicitud, renombrarPieza: ModalRenombrarPieza, compartir: ModalCompartirPieza, copiarConfig: ModalCopiarConfig, tecnico: ModalTecnico, medidas: ModalMedidas, observacion: ModalObservacion, atenderObs: ModalAtenderObs, confirmar: ModalConfirmacion }[m.tipo]();
+  const contenido = { desmarcar: ModalDesmarcar, sku: ModalSku, catalogo: ModalCatalogo, aprobar: ModalAprobar, reporte: ModalReporte, importarImagenes: ModalImportarImagenes, documento: ModalDocumento, retirarDocumento: ModalRetirarDocumento, versionesDocumento: ModalVersionesDocumento, corteCatalogo: ModalCorteCatalogo, noAplica: ModalNoAplica, solicitud: ModalSolicitud, problema: ModalProblema, cargaMasiva: ModalCargaMasiva, prototipo: ModalPrototipo, protoCortado: ModalProtoCortado, atenderSolicitud: ModalAtenderSolicitud, renombrarPieza: ModalRenombrarPieza, compartir: ModalCompartirPieza, copiarConfig: ModalCopiarConfig, tecnico: ModalTecnico, componente: ModalComponente, especComponente: ModalEspecComponente, versionesComponente: ModalVersionesComponente, medidas: ModalMedidas, observacion: ModalObservacion, atenderObs: ModalAtenderObs, confirmar: ModalConfirmacion }[m.tipo]();
   return h('div', { class: 'fixed inset-0 z-50 flex items-center justify-center p-4' },
     h('button', { type: 'button', class: 'absolute inset-0 h-full w-full cursor-default bg-[#1B2430]/40 dark:bg-[#000000]/40', 'aria-label': 'Cerrar diálogo', tabindex: '-1', onClick: cerrarModal }),
     h('div', { 'data-scroll-id': `modal-${m.tipo}`, class: `relative max-h-[90vh] w-full ${m.tipo === 'documento' || m.tipo === 'prototipo' || m.tipo === 'cargaMasiva' ? 'max-w-3xl' : m.tipo === 'renombrarPieza' ? 'max-w-xl' : 'max-w-md'} overflow-y-auto rounded-lg bg-white dark:bg-[#18202A] p-6 shadow-xl`, role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'titulo-modal' }, contenido));
@@ -4387,7 +4441,7 @@ function ModalAprobar() {
     h('div', { class: 'mt-4' },
       h('label', { for: 'aprobar-rol', class: CLS.etiqueta }, 'Rol'),
       h('select', { id: 'aprobar-rol', class: CLS.input, value: m.rol_id, onChange: ev => { estado.modal.rol_id = ev.target.value; render(); } },
-        [ROLES.INGENIERO, ROLES.JEFE, ROLES.CONSULTA, ...(DataService.catalogosCorte().maquinas.length ? [ROLES.OPERADOR] : []), ...(tiposTecnicos().length ? [ROLES.PLANTA] : [])].map(r => h('option', { value: r }, NOMBRES_ROL[r]))),
+        [ROLES.INGENIERO, ROLES.JEFE, ROLES.CONSULTA, ...(DataService.catalogosCorte().maquinas.length ? [ROLES.OPERADOR] : []), ...(tiposTecnicos().length ? [ROLES.PLANTA] : []), ROLES.MATERIA].map(r => h('option', { value: r }, NOMBRES_ROL[r]))),
       h('p', { class: 'mt-1 text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, descripciones[m.rol_id])),
     Number(m.rol_id) === ROLES.OPERADOR ? h('div', { class: 'mt-4' },
       h('label', { for: 'aprobar-maquina', class: CLS.etiqueta }, 'Máquina'),
@@ -4765,10 +4819,11 @@ async function imprimirPdf(pdf, d, avance) {
 }
 /* El visor vive fuera de render(): así las páginas dibujadas no se pierden cuando cambia el resto de la pantalla. */
 async function verDocumentoPdf(d) {
-  const s = estado.sesion, operador = s.rol_id === ROLES.OPERADOR, planta = s.rol_id === ROLES.PLANTA || operador; // el operador solo consulta en pantalla
-  const descarga = puede(s.rol_id, 'doctec_descargar') || (!!d.descargar && puede(s.rol_id, 'prototipos'));
+  const s = estado.sesion, operador = s.rol_id === ROLES.OPERADOR, per = d.permisos || null;
+  const planta = per ? !!per.consulta : s.rol_id === ROLES.PLANTA || operador; // el operador solo consulta en pantalla
+  const descarga = per ? !!per.descarga : puede(s.rol_id, 'doctec_descargar') || (!!d.descargar && puede(s.rol_id, 'prototipos'));
   const tipoDoc = cache.tiposDocumento[String(d.tipo_documento_id)] || {};
-  const imprime = operador ? false : planta ? !!tipoDoc.planta_imprime : true;
+  const imprime = per ? !!per.imprime : operador ? false : planta ? !!tipoDoc.planta_imprime : true;
   const marca = planta ? `CONSULTA · ${s.nombre} · ${new Date().toLocaleDateString('es-MX')}` : null;
   let zoom = 1, pdf = null, cerrado = false, observador = null, imprimiendo = false;
   const titulo = `${d.sku_clave} · ${d.tipo_nombre}`;
@@ -4833,7 +4888,8 @@ async function verDocumentoPdf(d) {
     imprimiendo = true;
     const antes = estadoTxt.textContent;
     try {
-      if (!d.obtenerBytes) await DataService.registrarImpresion(d.version_id); // la impresión queda registrada (y el servidor confirma el permiso)
+      if (d.alImprimir) await d.alImprimir();
+      else if (!d.obtenerBytes) await DataService.registrarImpresion(d.version_id); // la impresión queda registrada (y el servidor confirma el permiso)
       await imprimirPdf(pdf, d, n => { estadoTxt.textContent = `Preparando impresión… página ${n} de ${pdf.numPages}`; });
     } catch (e) { agregarAviso('error', `No se pudo imprimir. ${e.message || ''}`); }
     finally { imprimiendo = false; if (!cerrado) estadoTxt.textContent = antes; }
@@ -4945,6 +5001,217 @@ async function guardarTecnico() {
     if (estado.doctec.datos) cargarDocumentacion({ silencioso: true });
   } catch (e) { m.error = e.message; m.enviando = false; }
   render();
+}
+
+/* ---------- Materia prima: especificaciones por componente (incoming y compras consultan e imprimen) ---------- */
+const MP_MAX_MB = 25;
+const UNIDADES_MP = ['PZA', 'KG', 'M', 'M2', 'L', 'ROLLO', 'JUEGO', 'HOJA'];
+function validarPdfMateria(f) {
+  if (!f) return 'Elige el PDF de la especificación.';
+  if (!/\.pdf$/i.test(f.name)) return 'La especificación debe ser un PDF.';
+  if (f.size > MP_MAX_MB * 1048576) return `El archivo pesa ${formatoTamano(f.size)}; el máximo es ${MP_MAX_MB} MB. Redúcelo (por ejemplo, guardándolo como PDF optimizado).`;
+  return null;
+}
+async function cargarMateria({ silencioso = false } = {}) {
+  const mp = estado.mp;
+  if (!silencioso) { mp.cargando = true; mp.error = null; render(); }
+  try { mp.datos = await DataService.listarComponentes(); mp.error = null; mp.instalado = true; }
+  catch (e) {
+    if (/ing_v_componentes|does not exist|schema cache/i.test(e.message || '')) { mp.instalado = false; mp.error = 'Falta ejecutar actualizacion_materia_prima.sql en Supabase.'; }
+    else mp.error = e.message;
+  }
+  finally { mp.cargando = false; render(); }
+}
+function verEspecComponente(c) {
+  const r = estado.sesion.rol_id, consulta = r === ROLES.MATERIA;
+  verDocumentoPdf({ sku_clave: c.codigo, tipo_nombre: 'Especificación de materia prima', version_vigente: c.version, subida_en: c.subida_en,
+    permisos: { consulta, imprime: puede(r, 'mp_ver'), descarga: puede(r, 'mp_descargar') },
+    obtenerBytes: () => DataService.bytesEspecComponente(c, consulta ? 'consulta' : null),
+    alImprimir: () => DataService.registrarConsultaComponente(c.espec_id, 'impresion'),
+    descargar: () => descargarEspecComponente(c) });
+}
+async function descargarEspecComponente(c) {
+  try { guardarArchivo(await DataService.bytesEspecComponente(c, 'descarga'), nombreSeguroWindows(`${c.codigo}_ESPEC v${c.version}.pdf`)); }
+  catch (e) { agregarAviso('error', `No se pudo descargar. ${e.message || ''}`); }
+}
+function filasMateria() {
+  const mp = estado.mp, f = mp.filtros, q = normalizarTexto(f.busqueda);
+  let l = (mp.datos || []).filter(c => f.obsoletos || c.activo);
+  if (q) l = l.filter(c => normalizarTexto(`${c.codigo} ${c.descripcion} ${c.categoria || ''}`).includes(q));
+  if (f.categoria) l = l.filter(c => (c.categoria || '') === f.categoria);
+  if (f.estado === 'con') l = l.filter(c => c.espec_id); else if (f.estado === 'sin') l = l.filter(c => !c.espec_id);
+  return l.sort((a, b) => compararNatural(a.codigo, b.codigo));
+}
+const categoriasMateria = () => [...new Set((estado.mp.datos || []).map(c => c.categoria).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es'));
+function VistaMateria() {
+  const mp = estado.mp, f = mp.filtros, r = estado.sesion.rol_id, editar = puede(r, 'mp_editar'), consulta = r === ROLES.MATERIA;
+  const cambiar = (campo, valor) => { f[campo] = valor; render(); };
+  let contenido;
+  if (mp.error) contenido = EstadoError(mp.error, () => cargarMateria());
+  else if (!mp.datos) contenido = EstadoCargando('Cargando especificaciones…', 8);
+  else {
+    const lista = filasMateria(), activos = mp.datos.filter(c => c.activo), conEspec = activos.filter(c => c.espec_id).length;
+    const resumen = consulta ? null : h('div', { class: 'mb-4 grid gap-3 sm:grid-cols-3' },
+      [['Componentes activos', activos.length, null], ['Con especificación', conEspec, activos.length ? Math.round(conEspec * 100 / activos.length) : 0], ['Sin especificación', activos.length - conEspec, null]]
+        .map(([t, n, pct]) => h('div', { class: `${CLS.panel} p-3` }, h('p', { class: 'text-sm font-semibold' }, t),
+          h('p', { class: 'mt-1 text-xl font-semibold tabular-nums' }, String(n), pct !== null ? h('span', { class: 'text-sm font-normal text-[#5B6675] dark:text-[#9AA7B6]' }, ` · ${pct}%`) : null))));
+    const fila = c => h('tr', { class: c.activo ? '' : 'opacity-60' },
+      h('th', { scope: 'row', class: `${CLS.td} text-left font-semibold tabular-nums whitespace-nowrap` }, c.codigo,
+        c.activo ? null : h('span', { class: 'ml-2 rounded bg-[#E3E7EC] px-1.5 py-0.5 text-[10px] font-semibold text-[#5B6675] dark:bg-[#26313D] dark:text-[#9AA7B6]' }, 'OBSOLETO')),
+      h('td', { class: CLS.td }, c.descripcion, c.notas ? h('p', { class: 'text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, c.notas) : null),
+      h('td', { class: `${CLS.td} text-sm` }, c.categoria || '—'),
+      h('td', { class: `${CLS.td} text-sm` }, c.unidad || '—'),
+      h('td', { class: `${CLS.td} text-center` }, c.espec_id
+        ? h('button', { type: 'button', class: 'inline-flex items-center gap-1 rounded-md bg-[#E6F2EB] px-2 py-1 text-xs font-semibold text-[#1F7A4D] hover:bg-[#D3E8DB] dark:bg-[#173526] dark:text-[#5CC48E] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1E4E79]',
+            onClick: () => verEspecComponente(c), 'aria-label': `Ver la especificación de ${c.codigo}` }, icono('ojo', 'w-3.5 h-3.5'), consulta ? 'Ver' : `v${c.version}`)
+        : h('span', { class: 'text-xs text-[#B26A00] dark:text-[#E0A650]' }, 'Sin especificación')),
+      h('td', { class: `${CLS.td} whitespace-nowrap text-xs text-[#5B6675] dark:text-[#9AA7B6]` }, c.subida_en ? [fechaCorta(c.subida_en), c.subida_por_nombre ? h('br') : null, c.subida_por_nombre || null] : '—'),
+      editar ? h('td', { class: `${CLS.td} whitespace-nowrap` }, h('div', { class: 'flex flex-wrap gap-1' },
+        h('button', { type: 'button', class: CLS.btnChico, onClick: () => abrirModalEspecComponente(c) }, icono('subir', 'w-3.5 h-3.5'), c.espec_id ? 'Nueva versión' : 'Subir PDF'),
+        h('button', { type: 'button', class: CLS.btnChico, onClick: () => abrirModalComponente(c) }, 'Editar'),
+        c.version > 1 ? h('button', { type: 'button', class: CLS.btnChico, onClick: () => abrirVersionesComponente(c) }, 'Versiones') : null)) : null);
+    const cols = [['Código'], ['Descripción'], ['Categoría'], ['Unidad'], ['Especificación', 'text-center'], ['Actualizada'], ...(editar ? [['Acciones']] : [])];
+    contenido = lista.length ? h('div', { class: `${CLS.panel} max-h-[calc(100vh-16rem)] min-h-[20rem] overflow-auto`, 'data-scroll-id': 'materia' },
+      h('table', { class: 'min-w-full border-separate border-spacing-0' },
+        h('thead', null, h('tr', null, cols.map(([t, c]) => h('th', { scope: 'col', class: `${CLS.th} sticky top-0 z-10 ${c || ''}` }, t)))),
+        h('tbody', { 'data-virtual': '' }, filasVirtuales('materia', lista, fila, cols.length, 57))))
+      : EstadoVacio(mp.datos.length ? { titulo: 'Ningún componente coincide', texto: 'Prueba con otra búsqueda o quita los filtros.', accion: null }
+          : { titulo: 'Todavía no hay componentes', texto: editar ? 'Da de alta el primero con "Nuevo componente" y súbele su especificación en PDF.' : 'Ingeniería aún no ha cargado especificaciones.', accion: null });
+    contenido = h('div', null, resumen, contenido, h('p', { class: 'mt-2 text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, `${lista.length} componentes`));
+  }
+  return h('section', null,
+    EncabezadoVista('Materia prima', consulta ? 'Busca el componente por código o descripción y abre su especificación vigente. Desde el visor la puedes imprimir.'
+      : 'Especificación vigente de cada componente, para que incoming libere los materiales y compras los solicite. Da clic en la versión para verla.',
+      editar ? h('button', { type: 'button', class: CLS.btnPrimario, onClick: () => abrirModalComponente(null) }, icono('mas'), 'Nuevo componente') : null),
+    h('div', { class: 'mb-4 flex flex-wrap items-end gap-3' },
+      h('div', { class: 'w-full sm:w-72' },
+        h('label', { for: 'mp-busqueda', class: 'mb-1 block text-xs font-medium text-[#5B6675] dark:text-[#9AA7B6]' }, 'Buscar'),
+        h('input', { id: 'mp-busqueda', type: 'search', class: CLS.input, placeholder: 'Código o descripción', value: f.busqueda, onInput: ev => cambiar('busqueda', ev.target.value) })),
+      h('div', { class: 'min-w-[12rem]' },
+        h('label', { for: 'mp-categoria', class: 'mb-1 block text-xs font-medium text-[#5B6675] dark:text-[#9AA7B6]' }, 'Categoría'),
+        h('select', { id: 'mp-categoria', class: CLS.input, value: f.categoria, onChange: ev => cambiar('categoria', ev.target.value) }, h('option', { value: '' }, 'Todas'), categoriasMateria().map(c => h('option', { value: c }, c)))),
+      h('div', { class: 'min-w-[11rem]' },
+        h('label', { for: 'mp-estado', class: 'mb-1 block text-xs font-medium text-[#5B6675] dark:text-[#9AA7B6]' }, 'Mostrar'),
+        h('select', { id: 'mp-estado', class: CLS.input, value: f.estado, onChange: ev => cambiar('estado', ev.target.value) },
+          [['todos', 'Todos'], ['con', 'Con especificación'], ['sin', 'Sin especificación']].map(([v, t]) => h('option', { value: v }, t)))),
+      h('label', { for: 'mp-obsoletos', class: 'flex items-center gap-2 pb-2 text-sm' },
+        h('input', { id: 'mp-obsoletos', type: 'checkbox', class: 'h-4 w-4 accent-[#1E4E79]', checked: f.obsoletos, onChange: ev => cambiar('obsoletos', ev.target.checked) }), 'Incluir obsoletos'),
+      mp.cargando && mp.datos ? h('span', { class: 'pb-2' }, Spinner()) : null),
+    contenido);
+}
+/* Alta o edición de un componente; en el alta se puede subir de una vez su especificación */
+function abrirModalComponente(c) {
+  estado.modal = { tipo: 'componente', comp: c || null, codigo: c ? c.codigo : '', descripcion: c ? c.descripcion : '', categoria: c ? c.categoria || '' : '', unidad: c ? c.unidad || '' : '',
+    notas: c ? c.notas || '' : '', archivo: null, error: null, enviando: false, arrastrando: false };
+  enfocarDespues = c ? 'comp-descripcion' : 'comp-codigo'; render();
+}
+function ModalComponente() {
+  const m = estado.modal, campo = (id, etiqueta, k, extra = {}) => h('div', null,
+    h('label', { for: id, class: 'mb-1 block text-sm font-medium' }, etiqueta),
+    h('input', { id, class: CLS.input, value: m[k], disabled: m.enviando, onInput: ev => { estado.modal[k] = ev.target.value; }, ...extra }));
+  const esJefe = puede(estado.sesion.rol_id, 'mp_eliminar');
+  return h('form', { novalidate: true, onSubmit: ev => { ev.preventDefault(); guardarComponente(); } },
+    h('h2', { id: 'titulo-modal', class: 'text-lg font-semibold' }, m.comp ? `Editar ${m.comp.codigo}` : 'Nuevo componente'),
+    h('p', { class: 'mt-1 text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, 'Usa el mismo código que en Business Central (número de producto), para poder ligarlo después.'),
+    h('div', { class: 'mt-4 grid gap-3 sm:grid-cols-2' },
+      campo('comp-codigo', 'Código', 'codigo', { maxlength: '40', placeholder: 'Ej. 22501005', class: `${CLS.input} uppercase tabular-nums` }),
+      campo('comp-categoria', 'Categoría (opcional)', 'categoria', { maxlength: '60', list: 'comp-categorias', placeholder: 'Ej. Herraje, Tornillería, Empaque' }),
+      h('div', { class: 'sm:col-span-2' }, campo('comp-descripcion', 'Descripción', 'descripcion', { maxlength: '200', placeholder: 'Ej. Gancho chico natural' })),
+      campo('comp-unidad', 'Unidad (opcional)', 'unidad', { maxlength: '20', list: 'comp-unidades', placeholder: 'Ej. PZA' }),
+      campo('comp-notas', 'Notas (opcional)', 'notas', { maxlength: '500', placeholder: 'Ej. Proveedor aprobado, tolerancias' })),
+    h('datalist', { id: 'comp-categorias' }, categoriasMateria().map(c => h('option', { value: c }))),
+    h('datalist', { id: 'comp-unidades' }, UNIDADES_MP.map(u => h('option', { value: u }))),
+    m.comp ? null : h('label', { for: 'comp-archivo', ...manejadoresArrastre(m, ev => { const f = ev.dataTransfer.files[0]; if (f) { m.archivo = f; m.error = validarPdfMateria(f); render(); } }),
+      class: `mt-4 flex cursor-pointer flex-col items-center justify-center gap-1 rounded-md border-2 border-dashed px-4 py-4 text-center text-sm ${m.arrastrando ? 'border-[#1E4E79] bg-[#EEF3F8] dark:border-[#7FB2E5] dark:bg-[#1C2A3A]' : 'border-[#C3CBD4] dark:border-[#3A4756]'}` },
+      icono('subir', 'w-5 h-5 text-[#5B6675]'),
+      m.archivo ? [h('span', { class: 'font-medium' }, m.archivo.name), h('span', { class: 'text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, `${formatoTamano(m.archivo.size)} · clic para cambiarlo`)]
+        : [h('span', { class: 'font-medium' }, 'Especificación en PDF (opcional)'), h('span', { class: 'text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, `Arrástrala aquí o da clic · hasta ${MP_MAX_MB} MB · también se puede subir después`)],
+      h('input', { id: 'comp-archivo', type: 'file', accept: '.pdf,application/pdf', class: 'sr-only', disabled: m.enviando, onChange: ev => { const f = ev.target.files[0]; ev.target.value = ''; if (f) { m.archivo = f; m.error = validarPdfMateria(f); render(); } } })),
+    m.comp ? h('div', { class: 'mt-4 flex flex-wrap items-center gap-2 border-t border-[#E3E7EC] pt-3 text-sm dark:border-[#26313D]' },
+      h('button', { type: 'button', class: CLS.btnChico, disabled: m.enviando, onClick: () => cambiarActivoComponente(m.comp) }, m.comp.activo ? 'Marcar como obsoleto' : 'Volver a activar'),
+      esJefe ? h('button', { type: 'button', class: `${CLS.btnChico} text-[#B42318] dark:text-[#F28B82]`, disabled: m.enviando, onClick: () => pedirEliminarComponente(m.comp) }, 'Eliminar') : null,
+      h('span', { class: 'text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, 'Un obsoleto sigue visible con "Incluir obsoletos" por si aún llegan lotes.')) : null,
+    ErrorModal(m.error),
+    PieModal(m.comp ? 'Guardar cambios' : (m.archivo ? 'Guardar y subir especificación' : 'Guardar componente'), guardarComponente, { enviando: m.enviando, textoEnviando: m.archivo ? 'Subiendo…' : 'Guardando…' }));
+}
+async function guardarComponente() {
+  const m = estado.modal; if (!m || m.enviando) return;
+  if (!String(m.codigo).trim()) { m.error = 'Escribe el código del componente.'; render(); return; }
+  if (String(m.descripcion).trim().length < 3) { m.error = 'Escribe la descripción (mínimo 3 caracteres).'; render(); return; }
+  if (m.archivo) { const e = validarPdfMateria(m.archivo); if (e) { m.error = e; render(); return; } }
+  m.enviando = true; m.error = null; render();
+  try {
+    const id = m.compId || await DataService.guardarComponente(m.comp ? m.comp.id : null, m);
+    m.compId = id; // si falla el PDF, al reintentar no se vuelve a crear el componente
+    let v = null;
+    if (m.archivo) v = await DataService.subirEspecComponente({ id, codigo: String(m.codigo).trim().toUpperCase() }, m.archivo, null);
+    if (estado.modal === m) estado.modal = null;
+    agregarAviso('exito', m.comp ? `Componente ${String(m.codigo).trim().toUpperCase()} actualizado.` : `Componente ${String(m.codigo).trim().toUpperCase()} dado de alta${v ? ' con su especificación' : ''}.`);
+    await cargarMateria({ silencioso: true });
+  } catch (e) { m.error = m.compId && !m.comp ? `El componente se guardó, pero el PDF no se pudo subir: ${e.message} Presiona de nuevo para reintentar.` : e.message; m.enviando = false; }
+  render();
+}
+async function cambiarActivoComponente(c) {
+  try { await DataService.activarComponente(c.id, !c.activo); estado.modal = null; agregarAviso('exito', `${c.codigo} ${c.activo ? 'marcado como obsoleto' : 'activo de nuevo'}.`); await cargarMateria({ silencioso: true }); }
+  catch (e) { if (estado.modal) { estado.modal.error = e.message; render(); } }
+}
+function pedirEliminarComponente(c) {
+  abrirConfirmacion({ titulo: `Eliminar ${c.codigo}`, textoBoton: 'Eliminar', peligro: true,
+    mensaje: 'Se quita de la lista y se borra su especificación de Drive. Si el componente solo dejó de usarse, mejor márcalo como obsoleto.',
+    accion: async () => { await DataService.eliminarComponente(c.id); agregarAviso('exito', `Componente ${c.codigo} eliminado.`); await cargarMateria({ silencioso: true }); } });
+}
+/* Subir la especificación o una nueva versión */
+function abrirModalEspecComponente(c) {
+  estado.modal = { tipo: 'especComponente', comp: c, archivo: null, cambios: '', error: null, enviando: false, arrastrando: false };
+  render();
+}
+function ModalEspecComponente() {
+  const m = estado.modal, c = m.comp, elegir = f => { if (!f) return; m.archivo = f; m.error = validarPdfMateria(f); render(); };
+  return h('form', { onSubmit: ev => { ev.preventDefault(); guardarEspecComponente(); } },
+    h('h2', { id: 'titulo-modal', class: 'text-lg font-semibold' }, `${c.espec_id ? 'Nueva versión' : 'Subir especificación'}: ${c.codigo}`),
+    h('p', { class: 'mt-1 text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, `${c.descripcion}. Un PDF de hasta ${MP_MAX_MB} MB.`,
+      c.espec_id ? ` Reemplaza a la versión ${c.version}: su archivo se borra y queda el registro de quién la subió, cuándo y qué cambió.` : ''),
+    h('label', { for: 'mpe-archivo', ...manejadoresArrastre(m, ev => elegir(ev.dataTransfer.files[0])),
+      class: `mt-4 flex cursor-pointer flex-col items-center justify-center gap-1 rounded-md border-2 border-dashed px-4 py-6 text-center text-sm ${m.arrastrando ? 'border-[#1E4E79] bg-[#EEF3F8] dark:border-[#7FB2E5] dark:bg-[#1C2A3A]' : 'border-[#C3CBD4] dark:border-[#3A4756]'}` },
+      icono('subir', 'w-6 h-6 text-[#5B6675]'),
+      m.archivo ? [h('span', { class: 'font-medium' }, m.archivo.name), h('span', { class: 'text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, `${formatoTamano(m.archivo.size)} · clic para cambiarlo`)]
+        : [h('span', { class: 'font-medium' }, 'Arrastra aquí el PDF'), h('span', { class: 'text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, 'o da clic para elegirlo')],
+      h('input', { id: 'mpe-archivo', type: 'file', accept: '.pdf,application/pdf', class: 'sr-only', disabled: m.enviando, onChange: ev => { elegir(ev.target.files[0]); ev.target.value = ''; } })),
+    c.espec_id ? h('div', { class: 'mt-4' },
+      h('label', { for: 'mpe-cambios', class: 'mb-1 block text-sm font-medium' }, '¿Qué cambió respecto a la versión anterior?'),
+      h('textarea', { id: 'mpe-cambios', rows: '3', class: CLS.input, maxlength: '500', value: m.cambios, disabled: m.enviando, placeholder: 'Ej. Cambio de acabado a galvanizado; nueva tolerancia de espesor', onInput: ev => { m.cambios = ev.target.value; } })) : null,
+    ErrorModal(m.error),
+    PieModal(c.espec_id ? 'Subir nueva versión' : 'Subir especificación', guardarEspecComponente, { enviando: m.enviando, textoEnviando: 'Subiendo…' }));
+}
+async function guardarEspecComponente() {
+  const m = estado.modal; if (!m || m.enviando) return;
+  const err = validarPdfMateria(m.archivo) || (m.comp.espec_id && String(m.cambios).trim().length < 5 ? 'Escribe qué cambió en esta versión (mínimo 5 caracteres).' : null);
+  if (err) { m.error = err; render(); return; }
+  m.enviando = true; m.error = null; render();
+  try {
+    const v = await DataService.subirEspecComponente(m.comp, m.archivo, m.cambios);
+    if (estado.modal === m) estado.modal = null;
+    agregarAviso('exito', `Especificación de ${m.comp.codigo}: versión ${v} guardada.`);
+    await cargarMateria({ silencioso: true });
+  } catch (e) { m.error = e.message; m.enviando = false; }
+  render();
+}
+async function abrirVersionesComponente(c) {
+  estado.modal = { tipo: 'versionesComponente', comp: c, lista: null, error: null }; render();
+  try { estado.modal.lista = await DataService.versionesComponente(c.id); } catch (e) { if (estado.modal) estado.modal.error = e.message; }
+  render();
+}
+function ModalVersionesComponente() {
+  const m = estado.modal;
+  return h('div', null,
+    h('h2', { id: 'titulo-modal', class: 'text-lg font-semibold' }, `Versiones de la especificación de ${m.comp.codigo}`),
+    h('p', { class: 'mt-1 text-sm text-[#5B6675] dark:text-[#9AA7B6]' }, 'Solo se guarda el PDF vigente; de las anteriores queda el registro.'),
+    m.error ? ErrorModal(m.error) : !m.lista ? h('div', { class: 'py-6' }, Spinner()) :
+      h('ol', { class: 'mt-4 space-y-2' }, m.lista.map(v => h('li', { class: 'rounded-md border border-[#E3E7EC] px-3 py-2 text-sm dark:border-[#26313D]' },
+        h('p', { class: 'font-semibold' }, `Versión ${v.version}`, v.vigente ? h('span', { class: 'ml-2 rounded bg-[#E6F2EB] px-1.5 py-0.5 text-xs text-[#1F7A4D] dark:bg-[#173526] dark:text-[#5CC48E]' }, 'VIGENTE') : h('span', { class: 'ml-2 text-xs font-normal text-[#7A8594]' }, 'solo registro')),
+        h('p', { class: 'text-xs text-[#5B6675] dark:text-[#9AA7B6]' }, `${formatearFechaHora(v.created_at)} · ${v.subida_por_nombre || '—'} · ${v.nombre_original}`),
+        v.cambios ? h('p', { class: 'mt-0.5' }, v.cambios) : null))),
+    h('div', { class: 'mt-6 flex justify-end' }, h('button', { type: 'button', id: 'confirmar-cancelar', class: CLS.btnSecundario, onClick: cerrarModal }, 'Cerrar')));
 }
 
 /* ---------- Vista Documentación técnica (todos los SKUs) ---------- */
@@ -6278,7 +6545,7 @@ function AvisoVersionNueva() {
 function App() {
   if (estado.fase === 'auth') return h('div', null, FormularioAuth(), Avisos());
   if (estado.fase !== 'app' || !estado.sesion) return h('div', null, PantallaInicio(), Avisos());
-  const vistas = { prototipos: VistaPrototipos, observaciones: VistaObservaciones, skus: VistaSkus, tablero: VistaTablero, historial: VistaHistorial, admin: VistaAdministracion, corte: estado.sesion.rol_id === ROLES.OPERADOR ? VistaCorteOperador : VistaCorte, documentacion: VistaDocumentacion };
+  const vistas = { prototipos: VistaPrototipos, observaciones: VistaObservaciones, skus: VistaSkus, tablero: VistaTablero, historial: VistaHistorial, admin: VistaAdministracion, corte: estado.sesion.rol_id === ROLES.OPERADOR ? VistaCorteOperador : VistaCorte, documentacion: VistaDocumentacion, materia: VistaMateria };
   const reporte = estado.reporte.abierto && estado.reporte.datos;
   return h('div', null,
     h('div', { class: `flex min-h-screen flex-col ${reporte ? 'print:hidden' : ''}` },
