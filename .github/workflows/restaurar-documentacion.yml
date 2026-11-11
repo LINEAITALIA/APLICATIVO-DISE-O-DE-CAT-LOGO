@@ -1,4 +1,4 @@
-# Restaurar la DOCUMENTACIÓN TÉCNICA desde los respaldos semanales. Solo se corre a mano.
+# Restaurar la DOCUMENTACIÓN TÉCNICA y las ESPECIFICACIONES DE MATERIA PRIMA desde los respaldos semanales. Solo se corre a mano.
 # Va en el repositorio de GitHub en la ruta:  .github/workflows/restaurar-documentacion.yml
 #
 # Qué hace:
@@ -13,7 +13,7 @@
 # Si cambiaste de cuenta de Google, primero instala el intermediario en la cuenta nueva
 # y pon su dirección en el config.js del repositorio; después corre esta tarea.
 #
-# Versión 1 (22/10/2026)
+# Versión 2 (11/11/2026): también restaura las especificaciones de materia prima.
 
 name: Restaurar documentación técnica
 
@@ -139,7 +139,7 @@ jobs:
               let lote = [], peso = 0;
               const enviar = async () => {
                 const r = await llamar({ accion: 'restaurar', clave: CLAVE, archivos: lote.map((x, k) => ({ clave: k, carpetas: x.carpetas, nombre: x.nombre, contenido: comoEnDrive(x).toString('base64') })) });
-                for (const a of r.archivos || []) if (a.drive_id) { const x = lote[a.clave]; cambios.push(`update public.ing_versiones_documento set drive_id = ${sql(a.drive_id)} where drive_id = ${sql(x.drive_id)};`); }
+                for (const a of r.archivos || []) if (a.drive_id) { const x = lote[a.clave]; cambios.push(x.tabla === 'componentes' ? `update public.ing_especs_componente set drive_id = ${sql(a.drive_id)} where drive_id = ${sql(x.drive_id)};` : `update public.ing_versiones_documento set drive_id = ${sql(a.drive_id)} where drive_id = ${sql(x.drive_id)};`); }
                 console.log(`Restaurados ${cambios.length} de ${porRestaurar.length}`); lote = []; peso = 0;
               };
               for (const x of porRestaurar) {
