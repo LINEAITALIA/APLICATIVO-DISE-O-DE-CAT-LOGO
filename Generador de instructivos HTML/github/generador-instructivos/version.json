@@ -1,12 +1,15 @@
 {
-  "version": "4.0.0",
-  "minVersion": "4.0.0",
-  "url": "https://github.com/LINEAITALIA/APLICATIVO-DISE-O-DE-CAT-LOGO/raw/Instructivo/Generador%20de%20instructivos%20HTML/github/generador-instructivos/Instructivo-standalone-4.0.0.html",
+  "version": "4.3.3",
+  "minVersion": "4.3.3",
+  "url": "https://github.com/LINEAITALIA/APLICATIVO-DISE-O-DE-CAT-LOGO/raw/Instructivo/Generador%20de%20instructivos%20HTML/github/generador-instructivos/Instructivo-standalone-4.3.3.html",
   "notes": [
-    "¿Se descarga la versión anterior? Ábrelo en una ventana de incógnito (Ctrl+Shift+N) con este link: https://github.com/LINEAITALIA/APLICATIVO-DISE-O-DE-CAT-LOGO/raw/Instructivo/Generador%20de%20instructivos%20HTML/github/generador-instructivos/Instructivo-standalone-4.0.0.html",
-    "Versión 4.0.0: nuevo Composer para crear las vistas del instructivo desde el archivo STEP (como SOLIDWORKS Composer), con vistas en SVG, piezas integradas editables y texto sugerido desde las piezas seleccionadas.",
-    "Varios muebles (módulos) en un mismo archivo: cada uno con su instructivo, PDF y relación de piezas; instructivo 3D del conjunto con pantalla de inicio por SKU.",
-    "Instructivo 3D en ventana propia con barra de herramientas: editor de escena con flechas X/Y/Z, clic derecho, cámara libre, cámaras predeterminadas y cámara/zoom por fase; indicaciones editables; empieza en pausa.",
-    "Instructivo 3D: «Comenzar» reproduce las fases del paso y luego avanza; guía de bienvenida para el cliente al abrirlo (con «No volver a mostrar» y botón «?» para verla de nuevo)."
+    "¿Se descarga la versión anterior? Ábrelo en una ventana de incógnito (Ctrl+Shift+N) con este link: https://github.com/LINEAITALIA/APLICATIVO-DISE-O-DE-CAT-LOGO/raw/Instructivo/Generador%20de%20instructivos%20HTML/github/generador-instructivos/Instructivo-standalone-4.3.3.html",
+    "Versión 4.3.3 · Instructivo 3D, «Ajustar pasos»: panel ordenado en pestañas (Paso, Piezas, Posiciones, Cámara, Textos), sin controles repetidos.",
+    "Posiciones: arrastrar y girar piezas también en pasos que solo preparan; posición por fase al inicio o al final; la posición sigue en el paso siguiente; «Altura de inicio» para que las piezas salgan al mismo nivel.",
+    "Animación más fluida: giros por el camino más corto, sin idas y vueltas ni paradas a la mitad; lo manual empieza cuando termina lo automático.",
+    "Cámara por fase exacta: se guarda lo que se ve (zoom y desplazamiento ya no se acumulan).",
+    "Guía de uso con videos de ejemplo (botón «? Ayuda» en la ventana del instructivo 3D).",
+    "Instructivo impreso: formato en panel izquierdo con estilos como el 3D y colores de texto, marcos, logo, insignias y códigos QR; copiar el formato entre el impreso y el 3D en ambos sentidos.",
+    "Además (desde la 4.0.0): separar copias y número de pieza desde el BOM del Composer, herramientas y recomendaciones por paso, agregar/quitar fases, vista fantasma al agregar piezas, deshacer en el editor de escena, estilo del 3D en vivo e importar fuentes."
   ]
 }
